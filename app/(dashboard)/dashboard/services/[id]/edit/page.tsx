@@ -338,25 +338,26 @@ export default function EditServicePage() {
           : [],
       };
 
-      // Create service
-      const service = await apiService.createService(
+      // Update service
+      const service = await apiService.updateService(
+        serviceId,
         serviceData,
         coverImage || undefined,
       );
 
-      toast.success("Service created successfully!");
+      toast.success("Service updated successfully!");
 
       // Upload portfolio images if any
       if (portfolioImages.length > 0) {
         try {
           await apiService.uploadServiceImages(service.id, portfolioImages);
           toast.success(
-            `${portfolioImages.length} portfolio image(s) uploaded!`,
+            `${portfolioImages.length} new portfolio image(s) uploaded!`,
           );
         } catch (error) {
           console.error("Failed to upload portfolio images:", error);
           toast.warning(
-            "Service created but some portfolio images failed to upload",
+            "Service updated but some portfolio images failed to upload",
           );
         }
       }
@@ -370,8 +371,8 @@ export default function EditServicePage() {
       // Redirect to services list
       router.push("/dashboard/services");
     } catch (error: any) {
-      console.error("Error creating service:", error);
-      toast.error(error?.message || "Failed to create service");
+      console.error("Error updating service:", error);
+      toast.error(error?.message || "Failed to update service");
     } finally {
       setIsDraftSaving(false);
       setIsPublishing(false);

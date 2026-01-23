@@ -6,13 +6,13 @@ import { Search, ChevronRight } from "lucide-react";
 interface ServiceDetailHeaderProps {
   categoryName: string;
   categorySlug: string;
-  providerName: string;
+  serviceTitle: string;
 }
 
 export function ServiceDetailHeader({
   categoryName,
   categorySlug,
-  providerName,
+  serviceTitle,
 }: ServiceDetailHeaderProps) {
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -45,8 +45,8 @@ export function ServiceDetailHeader({
             {categoryName}
           </Link>
           <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-900 dark:text-white font-medium">
-            {providerName}
+          <span className="text-gray-900 dark:text-white font-medium truncate max-w-[300px]">
+            {serviceTitle}
           </span>
         </nav>
       </div>
