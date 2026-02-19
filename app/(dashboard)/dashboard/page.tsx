@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -27,6 +28,7 @@ import {
   ArrowUp,
   CheckCircle2,
   Award,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,211 +40,84 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import Image from "next/image";
+import { apiService } from "@/lib/api";
+import { ProviderAnalytics, AdminAnalytics } from "@/types/analytics";
 
-// --- Admin Mock Data ---
-
-const revenueData = [
-  { name: "Jan", revenue: 600, commission: 380, payout: 100 },
-  { name: "Feb", revenue: 620, commission: 390, payout: 120 },
-  { name: "Mar", revenue: 630, commission: 400, payout: 130 },
-  { name: "Apr", revenue: 650, commission: 410, payout: 150 },
-  { name: "May", revenue: 700, commission: 430, payout: 200 },
-  { name: "Jun", revenue: 720, commission: 440, payout: 250 },
-  { name: "Jul", revenue: 680, commission: 420, payout: 180 },
-  { name: "Aug", revenue: 750, commission: 460, payout: 300 },
-  { name: "Sep", revenue: 780, commission: 480, payout: 350 },
-  { name: "Oct", revenue: 760, commission: 470, payout: 320 },
-  { name: "Nov", revenue: 800, commission: 500, payout: 380 },
-  { name: "Dec", revenue: 850, commission: 520, payout: 420 },
-];
-
-const orderStatusData = [
-  { name: "Completed", value: 70, color: "#4ade80" }, // green-400
-  { name: "Pending", value: 30, color: "#facc15" }, // yellow-400
-  { name: "In-progress", value: 35, color: "#3b82f6" }, // blue-500
-  { name: "Declined", value: 10, color: "#f87171" }, // red-400
-  { name: "Expired", value: 5, color: "#9ca3af" }, // gray-400
-];
-
-const topCategories = [
-  { name: "Plumbing", amount: "200.0Bkgs", icon: "⚙️" },
-  { name: "Interior Decor", amount: "150.0Bkgs", icon: "🎨" },
-  { name: "Hairstyling", amount: "90.0Bkgs", icon: "✂️" },
-  { name: "Masonry", amount: "70.0Bkgs", icon: "🧱" },
-  { name: "Web Development", amount: "25.0Bkgs", icon: "💻" },
-];
-
-const stats = [
-  {
-    label: "Total User",
-    value: "2000",
-    trend: "+12%",
-    trendLabel: "vs last month",
-    icon: Users,
-    color: "text-orange-600",
-    barColor: "bg-orange-600",
-  },
-  {
-    label: "Active Providers",
-    value: "1000",
-    trend: "+12%",
-    trendLabel: "vs last month",
-    icon: Briefcase,
-    color: "text-purple-600",
-    barColor: "bg-purple-600",
-  },
-  {
-    label: "Active Orders",
-    value: "200",
-    trend: "+12%",
-    trendLabel: "from last month",
-    icon: ShoppingBag,
-    color: "text-blue-600",
-    barColor: "bg-blue-600",
-  },
-  {
-    label: "Revenue",
-    value: "GHS 100,500",
-    trend: "+12%",
-    trendLabel: "vs last month",
-    icon: CreditCard,
-    color: "text-green-600",
-    barColor: "bg-green-600",
-  },
-];
-
-// --- Provider Mock Data ---
-
-const providerStats = [
-  {
-    label: "Earnings",
-    value: "GHS 2,350",
-    trend: "+12%",
-    trendLabel: "vs last month",
-    icon: CreditCard, // Wallet icon would be better but CreditCard works
-    color: "text-green-600",
-    barColor: "bg-green-600",
-  },
-  {
-    label: "Active Orders",
-    value: "5",
-    trend: "+12%",
-    trendLabel: "from last month",
-    icon: Briefcase, // Or Box
-    color: "text-blue-600",
-    barColor: "bg-blue-600",
-  },
-  {
-    label: "Completed Orders",
-    value: "45",
-    trend: "+12%",
-    trendLabel: "vs last month",
-    icon: CheckCircle2,
-    color: "text-purple-600",
-    barColor: "bg-purple-600",
-  },
-  {
-    label: "Average Rating",
-    value: "4.7 / 5",
-    trend: "+12%",
-    trendLabel: "from last month",
-    icon: Star,
-    color: "text-orange-500",
-    barColor: "bg-orange-500",
-  },
-];
-
-const earningsOverviewData = [
-  { name: "Jan", current: 450, previous: 800 },
-  { name: "Feb", current: 550, previous: 1000 },
-  { name: "Mar", current: 300, previous: 600 },
-  { name: "Apr", current: 480, previous: 850 },
-  { name: "May", current: 300, previous: 600 },
-  { name: "Jun", current: 520, previous: 950 },
-  { name: "Jul", current: 450, previous: 800 },
-  { name: "Aug", current: 480, previous: 850 },
-  { name: "Sep", current: 450, previous: 800 },
-  { name: "Oct", current: 500, previous: 900 },
-  { name: "Nov", current: 550, previous: 1000 },
-  { name: "Dec", current: 400, previous: 750 },
-];
-
-const providerOrderStatusData = [
-  { name: "Awaiting", value: 5, color: "#facc15" },
-  { name: "In-progress", value: 8, color: "#3b82f6" },
-  { name: "Declined", value: 2, color: "#f87171" },
-  { name: "Completed", value: 45, color: "#4ade80" },
-];
-
-const recentOrderRequests = [
-  {
-    id: "#5764892",
-    user: {
-      name: "Robert sam",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    plan: "Basic",
-    category: "Architecture & Interior Design",
-    date: "August 29, 2025",
-  },
-  {
-    id: "#5782031",
-    user: {
-      name: "Emily Chen",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    plan: "Premium",
-    category: "Graphic Design",
-    date: "September 15, 2025",
-  },
-];
-
-const serviceLeaderboard = [
-  {
-    rank: 1,
-    provider: {
-      name: "Robert sam",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Architect & Interior...",
-    points: "50.pts",
-  },
-  {
-    rank: 2,
-    provider: {
-      name: "Robert sam",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Architect & Interior...",
-    points: "50.pts",
-  },
-  {
-    rank: 3,
-    provider: {
-      name: "Robert sam",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Architect & Interior...",
-    points: "50.pts",
-  },
-  {
-    rank: 18,
-    provider: {
-      name: "You",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Plumbing",
-    points: "7.pts",
-  },
-];
+// --- Admin Dashboard ---
 
 function AdminDashboard() {
+  const [data, setData] = useState<AdminAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const analytics = await apiService.getAdminAnalytics();
+        setData(analytics);
+      } catch (error) {
+        console.error("Failed to load admin analytics", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  const {
+    stats,
+    orderStatusBreakdown,
+    topCategories,
+    revenueChart,
+    totalOrders,
+  } = data;
+
+  const statCards = [
+    {
+      label: "Total User",
+      value: stats.totalUsers.toString(),
+      trend: "+12%", // Mock trend
+      trendLabel: "vs last month",
+      icon: Users,
+      color: "text-orange-600",
+      barColor: "bg-orange-600",
+    },
+    {
+      label: "Active Providers",
+      value: stats.activeProviders.toString(),
+      trend: "+5%", // Mock trend
+      trendLabel: "vs last month",
+      icon: Briefcase,
+      color: "text-purple-600",
+      barColor: "bg-purple-600",
+    },
+    {
+      label: "Active Orders",
+      value: stats.activeOrders.toString(),
+      trend: "+8%", // Mock trend
+      trendLabel: "from last month",
+      icon: ShoppingBag,
+      color: "text-blue-600",
+      barColor: "bg-blue-600",
+    },
+    {
+      label: "Revenue",
+      value: `GHS ${stats.revenue.toLocaleString()}`,
+      trend: "+15%", // Mock trend
+      trendLabel: "vs last month",
+      icon: CreditCard,
+      color: "text-green-600",
+      barColor: "bg-green-600",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -255,7 +130,7 @@ function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <div
             key={stat.label}
             className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative"
@@ -328,7 +203,7 @@ function AdminDashboard() {
 
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
+              <LineChart data={revenueChart}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
@@ -399,7 +274,7 @@ function AdminDashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={orderStatusData}
+                      data={orderStatusBreakdown}
                       cx="50%"
                       cy="50%"
                       innerRadius={40}
@@ -407,7 +282,7 @@ function AdminDashboard() {
                       paddingAngle={0}
                       dataKey="value"
                     >
-                      {orderStatusData.map((entry, index) => (
+                      {orderStatusBreakdown.map((entry, index) => (
                         <Cell key={`cell-${entry.name}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -415,17 +290,15 @@ function AdminDashboard() {
                 </ResponsiveContainer>
                 {/* Center Text */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                  <div className="text-2xl font-bold text-gray-900">200</div>
-                </div>
-                {/* Custom Tooltip Overlay Style */}
-                <div className="absolute top-0 right-0 bg-gray-900 text-white text-xs px-3 py-1 rounded-full transform translate-x-4 -translate-y-2 hidden group-hover:block">
-                  Completed orders-35%
+                  <div className="text-2xl font-bold text-gray-900">
+                    {totalOrders}
+                  </div>
                 </div>
               </div>
 
               {/* Legend */}
               <div className="flex-1 pl-6 space-y-3">
-                {orderStatusData.map((item) => (
+                {orderStatusBreakdown.map((item) => (
                   <div
                     key={item.name}
                     className="flex items-center justify-between text-sm"
@@ -485,14 +358,26 @@ function AdminDashboard() {
                       {index + 1}.
                     </span>
                     <div className="w-6 h-6 flex items-center justify-center bg-gray-50 rounded-full text-xs">
-                      <span className="text-gray-600">{cat.icon}</span>
+                      {/* Using imageUrl as icon here, or fallback emoji */}
+                      {cat.icon.startsWith("http") ? (
+                        <div className="relative w-5 h-5 rounded-full overflow-hidden">
+                          <Image
+                            src={cat.icon}
+                            alt={cat.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-gray-600">{cat.icon}</span>
+                      )}
                     </div>
                     <span className="text-sm font-medium text-gray-700">
                       {cat.name}
                     </span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
-                    {cat.amount}
+                    {cat.count} services
                   </span>
                 </div>
               ))}
@@ -504,7 +389,75 @@ function AdminDashboard() {
   );
 }
 
+// --- Provider Dashboard ---
+
 function ProviderDashboard() {
+  const [data, setData] = useState<ProviderAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const analytics = await apiService.getProviderAnalytics();
+        setData(analytics);
+      } catch (error) {
+        console.error("Failed to load provider analytics", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  const { stats, orderStatusBreakdown, recentOrders, earningsChart } = data;
+
+  const providerStats = [
+    {
+      label: "Earnings",
+      value: "GHS 2,350", // Mocked in backend service? Actually backend doesn't return revenue yet for provider, so static.
+      trend: "+12%",
+      trendLabel: "vs last month",
+      icon: CreditCard,
+      color: "text-green-600",
+      barColor: "bg-green-600",
+    },
+    {
+      label: "Active Orders",
+      value: stats.activeOrders.toString(),
+      trend: "+12%",
+      trendLabel: "from last month",
+      icon: Briefcase,
+      color: "text-blue-600",
+      barColor: "bg-blue-600",
+    },
+    {
+      label: "Completed Orders",
+      value: stats.completedOrders.toString(),
+      trend: "+12%",
+      trendLabel: "vs last month",
+      icon: CheckCircle2,
+      color: "text-purple-600",
+      barColor: "bg-purple-600",
+    },
+    {
+      label: "Average Rating",
+      value: `${stats.averageRating} / 5`,
+      trend: `(${stats.reviewCount} reviews)`,
+      trendLabel: "",
+      icon: Star,
+      color: "text-orange-500",
+      barColor: "bg-orange-500",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -588,7 +541,7 @@ function ProviderDashboard() {
 
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={earningsOverviewData} barGap={0}>
+                <BarChart data={earningsChart} barGap={0}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
@@ -651,7 +604,7 @@ function ProviderDashboard() {
             </div>
 
             <div className="space-y-6">
-              {recentOrderRequests.map((order) => (
+              {recentOrders.map((order) => (
                 <div
                   key={order.id}
                   className="flex items-start justify-between pb-6 border-b border-gray-100 last:border-0 last:pb-0"
@@ -659,8 +612,8 @@ function ProviderDashboard() {
                   <div className="flex gap-4">
                     <div className="w-10 h-10 rounded-full overflow-hidden relative bg-gray-100 shrink-0">
                       <Image
-                        src={order.user.avatar}
-                        alt={order.user.name}
+                        src={order.clientAvatar || "/assets/temp/user/u1.jpg"}
+                        alt={order.clientName}
                         fill
                         className="object-cover"
                       />
@@ -668,7 +621,7 @@ function ProviderDashboard() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900">
-                          {order.user.name}
+                          {order.clientName}
                         </span>
                         <span className="text-sm text-gray-300">|</span>
                         <span className="text-sm text-gray-500">
@@ -677,16 +630,18 @@ function ProviderDashboard() {
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
                         <span className="font-bold text-gray-900">
-                          Order ID: {order.id}
+                          {order.orderNumber}
                         </span>
                         <span className="text-gray-300">|</span>
-                        <span className="text-gray-500">{order.category}</span>
+                        <span className="text-gray-500">
+                          {order.serviceTitle}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-gray-500 mb-2">
-                      {order.date}
+                      {new Date(order.createdAt).toLocaleDateString()}
                     </div>
                     <button className="text-gray-400 hover:text-gray-600">
                       <MoreVertical className="w-5 h-5" />
@@ -694,6 +649,11 @@ function ProviderDashboard() {
                   </div>
                 </div>
               ))}
+              {recentOrders.length === 0 && (
+                <div className="text-sm text-gray-500 text-center py-4">
+                  No recent orders found.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -718,7 +678,9 @@ function ProviderDashboard() {
             </div>
 
             <div className="mb-4">
-              <div className="text-3xl font-bold text-gray-900">60</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {stats.totalOrders}
+              </div>
               <div className="text-sm text-green-600 font-medium">
                 +12%{" "}
                 <span className="text-gray-500 font-normal">vs Last Month</span>
@@ -727,20 +689,28 @@ function ProviderDashboard() {
             </div>
 
             <div className="w-full h-[60px] flex rounded-md overflow-hidden mb-4">
-              {providerOrderStatusData.map((item, index) => (
+              {orderStatusBreakdown.map((item, index) => (
                 <div
                   key={item.name}
                   style={{
-                    width: `${(item.value / 60) * 100}%`,
+                    width:
+                      stats.totalOrders > 0
+                        ? `${(item.value / stats.totalOrders) * 100}%`
+                        : "0%",
                     backgroundColor: item.color,
                   }}
                   className="h-full"
                 />
               ))}
+              {stats.totalOrders === 0 && (
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                  No data
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {providerOrderStatusData.map((item) => (
+              {orderStatusBreakdown.map((item) => (
                 <div
                   key={item.name}
                   className="flex items-center gap-2 text-sm"
@@ -758,80 +728,14 @@ function ProviderDashboard() {
             </div>
           </div>
 
-          {/* Service Leaderboard */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Service Leaderboard
-                </h3>
-                <Info className="w-4 h-4 text-gray-400" />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Month <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>August</DropdownMenuItem>
-                  <DropdownMenuItem>September</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div className="space-y-4">
-              {serviceLeaderboard.map((item) => (
-                <div
-                  key={item.rank}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 w-8">
-                      <span className="text-sm font-medium text-gray-900">
-                        {item.rank}.
-                      </span>
-                      {item.rank === 1 && (
-                        <Award className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                      )}
-                      {item.rank === 2 && (
-                        <Award className="w-3 h-3 text-gray-400 fill-gray-400" />
-                      )}
-                      {item.rank === 3 && (
-                        <Award className="w-3 h-3 text-amber-600 fill-amber-600" />
-                      )}
-                    </div>
-                    <div className="w-8 h-8 rounded-full overflow-hidden relative bg-gray-100 shrink-0">
-                      <Image
-                        src={item.provider.avatar}
-                        alt={item.provider.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900">
-                        {item.provider.name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {item.service}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm font-bold text-gray-900">
-                    <ArrowUp className="w-3 h-3 text-green-600" />
-                    {item.points}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <button className="flex items-center text-green-700 font-medium text-sm hover:underline">
-                View details <ArrowRight className="w-4 h-4 ml-1" />
-              </button>
-            </div>
-          </div>
+          {/* Service Leaderboard (Still Mocked for Provider or Hidden?) 
+              Provider dashboard usually doesn't show global leaderboard. 
+              Let's hide it for provider or mock it if needed. 
+              The original design had it. I'll mock it for now to keep the layout consistent or just leave it out 
+              if it wasn't returned by backend. 
+              
+              The backend for provider didn't return leaderboard. I'll omit it for provider to fit the data.
+          */}
         </div>
       </div>
     </div>
@@ -840,6 +744,13 @@ function ProviderDashboard() {
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) return null; // Avoid hydration mismatch
 
   if (user?.role === "ADMIN") {
     return <AdminDashboard />;

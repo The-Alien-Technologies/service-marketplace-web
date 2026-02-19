@@ -36,6 +36,7 @@ type Addon = {
   description: string;
   price: string;
   isSelected: boolean;
+  isExpanded: boolean;
 };
 
 export default function EditServicePage() {
@@ -92,6 +93,7 @@ export default function EditServicePage() {
               description: addon.description || "",
               price: String(addon.price),
               isSelected: false,
+              isExpanded: false,
             })),
           );
           setShowAddons(true);
@@ -186,6 +188,14 @@ export default function EditServicePage() {
     setAddons(addons.map((a) => (a.id === id ? { ...a, [field]: value } : a)));
   };
 
+  const toggleAddonExpansion = (id: string) => {
+    setAddons(
+      addons.map((a) =>
+        a.id === id ? { ...a, isExpanded: !a.isExpanded } : a,
+      ),
+    );
+  };
+
   const addAddon = () => {
     const newId = (addons.length + 1).toString();
     setAddons([
@@ -196,6 +206,7 @@ export default function EditServicePage() {
         description: "",
         price: "",
         isSelected: false,
+        isExpanded: true,
       },
     ]);
   };
@@ -320,19 +331,24 @@ export default function EditServicePage() {
         categoryId,
         overview,
         tags,
-        plans: plans.map((plan, index) => ({
-          title: plan.title,
-          price: Number.parseFloat(plan.price),
-          inclusions: plan.inclusions,
-          isPopular: plan.isPopular,
-          sortOrder: index,
-        })),
+        plans: plans
+          .filter(
+            (plan) =>
+              plan.title?.trim() && plan.price && plan.inclusions?.trim(),
+          )
+          .map((plan, index) => ({
+            title: plan.title,
+            price: Number.parseFloat(plan.price),
+            inclusions: plan.inclusions,
+            isPopular: plan.isPopular,
+            sortOrder: index,
+          })),
         addons: showAddons
           ? addons
-              .filter((addon) => addon.title.trim() && addon.price)
+              .filter((addon) => addon.title?.trim() && addon.price)
               .map((addon) => ({
                 title: addon.title,
-                description: addon.description,
+                description: addon.description || "",
                 price: Number.parseFloat(addon.price),
               }))
           : [],
@@ -889,93 +905,157 @@ export default function EditServicePage() {
                 {addons.map((addon) => (
                   <div
                     key={addon.id}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-4"
+                    className={cn(
+                      "bg-white rounded-xl border transition-all duration-200",
+                      addon.isExpanded
+                        ? "border-gray-200 shadow-sm"
+                        : "border-transparent hover:border-gray-200",
+                    )}
                   >
-                    {/* Using a simplified view similar to plans - always expanded for demo per image, 
-                               but ideally would be collapsible too. Image shows it expanded. */}
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mb-2">
-                      <Plus className="w-4 h-4 rotate-45" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor={`addon-title-${addon.id}`}
-                        className="text-sm font-medium text-gray-700"
+                    {/* Collapsed Summary View */}
+                    {!addon.isExpanded && (
+                      <button
+                        type="button"
+                        onClick={() => toggleAddonExpansion(addon.id)}
+                        className="w-full flex items-center justify-between p-4 cursor-pointer outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 rounded-xl text-left"
                       >
-                        Title
-                      </label>
-                      <Input
-                        id={`addon-title-${addon.id}`}
-                        value={addon.title}
-                        onChange={(e) =>
-                          updateAddon(addon.id, "title", e.target.value)
-                        }
-                        className="bg-white"
-                        placeholder="e.g., Express Delivery, Extra Revision, Priority Support"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor={`addon-desc-${addon.id}`}
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Short description{" "}
-                        <span className="text-gray-400 font-normal">
-                          (Optional)
-                        </span>
-                      </label>
-                      <Input
-                        id={`addon-desc-${addon.id}`}
-                        value={addon.description}
-                        onChange={(e) =>
-                          updateAddon(addon.id, "description", e.target.value)
-                        }
-                        className="bg-white"
-                        placeholder="Brief description of what this add-on provides"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor={`addon-price-${addon.id}`}
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Price
-                      </label>
-                      <div className="relative">
-                        <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
-                          <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
-                            GHS
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                            <Plus className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-900">
+                              {addon.title || "Untitled Add-on"}
+                            </h3>
+                            {addon.price && (
+                              <p className="text-xs text-gray-500">
+                                GHS {addon.price}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <Input
-                          id={`addon-price-${addon.id}`}
-                          value={addon.price}
-                          onChange={(e) =>
-                            updateAddon(addon.id, "price", e.target.value)
-                          }
-                          className="pl-20 bg-white"
-                          type="number"
-                          placeholder="25.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    </div>
+                        <div className="w-5 h-5 rounded-full border border-gray-200" />
+                      </button>
+                    )}
 
-                    <div className="flex items-center gap-3 pt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => removeAddon(addon.id)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white">
-                        Save
-                      </Button>
-                    </div>
+                    {/* Expanded Edit View */}
+                    {addon.isExpanded && (
+                      <div className="p-4 space-y-4">
+                        <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2">
+                          <Plus className="w-4 h-4" />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            htmlFor={`addon-title-${addon.id}`}
+                            className="text-sm font-medium text-gray-700"
+                          >
+                            Title
+                          </label>
+                          <Input
+                            id={`addon-title-${addon.id}`}
+                            value={addon.title}
+                            onChange={(e) =>
+                              updateAddon(addon.id, "title", e.target.value)
+                            }
+                            className="bg-white"
+                            placeholder="e.g., Express Delivery, Extra Revision, Priority Support"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            htmlFor={`addon-desc-${addon.id}`}
+                            className="text-sm font-medium text-gray-700"
+                          >
+                            Short description{" "}
+                            <span className="text-gray-400 font-normal">
+                              (Optional)
+                            </span>
+                          </label>
+                          <Input
+                            id={`addon-desc-${addon.id}`}
+                            value={addon.description}
+                            onChange={(e) =>
+                              updateAddon(
+                                addon.id,
+                                "description",
+                                e.target.value,
+                              )
+                            }
+                            className="bg-white"
+                            placeholder="Brief description of what this add-on provides"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            htmlFor={`addon-price-${addon.id}`}
+                            className="text-sm font-medium text-gray-700"
+                          >
+                            Price
+                          </label>
+                          <div className="relative">
+                            <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
+                              <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
+                                GHS
+                              </span>
+                            </div>
+                            <Input
+                              id={`addon-price-${addon.id}`}
+                              value={addon.price}
+                              onChange={(e) =>
+                                updateAddon(addon.id, "price", e.target.value)
+                              }
+                              className="pl-20 bg-white"
+                              type="number"
+                              placeholder="25.00"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-2">
+                          {addons.length > 1 && (
+                            <Button
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              onClick={() => removeAddon(addon.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => toggleAddonExpansion(addon.id)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
+                            onClick={() => {
+                              if (!addon.title.trim()) {
+                                toast.error("Please enter an add-on title");
+                                return;
+                              }
+                              if (
+                                !addon.price ||
+                                Number.parseFloat(addon.price) <= 0
+                              ) {
+                                toast.error("Please enter a valid price");
+                                return;
+                              }
+                              toggleAddonExpansion(addon.id);
+                              toast.success("Add-on saved!");
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <button

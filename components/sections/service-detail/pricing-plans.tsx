@@ -31,16 +31,20 @@ interface PricingPlansProps {
   plans: PricingPlan[];
   providerName: string;
   providerAvatar: string;
+  service: any; // TODO: Import Service type
+  serviceId: string;
 }
 
 export function PricingPlans({
   plans,
   providerName,
   providerAvatar,
+  service,
+  serviceId,
 }: PricingPlansProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>(plans[0]?.id || "");
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
-    new Set([plans[0]?.id || ""])
+    new Set([plans[0]?.id || ""]),
   );
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -240,6 +244,8 @@ export function PricingPlans({
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
         selectedPlan={getSelectedPlanData()}
+        service={service}
+        serviceId={serviceId}
       />
     </>
   );

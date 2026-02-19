@@ -11,7 +11,7 @@ import { ServiceCarousel } from "@/components/sections/carousels/service-carouse
 import { AppDownloadSection } from "@/components/sections/home/app-download-section";
 import { GetInspiredSection } from "@/components/sections/home/get-inspired-section";
 import { mockInspirations } from "@/lib/mock-inspirations";
-import { mockBestsellers } from "@/lib/mock-bestsellers";
+
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
 
@@ -33,46 +33,82 @@ export default function CategoryPage({
   const [services, setServices] = useState<Service[]>([]);
   const [totalServices, setTotalServices] = useState(0);
   const [latestServices, setLatestServices] = useState<Service[]>([]); // State for "You may also like"
-  const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    search: "",
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+    minRating: undefined as number | undefined,
+    sortBy: "best_match",
+  });
 
+  const [isCategoryLoading, setIsCategoryLoading] = useState(true);
+  const [isServicesLoading, setIsServicesLoading] = useState(true);
+
+  // Fetch category details - only runs when slug changes
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCategory = async () => {
       try {
-        setIsLoading(true);
-        // Fetch category details
+        setIsCategoryLoading(true);
         const categoryData = await apiService.getCategoryById(slug);
         setCategory(categoryData);
-
-        // Fetch services for this category
-        const servicesData = await apiService.getServices({
-          categoryId: slug,
-          page: currentPage,
-          limit: ITEMS_PER_PAGE,
-          status: "PUBLISHED",
-        });
-
-        setServices(servicesData.services);
-        setTotalServices(servicesData.total);
-
-        // Fetch latest services for "You may also like"
-        const latestData = await apiService.getServices({
-          limit: 10,
-          status: "PUBLISHED",
-          // Assumes backend sorts by createdAt desc by default or we might need to add sorting later if API supports it
-        });
-        setLatestServices(latestData.services);
       } catch (error) {
         console.error("Failed to fetch category data:", error);
         toast.error("Failed to load category details");
       } finally {
-        setIsLoading(false);
+        setIsCategoryLoading(false);
       }
     };
 
     if (slug) {
-      fetchData();
+      fetchCategory();
     }
-  }, [slug, currentPage]);
+  }, [slug]);
+
+  // Fetch services - runs when filters/page change
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setIsServicesLoading(true);
+        const servicesData = await apiService.getFilteredCategoryServices(
+          slug,
+          {
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+            ...filters,
+          },
+        );
+
+        setServices(servicesData.services);
+        setTotalServices(servicesData.total);
+      } catch (error) {
+        console.error("Failed to fetch services:", error);
+        toast.error("Failed to load services");
+      } finally {
+        setIsServicesLoading(false);
+      }
+    };
+
+    if (slug) {
+      fetchServices();
+    }
+  }, [slug, currentPage, filters]);
+
+  // Fetch latest services - only once
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const latestData = await apiService.getServices({
+          limit: 10,
+          status: "PUBLISHED",
+        });
+        setLatestServices(latestData.services);
+      } catch (error) {
+        console.error("Failed to fetch latest services:", error);
+      }
+    };
+
+    fetchLatest();
+  }, []);
 
   const totalPages = Math.ceil(totalServices / ITEMS_PER_PAGE);
 
@@ -82,7 +118,18 @@ export default function CategoryPage({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (isLoading) {
+  const handleFilterChange = (newFilters: {
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
+    sortBy?: string;
+  }) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  if (isCategoryLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-green-600" />
@@ -105,11 +152,16 @@ export default function CategoryPage({
         <CategoryFilters
           categoryName={displayCategoryName}
           resultCount={totalServices}
+          onFilterChange={handleFilterChange}
         />
 
         {/* Results Grid */}
-        <div className="mt-8">
-          {services.length > 0 ? (
+        <div className="mt-8 min-h-[400px]">
+          {isServicesLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          ) : services.length > 0 ? (
             <CategoryResultsGrid
               services={services.map((service) => ({
                 id: service.id,
@@ -161,11 +213,9 @@ export default function CategoryPage({
                 service.provider?.displayName ||
                 `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
                 "Provider",
-              providerAvatar:
-                service.provider?.avatar ?? "",
+              providerAvatar: service.provider?.avatar ?? "",
               isPro: false,
-              serviceImage:
-                service.coverImage ?? "",
+              serviceImage: service.coverImage ?? "",
               description: service.title,
               price: service.plans?.[0]?.price
                 ? `From GHS ${service.plans[0].price}`

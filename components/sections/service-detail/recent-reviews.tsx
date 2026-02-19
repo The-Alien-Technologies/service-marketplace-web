@@ -13,6 +13,7 @@ interface Review {
   reviewText: string;
   likes: number;
   dislikes: number;
+  response?: { comment: string; createdAt: string } | null;
 }
 
 interface RecentReviewsProps {
@@ -104,8 +105,20 @@ export function RecentReviews({
                 "{review.reviewText}"
               </p>
 
-              {/* Engagement Metrics */}
-              <div className="flex items-center gap-4">
+              {/* Provider Response */}
+              {review.response && (
+                <div className="mb-3 ml-2 pl-3 border-l-2 border-green-200 bg-green-50/60 dark:bg-green-900/10 rounded-r-lg py-2 pr-3">
+                  <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
+                    Provider response
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    {review.response.comment}
+                  </p>
+                </div>
+              )}
+
+              {/* Engagement Metrics — commented out for now */}
+              {/* <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <ThumbsUp className="w-4 h-4 text-gray-400" />
                   <span className="text-xs text-gray-500 dark:text-gray-500">
@@ -118,7 +131,7 @@ export function RecentReviews({
                     {review.dislikes}
                   </span>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         ))}

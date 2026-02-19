@@ -4,13 +4,16 @@ import {
   User,
   OnboardingStatus,
   Category,
+  VerificationDocument,
 } from "@/types/auth";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
+import { Order, Review, ReviewSummary } from "@/types/order";
+import { ProviderAnalytics, AdminAnalytics } from "@/types/analytics";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data: T;
@@ -27,7 +30,7 @@ interface AuthResponse {
 class ApiService {
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
 
@@ -56,9 +59,11 @@ class ApiService {
         // Handle specific error format from the backend
         if (data.message) {
           // Create a custom error with additional properties if available
-          const error = new Error(data.message);
+          const error = new Error(data.message) as Error & {
+            attemptsLeft?: number;
+          };
           if (data.attemptsLeft !== undefined) {
-            (error as any).attemptsLeft = data.attemptsLeft;
+            error.attemptsLeft = data.attemptsLeft;
           }
           throw error;
         }
@@ -92,7 +97,7 @@ class ApiService {
   }
 
   async signUp(
-    userData: SignUpData & { role?: "USER" | "SERVICE_PROVIDER" }
+    userData: SignUpData & { role?: "USER" | "SERVICE_PROVIDER" },
   ): Promise<AuthResponse> {
     const response = await this.request<AuthResponse>("/auth/register", {
       method: "POST",
@@ -170,7 +175,7 @@ class ApiService {
   }
 
   async getCategories(
-    includeInactive = false
+    includeInactive = false,
   ): Promise<{ categories: Category[] }> {
     const endpoint = includeInactive
       ? "/categories?includeInactive=true"
@@ -196,7 +201,7 @@ class ApiService {
       parentCategoryId?: string;
       featured?: boolean;
     },
-    imageFile?: File
+    imageFile?: File,
   ): Promise<Category> {
     const formData = new FormData();
     formData.append("name", data.name);
@@ -219,7 +224,7 @@ class ApiService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -236,7 +241,7 @@ class ApiService {
       featured?: boolean;
       isActive?: boolean;
     },
-    imageFile?: File
+    imageFile?: File,
   ): Promise<Category> {
     const formData = new FormData();
     if (data.name !== undefined) formData.append("name", data.name);
@@ -263,7 +268,7 @@ class ApiService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -275,6 +280,47 @@ class ApiService {
     await this.request(`/categories/${id}`, {
       method: "DELETE",
     });
+  }
+
+  async getFilteredCategoryServices(
+    categoryId: string,
+    filters?: {
+      search?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      minRating?: number;
+      sortBy?: string;
+      page?: number;
+      limit?: number;
+    },
+  ): Promise<{
+    services: Service[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.minPrice !== undefined)
+      params.append("minPrice", filters.minPrice.toString());
+    if (filters?.maxPrice !== undefined)
+      params.append("maxPrice", filters.maxPrice.toString());
+    if (filters?.minRating !== undefined)
+      params.append("minRating", filters.minRating.toString());
+    if (filters?.sortBy) params.append("sortBy", filters.sortBy);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      services: Service[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/categories/${categoryId}/services${query}`);
+    return response.data;
   }
 
   // Users API methods
@@ -326,7 +372,7 @@ class ApiService {
 
   async updateUserStatus(
     userId: string,
-    status: "ACTIVE" | "SUSPENDED" | "DELETED"
+    status: "ACTIVE" | "SUSPENDED" | "DELETED",
   ): Promise<User> {
     const response = await this.request<User>(`/users/${userId}/status`, {
       method: "PATCH",
@@ -344,7 +390,7 @@ class ApiService {
   // Services API methods
   async createService(
     data: CreateServiceData,
-    coverImage?: File
+    coverImage?: File,
   ): Promise<Service> {
     const formData = new FormData();
 
@@ -475,7 +521,7 @@ class ApiService {
   async updateService(
     id: string,
     data: Partial<CreateServiceData>,
-    coverImage?: File
+    coverImage?: File,
   ): Promise<Service> {
     const formData = new FormData();
 
@@ -505,7 +551,7 @@ class ApiService {
 
   async updateServiceStatus(
     id: string,
-    status: ServiceStatus
+    status: ServiceStatus,
   ): Promise<Service> {
     const response = await this.request<Service>(`/services/${id}/status`, {
       method: "PATCH",
@@ -540,7 +586,7 @@ class ApiService {
 
   async updateInterests(
     categoryIds: string[],
-    type: "INTEREST" | "SERVICE" = "INTEREST"
+    type: "INTEREST" | "SERVICE" = "INTEREST",
   ): Promise<void> {
     await this.request("/onboarding/interests", {
       method: "PUT",
@@ -552,7 +598,7 @@ class ApiService {
   }
 
   async updateExperience(
-    experienceLevel: "BEGINNER" | "INTERMEDIATE" | "EXPERT"
+    experienceLevel: "BEGINNER" | "INTERMEDIATE" | "EXPERT",
   ): Promise<{ user: User }> {
     const response = await this.request<{ user: User }>(
       "/onboarding/experience",
@@ -561,7 +607,7 @@ class ApiService {
         body: JSON.stringify({
           experienceLevel,
         }),
-      }
+      },
     );
     return response.data;
   }
@@ -594,7 +640,7 @@ class ApiService {
       bio?: string;
       experienceLevel?: string;
     },
-    avatarFile?: File
+    avatarFile?: File,
   ): Promise<{ user: User }> {
     const formData = new FormData();
 
@@ -688,7 +734,7 @@ class ApiService {
 
   async verifyPasswordResetOtp(
     email: string,
-    otpCode: string
+    otpCode: string,
   ): Promise<{ valid: boolean }> {
     const response = await this.request<{ valid: boolean }>(
       "/auth/verify-password-reset-otp",
@@ -698,7 +744,7 @@ class ApiService {
           email,
           otpCode,
         }),
-      }
+      },
     );
     return response.data;
   }
@@ -706,7 +752,7 @@ class ApiService {
   async resetPassword(
     email: string,
     otpCode: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<void> {
     await this.request("/auth/reset-password", {
       method: "POST",
@@ -723,7 +769,7 @@ class ApiService {
     provider: "google",
     accessToken: string,
     idToken?: string,
-    role?: "USER" | "SERVICE_PROVIDER"
+    role?: "USER" | "SERVICE_PROVIDER",
   ): Promise<AuthResponse> {
     const response = await this.request<AuthResponse>("/auth/social", {
       method: "POST",
@@ -747,8 +793,8 @@ class ApiService {
   async uploadDocument(
     file: File,
     documentType: string,
-    description?: string
-  ): Promise<any> {
+    description?: string,
+  ): Promise<VerificationDocument> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("documentType", documentType);
@@ -778,8 +824,10 @@ class ApiService {
     return result.data;
   }
 
-  async getUserDocuments(): Promise<any[]> {
-    const response = await this.request<any[]>("/onboarding/documents");
+  async getUserDocuments(): Promise<VerificationDocument[]> {
+    const response = await this.request<VerificationDocument[]>(
+      "/onboarding/documents",
+    );
     return response.data;
   }
 
@@ -794,8 +842,275 @@ class ApiService {
       "/onboarding/complete",
       {
         method: "POST",
-      }
+      },
     );
+    return response.data;
+  }
+
+  async updateUserProfile(data: Partial<User>): Promise<{ user: User }> {
+    const response = await this.request<{ user: User }>("/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.request("/auth/password", {
+      method: "PATCH",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  // Orders API
+  async createOrder(orderData: {
+    serviceId: string;
+    planId: string;
+    planTitle: string;
+    planPrice: number;
+    planInclusions: string;
+    addOns?: {
+      id: string;
+      title: string;
+      description?: string;
+      price: number;
+    }[];
+    subtotal: number;
+    addOnsTotal: number;
+    couponCode?: string;
+    couponDiscount?: number;
+    total: number;
+  }): Promise<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: number;
+  }> {
+    const response = await this.request<{
+      id: string;
+      orderNumber: string;
+      status: string;
+      total: number;
+    }>("/orders", {
+      method: "POST",
+      body: JSON.stringify(orderData),
+    });
+    return response.data;
+  }
+
+  async getOrder(id: string): Promise<Order> {
+    const response = await this.request<Order>(`/orders/${id}`);
+    return response.data;
+  }
+
+  async updateOrderStatus(
+    id: string,
+    status:
+      | "PENDING"
+      | "AWAITING"
+      | "IN_PROGRESS"
+      | "COMPLETED"
+      | "DECLINED"
+      | "REFUNDED",
+  ): Promise<Order> {
+    const response = await this.request<Order>(`/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    return response.data;
+  }
+
+  async getMyOrders(options?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Order[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.status) params.append("status", options.status);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.limit) params.append("limit", options.limit.toString());
+
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: Order[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(`/orders/my${query}`);
+    return response.data;
+  }
+
+  async getProviderOrders(options?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Order[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.status) params.append("status", options.status);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.limit) params.append("limit", options.limit.toString());
+
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: Order[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(`/orders/provider${query}`);
+    return response.data;
+  }
+
+  async getAdminOrders(options?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    data: Order[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.status) params.append("status", options.status);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.search) params.append("search", options.search);
+
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: Order[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(`/orders/admin/all${query}`);
+    return response.data;
+  }
+
+  // ─── Reviews ────────────────────────────────────────────────────────────────
+
+  async createReview(data: {
+    orderId: string;
+    rating: number;
+    comment?: string;
+  }): Promise<Review> {
+    const response = await this.request<Review>("/reviews", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async getServiceReviews(
+    serviceId: string,
+    options?: { rating?: number; sort?: string; page?: number; limit?: number },
+  ): Promise<{
+    data: Review[];
+    summary: ReviewSummary;
+    pagination: { page: number; limit: number; total: number; pages: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.rating) params.append("rating", options.rating.toString());
+    if (options?.sort) params.append("sort", options.sort);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.limit) params.append("limit", options.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: Review[];
+      summary: ReviewSummary;
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/reviews/service/${serviceId}${query}`);
+    return response.data;
+  }
+
+  async getMyReviews(options?: {
+    rating?: number;
+    sort?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Review[];
+    summary: ReviewSummary & { completedOrders: number };
+    pagination: { page: number; limit: number; total: number; pages: number };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.rating) params.append("rating", options.rating.toString());
+    if (options?.sort) params.append("sort", options.sort);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.limit) params.append("limit", options.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: Review[];
+      summary: ReviewSummary & { completedOrders: number };
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/reviews/my${query}`);
+    return response.data;
+  }
+
+  async getOrderReview(orderId: string): Promise<Review | null> {
+    const response = await this.request<Review | null>(
+      `/reviews/order/${orderId}`,
+    );
+    return response.data;
+  }
+
+  async respondToReview(
+    reviewId: string,
+    comment: string,
+  ): Promise<{ id: string; comment: string; createdAt: string }> {
+    const response = await this.request<{
+      id: string;
+      comment: string;
+      createdAt: string;
+    }>(`/reviews/${reviewId}/respond`, {
+      method: "POST",
+      body: JSON.stringify({ comment }),
+    });
+    return response.data;
+  }
+
+  // ─── Analytics ───────────────────────────────────────────────────────────────
+
+  async getProviderAnalytics(): Promise<ProviderAnalytics> {
+    const response = await this.request<ProviderAnalytics>(
+      "/analytics/provider",
+    );
+    return response.data;
+  }
+
+  async getAdminAnalytics(): Promise<AdminAnalytics> {
+    const response = await this.request<AdminAnalytics>("/analytics/admin");
     return response.data;
   }
 }

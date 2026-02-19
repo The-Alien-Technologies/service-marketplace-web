@@ -17,6 +17,10 @@ import { AppDownloadSection } from "@/components/sections/home/app-download-sect
 import { useEffect, useState } from "react";
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
+import {
+  Review as ReviewType,
+  ReviewSummary as ReviewSummaryType,
+} from "@/types/order";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 
@@ -29,13 +33,28 @@ export default function ServiceDetailPage({
 
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewData, setReviewData] = useState<{
+    summary: ReviewSummaryType;
+    reviews: ReviewType[];
+  }>({
+    summary: {
+      average: 0,
+      total: 0,
+      breakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    },
+    reviews: [],
+  });
 
   useEffect(() => {
-    const fetchService = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await apiService.getService(serviceId);
+        const [data, reviews] = await Promise.all([
+          apiService.getService(serviceId),
+          apiService.getServiceReviews(serviceId, { limit: 20 }),
+        ]);
         setService(data);
+        setReviewData({ summary: reviews.summary, reviews: reviews.data });
       } catch (error) {
         console.error("Failed to fetch service:", error);
         toast.error("Failed to load service details");
@@ -45,7 +64,7 @@ export default function ServiceDetailPage({
     };
 
     if (serviceId) {
-      fetchService();
+      fetchData();
     }
   }, [serviceId]);
 
@@ -90,17 +109,35 @@ export default function ServiceDetailPage({
         span: "normal" as const, // Default to normal span
       })) || [],
     reviews: {
-      averageRating: 0, // TODO: Implement reviews
-      totalReviews: 0,
-      ratingBreakdown: [
-        { rating: 5.0, count: 0, percentage: 0 },
-        { rating: 4.0, count: 0, percentage: 0 },
-        { rating: 3.0, count: 0, percentage: 0 },
-        { rating: 2.0, count: 0, percentage: 0 },
-        { rating: 1.0, count: 0, percentage: 0 },
-      ],
+      averageRating: reviewData.summary.average,
+      totalReviews: reviewData.summary.total,
+      ratingBreakdown: [5, 4, 3, 2, 1].map((star) => {
+        const count = reviewData.summary.breakdown[star] || 0;
+        const pct =
+          reviewData.summary.total > 0
+            ? (count / reviewData.summary.total) * 100
+            : 0;
+        return { rating: star, count, percentage: Math.round(pct) };
+      }),
     },
-    recentReviews: [], // TODO: Implement reviews
+    recentReviews: reviewData.reviews.map((r) => ({
+      id: r.id,
+      reviewerName:
+        r.client?.displayName ||
+        `${r.client?.firstName ?? ""} ${r.client?.lastName ?? ""}`.trim() ||
+        "Anonymous",
+      reviewerAvatar:
+        r.client?.avatar ||
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      rating: r.rating,
+      date: r.createdAt,
+      reviewText: r.comment ?? "",
+      likes: 0,
+      dislikes: 0,
+      response: r.response
+        ? { comment: r.response.comment, createdAt: r.response.createdAt }
+        : null,
+    })),
     provider: {
       name:
         service.provider?.displayName ||
@@ -187,6 +224,8 @@ export default function ServiceDetailPage({
               plans={serviceData.pricingPlans}
               providerName={serviceData.provider.name}
               providerAvatar={serviceData.provider.avatar}
+              service={service}
+              serviceId={serviceId}
             />
           </div>
         </div>

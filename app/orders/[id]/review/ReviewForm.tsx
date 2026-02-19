@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Star, Upload, Trash2, Check, FileVideo } from "lucide-react";
+import { Star, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/lib/api";
+import { toast } from "react-toastify";
 
 const RATINGS = [
   { value: 1, label: "Very poor" },
@@ -20,32 +22,80 @@ interface ReviewFormProps {
 export function ReviewForm({ orderId }: ReviewFormProps) {
   const router = useRouter();
   const [rating, setRating] = useState<number | null>(null);
-  const [description, setDescription] = useState("");
-  const [fileName, setFileName] = useState("Project recording.mp4");
-  const [fileSize] = useState("10 MB");
-  const [uploadProgress, setUploadProgress] = useState(40);
-  const [hasFile, setHasFile] = useState(true);
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
-  const remainingChars = 500 - description.length;
+  const remainingChars = 500 - comment.length;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    setHasFile(true);
-    setUploadProgress(40); // Mock progress start
-  };
+  // Check if this order already has a review
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const existing = await apiService.getOrderReview(orderId);
+        if (existing) setAlreadyReviewed(true);
+      } catch {
+        // ignore
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    check();
+  }, [orderId]);
 
-  const handleCancel = () => {
-    router.back();
-  };
-
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // Mock submit – in future, send to API
-    setIsSubmitted(true);
+    if (!rating) {
+      toast.error("Please select a rating");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await apiService.createReview({
+        orderId,
+        rating,
+        comment: comment.trim() || undefined,
+      });
+      setIsSubmitted(true);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to submit review");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (alreadyReviewed) {
+    return (
+      <div className="flex flex-col items-center justify-center pt-32 pb-40">
+        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-6">
+          <Star className="w-8 h-8 text-amber-500 fill-amber-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+          Already reviewed
+        </h2>
+        <p className="text-sm text-gray-500 mb-8 text-center">
+          You have already submitted a review for this order.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard/orders")}
+          className="text-sm font-bold text-green-700 hover:text-green-800 hover:underline border-b border-green-700 pb-0.5"
+        >
+          Back to Orders
+        </button>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -100,7 +150,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
                   "w-4 h-4 rounded-full border flex items-center justify-center transition-colors",
                   rating === option.value
                     ? "border-green-600"
-                    : "border-gray-300 group-hover:border-green-500"
+                    : "border-gray-300 group-hover:border-green-500",
                 )}
               >
                 {rating === option.value && (
@@ -118,7 +168,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
                       "w-3 h-3",
                       index < option.value
                         ? "text-amber-400 fill-amber-400"
-                        : "text-gray-200 fill-gray-200"
+                        : "text-gray-200 fill-gray-200",
                     )}
                   />
                 ))}
@@ -128,8 +178,8 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
         </div>
       </div>
 
-      {/* Description */}
-      <div className="mb-8">
+      {/* Comment */}
+      <div className="mb-10">
         <div className="flex items-center gap-2 mb-2">
           <p className="text-sm font-bold text-gray-900">
             Tell us more about your experience
@@ -138,8 +188,8 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
         </div>
         <div className="border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-1 focus-within:ring-green-500 focus-within:border-green-500 transition-all">
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+            value={comment}
+            onChange={(e) => setComment(e.target.value.slice(0, 500))}
             placeholder="Enter a description..."
             className="w-full h-32 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none resize-none"
           />
@@ -149,85 +199,21 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
         </div>
       </div>
 
-      {/* Upload section */}
-      <div className="mb-10">
-        <div className="flex items-center gap-2 mb-2">
-          <p className="text-sm font-bold text-gray-900">
-            Share photos of the work
-          </p>
-          <span className="text-xs text-gray-400">(optional)</span>
-        </div>
-
-        {!hasFile && (
-          <label className="flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-lg bg-white px-6 py-10 text-center cursor-pointer hover:bg-gray-50 transition-colors">
-            <input
-              type="file"
-              className="hidden"
-              onChange={handleFileChange}
-              accept="image/*,video/*"
-            />
-            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3 text-gray-400">
-              <Upload className="w-5 h-5" />
-            </div>
-            <p className="text-sm text-green-700 font-semibold mb-1">
-              Click to upload or drag and drop
-            </p>
-            <p className="text-xs text-gray-400">
-              SVG, PNG, JPG or GIF (max. 800×400px)
-            </p>
-          </label>
-        )}
-
-        {hasFile && (
-          <div className="border border-gray-200 rounded-lg px-4 py-4 bg-white">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
-                  <FileVideo className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {fileName}
-                  </p>
-                  <p className="text-xs text-gray-500">{fileSize}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setHasFile(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#15803d] rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 font-medium">
-                {uploadProgress}%
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Actions */}
       <div className="flex flex-col sm:flex-row sm:justify-between gap-4 pt-4 border-t border-gray-100">
         <button
           type="button"
-          onClick={handleCancel}
+          onClick={() => router.back()}
           className="flex-1 sm:flex-none sm:w-32 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="flex-1 sm:flex-none sm:w-48 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-[#15803d] hover:bg-[#14532d] transition-colors shadow-sm"
+          disabled={isSubmitting || !rating}
+          className="flex-1 sm:flex-none sm:w-48 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-[#15803d] hover:bg-[#14532d] transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
         >
+          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           Submit review
         </button>
       </div>
