@@ -31,7 +31,17 @@ interface PricingPlansProps {
   plans: PricingPlan[];
   providerName: string;
   providerAvatar: string;
-  service: any; // TODO: Import Service type
+  service: {
+    id: string;
+    title: string;
+    providerId: string;
+    addons?: {
+      id: string;
+      title: string;
+      description?: string;
+      price: number | string;
+    }[];
+  };
   serviceId: string;
 }
 
@@ -229,6 +239,7 @@ export function PricingPlans({
       <ChatBox
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+        providerId={service.providerId}
         providerName={providerName}
         providerAvatar={providerAvatar}
       />

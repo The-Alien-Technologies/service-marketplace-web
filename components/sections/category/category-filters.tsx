@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ChevronDown, Filter, X } from "lucide-react";
+import { Search, ChevronDown, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,10 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HorizontalSeparator } from "../../layout/horizontal-separator";
-import { SkillDropdown } from "./filters/skill-dropdown";
+
 import { PriceRangeDropdown } from "./filters/price-range-dropdown";
 import { RatingDropdown } from "./filters/rating-dropdown";
-import { DeliveryTimeDropdown } from "./filters/delivery-time-dropdown";
 
 const SORT_OPTIONS = [
   { label: "Best match", value: "best_match" },
@@ -48,25 +47,6 @@ export function CategoryFilters({
   const [ratingIds, setRatingIds] = useState<string[]>([]);
   // const [deliveryTime, setDeliveryTime] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("best_match");
-
-  // Skill mapping for display
-  const skillLabels: Record<string, string> = {
-    plumbing: "Plumbing",
-    carpentry: "Carpentry",
-    "painting-decorating": "Painting & decorating",
-    packaging: "Packaging",
-    electrical: "Electrical",
-    hvac: "HVAC",
-    hairdressing: "Hairdressing",
-    "makeup-services": "Makeup services",
-    skincare: "Skincare",
-    massage: "Massage therapy",
-    "nail-care": "Nail care",
-    "logo-design": "Logo Design",
-    "brand-identity": "Brand Identity",
-    illustration: "Illustration",
-    "ui-ux": "UI/UX Design",
-  };
 
   // Commented out for now - will be implemented later
   // const MAX_VISIBLE_FILTERS = 1;
@@ -196,7 +176,9 @@ export function CategoryFilters({
           <span className="text-gray-700 font-medium">
             Showing search results for
           </span>
-          <span className="font-bold text-gray-900">'{categoryName}'</span>
+          <span className="font-bold text-gray-900">
+            &apos;{categoryName}&apos;
+          </span>
           <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium">
             {resultCount}
           </span>

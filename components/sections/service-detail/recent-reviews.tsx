@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Star, ThumbsUp, ThumbsDown, ChevronDown } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
 
 interface Review {
   id: string;
@@ -102,7 +102,7 @@ export function RecentReviews({
 
               {/* Review Text */}
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3">
-                "{review.reviewText}"
+                &quot;{review.reviewText}&quot;
               </p>
 
               {/* Provider Response */}

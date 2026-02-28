@@ -21,7 +21,17 @@ interface CheckoutModalProps {
     price: string;
     features: { text: string }[];
   };
-  service: any;
+  service: {
+    id: string;
+    title: string;
+    providerId: string;
+    addons?: {
+      id: string;
+      title: string;
+      description?: string;
+      price: number | string;
+    }[];
+  };
   serviceId: string;
 }
 
@@ -39,12 +49,19 @@ export function CheckoutModal({
 
   // Map service add-ons to component format
   const availableAddOns: AddOn[] =
-    service?.addons?.map((addon: any) => ({
-      id: addon.id,
-      name: addon.title,
-      description: addon.description || "",
-      price: Number(addon.price),
-    })) || [];
+    service?.addons?.map(
+      (addon: {
+        id: string;
+        title: string;
+        description?: string;
+        price: number | string;
+      }) => ({
+        id: addon.id,
+        name: addon.title,
+        description: addon.description || "",
+        price: Number(addon.price),
+      }),
+    ) || [];
 
   if (!isOpen) return null;
 
@@ -291,7 +308,8 @@ export function CheckoutModal({
                 />
               </svg>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                You won't be charged until the freelancer accepts your order.
+                You won&apos;t be charged until the freelancer accepts your
+                order.
               </p>
             </div>
           </div>
