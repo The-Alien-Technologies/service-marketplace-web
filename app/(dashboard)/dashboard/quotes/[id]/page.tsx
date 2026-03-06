@@ -8,17 +8,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ChevronRight,
-  Download,
-  FileText,
-  Mail,
-  Upload,
-  Paperclip,
-} from "lucide-react";
+import { ChevronRight, Download, FileText, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,56 +23,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-// --- Mock Data ---
-
-const quoteDetail = {
-  id: "1",
-  client: {
-    name: "Olivia Rhye",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  projectTitle: "Interior Design",
-  budget: "GHS 2,500",
-  description:
-    "I'm looking for a modern and minimalist interior design for my 2-bedroom apartment located in East Legon. I want the space to feel open, bright, and functional, with soft lighting and a neutral color palette. The living area should have a cozy yet sophisticated atmosphere, while the bedrooms should reflect a calm and relaxing mood. I already have a rough floor plan and some reference photos, which I've attached below.",
-  deliveryTime: "3-5 Days",
-  attachments: [
-    {
-      name: "Floorplan.pdf",
-      size: "200 KB",
-      type: "pdf",
-    },
-  ],
-  date: "October 07, 2025",
-  status: "New Request", // Default for demo, will override based on param/logic if needed
-};
+import { apiService } from "@/lib/api";
+import { QuoteRequest, QuoteStatus } from "@/types/quote";
+import { toast } from "react-toastify";
 
 // --- Components ---
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: QuoteStatus }) {
+  const labels: Record<QuoteStatus, string> = {
+    NEW: "New Request",
+    PENDING: "Pending",
+    ACCEPTED: "Accepted",
+    DECLINED: "Declined",
+    EXPIRED: "Expired",
+  };
+
   let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
   let dotStyles = "bg-gray-500";
-
   switch (status) {
-    case "New Request":
+    case "NEW":
       badgeStyles = "bg-blue-50 text-blue-700 border-blue-200";
       dotStyles = "bg-blue-500";
       break;
-    case "Accepted":
+    case "ACCEPTED":
       badgeStyles = "bg-green-50 text-green-700 border-green-200";
       dotStyles = "bg-green-500";
       break;
-    case "Pending":
+    case "PENDING":
       badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
       dotStyles = "bg-orange-500";
       break;
-    case "Declined":
+    case "DECLINED":
       badgeStyles = "bg-red-50 text-red-700 border-red-200";
       dotStyles = "bg-red-500";
       break;
-    case "Expired":
+    case "EXPIRED":
       badgeStyles = "bg-gray-100 text-gray-700 border-gray-200";
       dotStyles = "bg-gray-500";
       break;
@@ -89,8 +67,8 @@ function StatusBadge({ status }: { status: string }) {
     <div
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeStyles}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}></span>
-      {status}
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`} />
+      {labels[status]}
     </div>
   );
 }
@@ -101,22 +79,108 @@ export default function QuoteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const [quote, setQuote] = useState<QuoteRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("Too busy at the moment");
-  // In a real app, fetch data based on ID.
-  // For demo, we might simulate different statuses based on ID or just default.
-  // Let's toggle status based on ID for demo purposes or random?
-  // 1=New, 2=Accepted, 3=Declined, 4=Expired.
-  let status = quoteDetail.status;
-  if (id === "4" || id === "7") status = "Accepted";
-  if (id === "3") status = "Declined";
-  if (id === "6") status = "Expired";
-  if (id === "5") status = "Pending";
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const isNewRequest = status === "New Request";
-  const isAccepted = status === "Accepted";
-  const isDeclined = status === "Declined";
-  const isExpired = status === "Expired";
+  // Offer form state
+  const [offerTitle, setOfferTitle] = useState("");
+  const [offerDelivery, setOfferDelivery] = useState("");
+  const [offerBudget, setOfferBudget] = useState("");
+  const [offerNote, setOfferNote] = useState("");
+
+  useEffect(() => {
+    const fetchQuote = async () => {
+      setIsLoading(true);
+      try {
+        const data = await apiService.getQuote(id);
+        setQuote(data);
+        setOfferTitle(data.projectTitle);
+        setOfferBudget(String(Number(data.budget)));
+        setOfferDelivery(data.deliveryTime);
+      } catch {
+        toast.error("Failed to load quote request.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchQuote();
+  }, [id]);
+
+  const handleAccept = async () => {
+    setIsActionLoading(true);
+    try {
+      const updated = await apiService.updateQuoteStatus(id, "ACCEPTED");
+      setQuote(updated);
+      toast.success("Quote accepted!");
+    } catch {
+      toast.error("Failed to accept quote.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setIsActionLoading(true);
+    try {
+      const updated = await apiService.updateQuoteStatus(
+        id,
+        "DECLINED",
+        declineReason,
+      );
+      setQuote(updated);
+      setIsDeclineModalOpen(false);
+      toast.success("Quote declined.");
+    } catch {
+      toast.error("Failed to decline quote.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleSendOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsActionLoading(true);
+    try {
+      const updated = await apiService.sendQuoteOffer(id, {
+        projectTitle: offerTitle,
+        budget: parseFloat(offerBudget),
+        deliveryTime: offerDelivery,
+        providerNote: offerNote,
+      });
+      setQuote(updated);
+      toast.success("Offer sent!");
+    } catch {
+      toast.error("Failed to send offer.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (!quote) {
+    return (
+      <div className="text-center py-16 text-gray-500">
+        Quote request not found.
+      </div>
+    );
+  }
+
+  const clientName = `${quote.client.firstName} ${quote.client.lastName}`;
+  const isNew = quote.status === "NEW";
+  const isAccepted = quote.status === "ACCEPTED";
+  const isDeclined = quote.status === "DECLINED";
+  const isExpired = quote.status === "EXPIRED";
+  const isPending = quote.status === "PENDING";
 
   return (
     <div className="space-y-8 pb-12">
@@ -128,8 +192,7 @@ export default function QuoteDetailPage({
         </p>
       </div>
 
-      {/* Tabs / Filter Pills (Visual only here as per list page design usually) */}
-      {/* Omitting tabs on detail page as per design - breadcrumbs used instead */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Link
           href="/dashboard/quotes"
@@ -138,7 +201,7 @@ export default function QuoteDetailPage({
           Quote Requests
         </Link>
         <ChevronRight className="w-4 h-4" />
-        <span className="text-gray-900">{quoteDetail.client.name}</span>
+        <span className="text-gray-900">{clientName}</span>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -147,21 +210,33 @@ export default function QuoteDetailPage({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 relative">
-                <Image
-                  src={quoteDetail.client.avatar}
-                  alt={quoteDetail.client.name}
-                  fill
-                  className="object-cover"
-                />
+                {quote.client.avatar ? (
+                  <Image
+                    src={quote.client.avatar}
+                    alt={clientName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium uppercase">
+                    {quote.client.firstName?.charAt(0)}
+                  </span>
+                )}
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
-                  {quoteDetail.client.name}
+                  {clientName}
                 </h2>
               </div>
-              <StatusBadge status={status} />
+              <StatusBadge status={quote.status} />
             </div>
-            <span className="text-sm text-gray-500">{quoteDetail.date}</span>
+            <span className="text-sm text-gray-500">
+              {new Date(quote.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
           </div>
 
           <div className="space-y-6">
@@ -169,12 +244,14 @@ export default function QuoteDetailPage({
               <h3 className="text-sm font-bold text-gray-900 mb-1">
                 Project title
               </h3>
-              <p className="text-gray-600">{quoteDetail.projectTitle}</p>
+              <p className="text-gray-600">{quote.projectTitle}</p>
             </div>
 
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-1">Budget</h3>
-              <p className="text-gray-600">{quoteDetail.budget}</p>
+              <p className="text-gray-600">
+                {quote.currency} {Number(quote.budget).toLocaleString()}
+              </p>
             </div>
 
             <div>
@@ -182,7 +259,7 @@ export default function QuoteDetailPage({
                 Project description
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                {quoteDetail.description}
+                {quote.description}
               </p>
             </div>
 
@@ -190,56 +267,84 @@ export default function QuoteDetailPage({
               <h3 className="text-sm font-bold text-gray-900 mb-1">
                 Delivery Time
               </h3>
-              <p className="text-gray-600">{quoteDetail.deliveryTime}</p>
+              <p className="text-gray-600">{quote.deliveryTime}</p>
             </div>
 
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-3">
-                Attachments
-              </h3>
-              <div className="border border-gray-200 rounded-lg p-4 flex items-center justify-between bg-white max-w-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {quoteDetail.attachments[0].name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {quoteDetail.attachments[0].size}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <button className="text-green-700 text-sm font-medium hover:underline">
-                    Preview
-                  </button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-gray-600"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
+            {/* Attachments */}
+            {quote.attachments.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-3">
+                  Attachments
+                </h3>
+                <div className="space-y-2">
+                  {quote.attachments.map((url, i) => {
+                    const fileName = url.split("/").pop() ?? `File ${i + 1}`;
+                    return (
+                      <div
+                        key={i}
+                        className="border border-gray-200 rounded-lg p-4 flex items-center justify-between bg-white max-w-md"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {fileName}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-green-700 text-sm font-medium hover:underline"
+                          >
+                            Preview
+                          </a>
+                          <a
+                            href={url}
+                            download
+                            className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Actions Section (Left Side) */}
-            {(isAccepted || isNewRequest) && (
+            {/* Actions Section */}
+            {(isNew || isAccepted) && (
               <div className="pt-4 flex items-center gap-3">
-                <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[120px] rounded-lg">
-                  Accept offer
-                </Button>
                 <Button
-                  variant="ghost"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
-                  onClick={() => setIsDeclineModalOpen(true)}
+                  className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[120px] rounded-lg"
+                  onClick={handleAccept}
+                  disabled={isActionLoading || isAccepted}
                 >
-                  Decline
+                  {isActionLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isAccepted ? (
+                    "Accepted"
+                  ) : (
+                    "Accept offer"
+                  )}
                 </Button>
+                {isNew && (
+                  <Button
+                    variant="ghost"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
+                    onClick={() => setIsDeclineModalOpen(true)}
+                    disabled={isActionLoading}
+                  >
+                    Decline
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
@@ -249,8 +354,8 @@ export default function QuoteDetailPage({
                 </Button>
               </div>
             )}
-            {/* If Pending, maybe cancel option? */}
-            {status === "Pending" && (
+
+            {isPending && (
               <div className="pt-4 flex items-center gap-3">
                 <Button className="bg-gray-900 hover:bg-gray-800 text-white font-medium min-w-[120px] rounded-lg">
                   Cancel Quote
@@ -269,14 +374,14 @@ export default function QuoteDetailPage({
 
         {/* Right Column: Dynamic Content */}
         <div className="xl:col-span-1">
-          {isNewRequest && (
+          {isNew && (
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
               <h3 className="font-bold text-gray-900 mb-1">Send Your Offer</h3>
               <p className="text-xs text-gray-500 mb-6">
                 Customize your proposal for this request.
               </p>
 
-              <form className="space-y-5">
+              <form className="space-y-5" onSubmit={handleSendOffer}>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
                     Project title
@@ -284,6 +389,9 @@ export default function QuoteDetailPage({
                   <Input
                     placeholder='Example: "Standard Interior Package"'
                     className="bg-white"
+                    value={offerTitle}
+                    onChange={(e) => setOfferTitle(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -291,52 +399,39 @@ export default function QuoteDetailPage({
                   <label className="text-xs font-medium text-gray-700">
                     Delivery time
                   </label>
-                  <Select>
+                  <Select
+                    value={offerDelivery}
+                    onValueChange={setOfferDelivery}
+                  >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="Delivery time" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1-3">1-3 Days</SelectItem>
-                      <SelectItem value="3-5">3-5 Days</SelectItem>
-                      <SelectItem value="7+">7+ Days</SelectItem>
+                      <SelectItem value="1-3 Days">1-3 Days</SelectItem>
+                      <SelectItem value="3-5 Days">3-5 Days</SelectItem>
+                      <SelectItem value="1-2 Weeks">1-2 Weeks</SelectItem>
+                      <SelectItem value="1 Month+">1 Month+</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    Attach files
-                  </label>
-                  <div className="border border-dashed border-gray-300 rounded-lg bg-white p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
-                    <Paperclip className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-500">
-                      Click to attach
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-gray-700">
-                    Budget
+                    Budget (GHS)
                   </label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 border-r border-gray-200 pr-2 h-full py-2">
-                      {/* Flag placeholder */}
-                      <div className="w-4 h-4 rounded-full bg-red-500 border border-gray-200 shrink-0 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1/2 bg-red-600"></div>
-                        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-yellow-400"></div>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-green-600 star-shape"></div>
-                      </div>
                       <span className="text-xs text-gray-600 font-medium">
                         GHS
                       </span>
-                      <ChevronRight className="w-3 h-3 text-gray-400 rotate-90" />
                     </div>
                     <Input
                       type="number"
                       placeholder="0.00"
-                      className="pl-24 bg-white"
-                      defaultValue={2500.0}
+                      className="pl-16 bg-white"
+                      value={offerBudget}
+                      onChange={(e) => setOfferBudget(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
@@ -348,10 +443,19 @@ export default function QuoteDetailPage({
                   <Textarea
                     placeholder="Type here..."
                     className="bg-white min-h-[100px] resize-none"
+                    value={offerNote}
+                    onChange={(e) => setOfferNote(e.target.value)}
                   />
                 </div>
 
-                <Button className="w-full bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg mt-2">
+                <Button
+                  type="submit"
+                  disabled={isActionLoading}
+                  className="w-full bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg mt-2 flex items-center justify-center gap-2"
+                >
+                  {isActionLoading && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
                   Send offer
                 </Button>
               </form>
@@ -360,11 +464,9 @@ export default function QuoteDetailPage({
 
           {isDeclined && (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="font-bold text-gray-900 mb-4">
-                Message from client
-              </h3>
+              <h3 className="font-bold text-gray-900 mb-4">Decline reason</h3>
               <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-                Budget too high
+                {quote.declineReason || "No reason provided."}
               </div>
             </div>
           )}
@@ -382,15 +484,10 @@ export default function QuoteDetailPage({
               </div>
             </div>
           )}
-
-          {/* Accepted State Right Panel - Image 3 shows EMPTY right panel, 
-              but typically we might show the accepted offer details. 
-              Leaving empty to match screenshot layout implies left column takes width or is just blank. 
-              The layout handles it (Grid col span 1 is just empty). 
-          */}
         </div>
       </div>
 
+      {/* Decline Modal */}
       <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
         <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
@@ -403,7 +500,6 @@ export default function QuoteDetailPage({
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            {/* Radio Options */}
             {[
               "Too busy at the moment",
               "Outside my service area",
@@ -420,7 +516,7 @@ export default function QuoteDetailPage({
                     "w-4 h-4 rounded-full border flex items-center justify-center transition-colors",
                     declineReason === reason
                       ? "border-green-600"
-                      : "border-gray-300 group-hover:border-gray-400"
+                      : "border-gray-300 group-hover:border-gray-400",
                   )}
                 >
                   {declineReason === reason && (
@@ -456,11 +552,17 @@ export default function QuoteDetailPage({
               variant="outline"
               className="flex-1"
               onClick={() => setIsDeclineModalOpen(false)}
+              disabled={isActionLoading}
             >
               Cancel
             </Button>
-            <Button className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white">
-              Submit & Decline
+            <Button
+              className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white flex items-center justify-center gap-2"
+              onClick={handleDecline}
+              disabled={isActionLoading}
+            >
+              {isActionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Submit &amp; Decline
             </Button>
           </DialogFooter>
         </DialogContent>

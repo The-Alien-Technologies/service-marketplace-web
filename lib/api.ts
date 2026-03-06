@@ -9,6 +9,7 @@ import {
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
 import { Order, Review, ReviewSummary } from "@/types/order";
 import { ProviderAnalytics, AdminAnalytics } from "@/types/analytics";
+import { QuoteRequest } from "@/types/quote";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -1112,6 +1113,100 @@ class ApiService {
   async getAdminAnalytics(): Promise<AdminAnalytics> {
     const response = await this.request<AdminAnalytics>("/analytics/admin");
     return response.data;
+  }
+
+  // ─── Quotes ──────────────────────────────────────────────────────────────────
+
+  async createQuote(
+    data: {
+      providerId: string;
+      serviceId?: string;
+      projectTitle: string;
+      description: string;
+      deliveryTime: string;
+      budget: number;
+      currency?: string;
+    },
+    attachments: File[] = [],
+  ): Promise<QuoteRequest> {
+    const formData = new FormData();
+    formData.append("providerId", data.providerId);
+    if (data.serviceId) formData.append("serviceId", data.serviceId);
+    formData.append("projectTitle", data.projectTitle);
+    formData.append("description", data.description);
+    formData.append("deliveryTime", data.deliveryTime);
+    formData.append("budget", String(data.budget));
+    formData.append("currency", data.currency ?? "GHS");
+    attachments.forEach((f) => formData.append("attachments", f));
+
+    const token = localStorage.getItem("auth_token");
+    const res = await fetch(`${API_BASE_URL}/quotes`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `HTTP error! status: ${res.status}`);
+    }
+    const json = await res.json();
+    return json.data.quote;
+  }
+
+  async getProviderQuotes(status?: string): Promise<QuoteRequest[]> {
+    const query = status ? `?status=${status}` : "";
+    const response = await this.request<{ quotes: QuoteRequest[] }>(
+      `/quotes/provider${query}`,
+    );
+    return response.data.quotes;
+  }
+
+  async getClientQuotes(): Promise<QuoteRequest[]> {
+    const response = await this.request<{ quotes: QuoteRequest[] }>(
+      "/quotes/client",
+    );
+    return response.data.quotes;
+  }
+
+  async getQuote(id: string): Promise<QuoteRequest> {
+    const response = await this.request<{ quote: QuoteRequest }>(
+      `/quotes/${id}`,
+    );
+    return response.data.quote;
+  }
+
+  async updateQuoteStatus(
+    id: string,
+    status: "ACCEPTED" | "DECLINED" | "EXPIRED",
+    declineReason?: string,
+  ): Promise<QuoteRequest> {
+    const response = await this.request<{ quote: QuoteRequest }>(
+      `/quotes/${id}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status, declineReason }),
+      },
+    );
+    return response.data.quote;
+  }
+
+  async sendQuoteOffer(
+    id: string,
+    data: {
+      projectTitle: string;
+      budget: number;
+      deliveryTime: string;
+      providerNote?: string;
+    },
+  ): Promise<QuoteRequest> {
+    const response = await this.request<{ quote: QuoteRequest }>(
+      `/quotes/${id}/offer`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    );
+    return response.data.quote;
   }
 }
 

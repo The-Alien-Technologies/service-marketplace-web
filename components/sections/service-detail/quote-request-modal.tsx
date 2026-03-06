@@ -1,59 +1,106 @@
 "use client";
 
-import { X, Paperclip, Trash2, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { X, Paperclip, Trash2, ChevronDown, Loader2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { apiService } from "@/lib/api";
+import { toast } from "react-toastify";
 
 interface QuoteRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
+  providerId?: string;
+  serviceId?: string;
 }
 
 interface AttachedFile {
   id: string;
   name: string;
   size: number;
+  file: File;
 }
 
-export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
+export function QuoteRequestModal({
+  isOpen,
+  onClose,
+  providerId,
+  serviceId,
+}: QuoteRequestModalProps) {
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
   const [currency, setCurrency] = useState("GHS");
   const [budget, setBudget] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleFileAttach = () => {
-    // Simulate file upload
-    const newFile: AttachedFile = {
-      id: Date.now().toString(),
-      name: "Design requirements.pdf",
-      size: 200,
-    };
-    setAttachedFiles([...attachedFiles, newFile]);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const mapped: AttachedFile[] = files.map((f) => ({
+      id: `${Date.now()}-${Math.random()}`,
+      name: f.name,
+      size: Math.round(f.size / 1024),
+      file: f,
+    }));
+    setAttachedFiles((prev) => [...prev, ...mapped]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleRemoveFile = (fileId: string) => {
-    setAttachedFiles(attachedFiles.filter((file) => file.id !== fileId));
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log({
-      projectTitle,
-      projectDescription,
-      deliveryTime,
-      currency,
-      budget,
-      attachedFiles,
-    });
-    onClose();
+    if (!providerId) {
+      toast.error("Provider information is missing.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await apiService.createQuote(
+        {
+          providerId,
+          serviceId,
+          projectTitle,
+          description: projectDescription,
+          deliveryTime,
+          budget: parseFloat(budget),
+          currency,
+        },
+        attachedFiles.map((f) => f.file),
+      );
+      toast.success("Quote request submitted successfully!");
+      // Reset
+      setProjectTitle("");
+      setProjectDescription("");
+      setDeliveryTime("");
+      setBudget("");
+      setAttachedFiles([]);
+      onClose();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to submit quote request.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        accept="image/*,application/pdf,.doc,.docx"
+        onChange={handleFileSelect}
+      />
+
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
 
@@ -94,7 +141,11 @@ export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
 
             {/* Form Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form
+                id="quote-form"
+                onSubmit={handleSubmit}
+                className="space-y-5"
+              >
                 {/* Project Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -131,16 +182,14 @@ export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
                     Attach files <Paperclip className="w-4 h-4 inline ml-1" />
                   </label>
 
-                  {/* File Upload Button */}
                   <button
                     type="button"
-                    onClick={handleFileAttach}
+                    onClick={() => fileInputRef.current?.click()}
                     className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-brand-900 hover:text-brand-900 dark:hover:border-brand-500 dark:hover:text-brand-500 transition-colors"
                   >
                     Click to upload or drag and drop
                   </button>
 
-                  {/* Attached Files List */}
                   {attachedFiles.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {attachedFiles.map((file) => (
@@ -193,11 +242,11 @@ export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
                       required
                     >
                       <option value="">Delivery time</option>
-                      <option value="1-2">1-2 days</option>
-                      <option value="3-5">3-5 days</option>
-                      <option value="1-2weeks">1-2 weeks</option>
-                      <option value="2-4weeks">2-4 weeks</option>
-                      <option value="1month+">1 month+</option>
+                      <option value="1-3 Days">1-3 Days</option>
+                      <option value="3-5 Days">3-5 Days</option>
+                      <option value="1-2 Weeks">1-2 Weeks</option>
+                      <option value="2-4 Weeks">2-4 Weeks</option>
+                      <option value="1 Month+">1 Month+</option>
                     </select>
                     <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
@@ -230,6 +279,7 @@ export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
                       value={budget}
                       onChange={(e) => setBudget(e.target.value)}
                       placeholder="5000.00"
+                      min={0}
                       className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-900 focus:border-transparent"
                       required
                     />
@@ -244,15 +294,18 @@ export function QuoteRequestModal({ isOpen, onClose }: QuoteRequestModalProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  onClick={handleSubmit}
-                  className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
+                  form="quote-form"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   Submit Request
                 </button>
               </div>

@@ -248,6 +248,8 @@ export function PricingPlans({
       <QuoteRequestModal
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}
+        providerId={service.providerId}
+        serviceId={serviceId}
       />
 
       {/* Checkout Modal */}
