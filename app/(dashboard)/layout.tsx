@@ -18,10 +18,7 @@ export default function DashboardLayout({
     // Wait for hydration before checking auth
     if (!hasHydrated) return;
 
-    if (
-      !isAuthenticated ||
-      (user?.role !== "ADMIN" && user?.role !== "SERVICE_PROVIDER")
-    ) {
+    if (!isAuthenticated) {
       router.push("/");
     }
   }, [hasHydrated, isAuthenticated, user, router]);
@@ -35,10 +32,7 @@ export default function DashboardLayout({
     );
   }
 
-  if (
-    !isAuthenticated ||
-    (user?.role !== "ADMIN" && user?.role !== "SERVICE_PROVIDER")
-  ) {
+  if (!isAuthenticated) {
     return null;
   }
 

@@ -1,35 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { CheckoutHeader } from "@/components/sections/checkout/checkout-header";
-import { ChevronDown, Lock } from "lucide-react";
+import { ChevronDown, Lock, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useOrderStore, type PendingOrder } from "@/store/order-store";
+import { apiService } from "@/lib/api";
+import { toast } from "react-toastify";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  // TODO: Get providerName, serviceId, and order data from URL params or state
-  // For now using placeholder values
-  const providerName = "Robert sam";
-  const serviceId = undefined;
+  const { pendingOrder, clearPendingOrder } = useOrderStore();
+  const [orderData, setOrderData] = useState<PendingOrder | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [couponCode, setCouponCode] = useState("");
+  const [isCouponApplied, setIsCouponApplied] = useState(false);
 
-  // Mock order data - should come from checkout modal or URL params
-  const [orderData] = useState({
-    planName: "Basic plan",
-    planPrice: 250,
-    addOnsTotal: 150,
-    couponCode: "AVAD50",
-    couponDiscount: 50,
-    orderId: "5764892",
-  });
+  useEffect(() => {
+    // Load order from Zustand store
+    if (!pendingOrder) {
+      // No order found, redirect back
+      router.push("/");
+      return;
+    }
 
-  const [couponCode, setCouponCode] = useState(orderData.couponCode);
-  const [isCouponApplied, setIsCouponApplied] = useState(true);
+    setOrderData(pendingOrder);
+    setIsLoading(false);
+  }, [pendingOrder, router]);
 
-  const subtotal = orderData.planPrice + orderData.addOnsTotal;
-  const total = subtotal - (isCouponApplied ? orderData.couponDiscount : 0);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (!orderData) {
+    return null;
+  }
+
+  const providerName = "Service Provider"; // TODO: Get from orderData
+  const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
+  const couponDiscount = isCouponApplied ? 50 : 0; // TODO: Implement real coupon logic
+  const total = orderData.subtotal - couponDiscount;
 
   const handleApplyCoupon = () => {
     if (couponCode.trim()) {
@@ -38,19 +54,56 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleContinueToPaystack = () => {
-    // TODO: Integrate with Paystack
-    console.log("Redirecting to Paystack...");
+  const handleContinueToPaystack = async () => {
+    if (!orderData) return;
+
+    try {
+      setIsLoading(true);
+
+      const createdOrder = await apiService.createOrder({
+        serviceId: orderData.serviceId,
+        planId: orderData.plan.id,
+        planTitle: orderData.plan.name,
+        planPrice: orderData.plan.price,
+        planInclusions: "Standard Plan Inclusions", // TODO: Get from orderData
+        addOns: orderData.addOns.map((addon) => ({
+          id: addon.id,
+          title: addon.name,
+          description: addon.description,
+          price: addon.price,
+        })),
+        subtotal: orderData.subtotal,
+        addOnsTotal: orderData.addOnsTotal,
+        couponDiscount: isCouponApplied ? couponDiscount : 0,
+        total: total,
+      });
+
+      toast.success("Order created successfully!");
+      clearPendingOrder();
+
+      // Redirect to Paystack or Order Success page
+      // For now, redirect to the order details page in dashboard
+      router.push(`/dashboard/orders/${createdOrder.id}`);
+    } catch (error) {
+      console.error("Failed to create order:", error);
+      toast.error("Failed to create order. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelOrder = () => {
+    clearPendingOrder();
     router.back();
   };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Header />
-      <CheckoutHeader providerName={providerName} serviceId={serviceId} />
+      <CheckoutHeader
+        providerName={providerName}
+        serviceId={orderData.serviceId}
+      />
 
       {/* Page Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -120,7 +173,7 @@ export default function CheckoutPage() {
                   Order summary
                 </h2>
                 <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-                  Order ID: #{orderData.orderId}
+                  Order ID: #{orderId}
                 </span>
               </div>
 
@@ -128,10 +181,10 @@ export default function CheckoutPage() {
                 {/* Subtotal */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Subtotal({orderData.planName})
+                    Subtotal({orderData.plan.name})
                   </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    GHS {orderData.planPrice.toFixed(2)}
+                    GHS {orderData.plan.price.toFixed(2)}
                   </span>
                 </div>
 
@@ -152,7 +205,7 @@ export default function CheckoutPage() {
                       Coupon discount
                     </span>
                     <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                      -GHS {orderData.couponDiscount.toFixed(2)}
+                      -GHS {couponDiscount.toFixed(2)}
                     </span>
                   </div>
                 )}

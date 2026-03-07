@@ -3,6 +3,7 @@
 import { X, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOrderStore } from "@/store/order-store";
 
 interface AddOn {
   id: string;
@@ -20,37 +21,47 @@ interface CheckoutModalProps {
     price: string;
     features: { text: string }[];
   };
+  service: {
+    id: string;
+    title: string;
+    providerId: string;
+    addons?: {
+      id: string;
+      title: string;
+      description?: string;
+      price: number | string;
+    }[];
+  };
+  serviceId: string;
 }
-
-const availableAddOns: AddOn[] = [
-  {
-    id: "site-visit",
-    name: "Site Visit & Consultation",
-    description: "On-location inspection before design begins",
-    price: 100,
-  },
-  {
-    id: "floor-plans",
-    name: "Detailed Floor Plans",
-    description: "2D CAD drawings with precise measurements",
-    price: 200,
-  },
-  {
-    id: "permit-docs",
-    name: "Permit Documentation",
-    description: "Preparation of drawings for municipal approval",
-    price: 150,
-  },
-];
 
 export function CheckoutModal({
   isOpen,
   onClose,
   selectedPlan,
+  service,
+  serviceId,
 }: CheckoutModalProps) {
   const router = useRouter();
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const [isAddOnsExpanded, setIsAddOnsExpanded] = useState(true);
+  const { setPendingOrder } = useOrderStore();
+
+  // Map service add-ons to component format
+  const availableAddOns: AddOn[] =
+    service?.addons?.map(
+      (addon: {
+        id: string;
+        title: string;
+        description?: string;
+        price: number | string;
+      }) => ({
+        id: addon.id,
+        name: addon.title,
+        description: addon.description || "",
+        price: Number(addon.price),
+      }),
+    ) || [];
 
   if (!isOpen) return null;
 
@@ -76,6 +87,36 @@ export function CheckoutModal({
   };
 
   const handleContinue = () => {
+    // Build complete order data
+    const selectedAddOnsData = Array.from(selectedAddOns).map((id) => {
+      const addOn = availableAddOns.find((a) => a.id === id);
+      return {
+        id: addOn!.id,
+        name: addOn!.name,
+        description: addOn!.description,
+        price: addOn!.price,
+      };
+    });
+
+    const orderData = {
+      serviceId,
+      service: {
+        id: service.id,
+        title: service.title,
+      },
+      plan: {
+        id: selectedPlan.id,
+        name: selectedPlan.name,
+        price: planPrice,
+      },
+      addOns: selectedAddOnsData,
+      addOnsTotal,
+      subtotal,
+    };
+
+    // Store in Zustand
+    setPendingOrder(orderData);
+
     // Navigate to payment page
     router.push("/checkout");
   };
@@ -267,7 +308,8 @@ export function CheckoutModal({
                 />
               </svg>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                You won't be charged until the freelancer accepts your order.
+                You won&apos;t be charged until the freelancer accepts your
+                order.
               </p>
             </div>
           </div>

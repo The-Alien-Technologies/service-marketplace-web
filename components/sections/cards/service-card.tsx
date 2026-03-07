@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
 export interface ServiceCardData {
   id: string;
@@ -20,6 +20,18 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, onClick }: ServiceCardProps) {
+  const [avatarError, setAvatarError] = useState(false);
+
+  // Get initials from provider name
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <Link
       href={`/services/${service.id}`}
@@ -37,23 +49,32 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
 
         {/* Provider Info Header Overlay */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-          <div className="flex items-center space-x-2.5 bg-gray-600/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <div className="relative">
-              <Image
-                src={service.providerAvatar}
-                alt={service.providerName}
-                width={24}
-                height={24}
-                className="rounded-full object-cover"
-              />
-              {service.isOnline && (
-                <div className="absolute -bottom-0.5 -right-0.5">
+          <div className="flex items-center space-x-2.5 bg-gray-600/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full px-3 py-1.5 min-h-[36px]">
+            <div className="relative w-6 h-6 flex-shrink-0 flex items-center justify-center">
+              {!avatarError ? (
+                <>
                   <Image
-                    src="/assets/icons/online_indicator.svg"
-                    alt="Online"
-                    width={10}
-                    height={10}
+                    src={service.providerAvatar}
+                    alt={service.providerName}
+                    width={24}
+                    height={24}
+                    className="rounded-full object-cover w-full h-full"
+                    onError={() => setAvatarError(true)}
                   />
+                  {service.isOnline && (
+                    <div className="absolute -bottom-0.5 -right-0.5">
+                      <Image
+                        src="/assets/icons/online_indicator.svg"
+                        alt="Online"
+                        width={10}
+                        height={10}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center text-white text-[10px] font-bold leading-none select-none">
+                  {getInitials(service.providerName)}
                 </div>
               )}
             </div>

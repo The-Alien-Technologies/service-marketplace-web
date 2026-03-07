@@ -1,25 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
-  User,
+  User as UserIcon,
   Phone,
   Mail,
   MapPin,
   Pencil,
   FileText,
-  CheckCircle2,
   CheckSquare,
-  Square,
   Circle,
-  Eye,
-  EyeOff,
   Lock,
   AlertCircle,
   Trash2,
   Globe,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,30 +28,37 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
+import { apiService } from "@/lib/api";
+import { User } from "@/types/auth";
+import { toast } from "react-toastify";
 
-// Inline Switch Component for simplicity
+// Inline Switch Component
 function Switch({
   checked,
   onCheckedChange,
+  disabled,
 }: {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onCheckedChange(!checked)}
+      onClick={() => !disabled && onCheckedChange(!checked)}
+      disabled={disabled}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-green-600" : "bg-gray-200"
+        checked ? "bg-green-600" : "bg-gray-200",
       )}
     >
       <span
         className={cn(
           "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
-          checked ? "translate-x-5" : "translate-x-0"
+          checked ? "translate-x-5" : "translate-x-0",
         )}
       />
     </button>
@@ -62,8 +66,24 @@ function Switch({
 }
 
 export default function ProfileSettingsPage() {
+  const { user: storedUser, setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState("general");
-  
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Edit States
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isEditingProfessional, setIsEditingProfessional] = useState(false);
+
+  // Form States (initialized from user)
+  const [personalForm, setPersonalForm] = useState({
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+  });
+  const [professionalForm, setProfessionalForm] = useState({
+    bio: "",
+  });
+
   // Password State
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -75,12 +95,110 @@ export default function ProfileSettingsPage() {
   });
 
   // Preferences State
-  const [inAppNotif, setInAppNotif] = useState(true);
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [smsNotif, setSmsNotif] = useState(false);
+  // We map frontend preferences to DTO fields
+  // DTO: notificationsEnabled, marketingNotifications, etc.
+
+  // Fetch full profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        const { user: fullUser } = await apiService.getProfile();
+        setUser(fullUser);
+
+        // Initialize forms
+        setPersonalForm({
+          firstName: fullUser.firstName || "",
+          lastName: fullUser.lastName || "",
+          phoneNumber: (fullUser as any).phoneNumber || "",
+        });
+        setProfessionalForm({
+          bio: (fullUser as any).bio || "",
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [setUser]);
+
+  // Derived Values
+  const primaryAddress =
+    storedUser?.addresses?.find((a) => a.isPrimary) ||
+    storedUser?.addresses?.[0];
+  const userInterests = storedUser?.interests || [];
+  const verificationDocs = storedUser?.verificationDocuments || [];
+
+  // Handlers
+  const handleUpdateProfile = async (
+    data: any,
+    section: "personal" | "professional",
+  ) => {
+    try {
+      setIsLoading(true);
+      const { user: updatedUser } = await apiService.updateUserProfile(data);
+      setUser(updatedUser);
+      toast.success("Profile updated successfully");
+      if (section === "personal") setIsEditingPersonal(false);
+      if (section === "professional") setIsEditingProfessional(false);
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePreferenceUpdate = async (
+    key: string,
+    value: boolean | string,
+  ) => {
+    // Optimistic update would be good, but for simplicity we just call API and existing state syncs via re-fetch or manual set
+    // Currently we don't have local state for prefs separate from user, so we assume optimistic update isn't critically needed for toggles if fast enough.
+    // But typically toggles need local state. Let's rely on user object updates if possible or manage local state.
+
+    const updateData = { [key]: value };
+
+    try {
+      const { user: updatedUser } =
+        await apiService.updateUserProfile(updateData);
+      setUser(updatedUser);
+      toast.success("Preference updated");
+    } catch (error) {
+      toast.error("Failed to update preference");
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (passwordForm.new !== passwordForm.confirm) return;
+
+    try {
+      setIsLoading(true);
+      await apiService.changePassword(passwordForm.old, passwordForm.new);
+      setPasswordForm({ old: "", new: "", confirm: "" });
+      toast.success("Password updated successfully");
+    } catch (error) {
+      toast.error((error as Error).message || "Failed to update password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const passwordsMatch =
     !passwordForm.confirm || passwordForm.new === passwordForm.confirm;
+
+  if (!storedUser && isLoading) {
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-green-600" />
+      </div>
+    );
+  }
+
+  if (!storedUser)
+    return <div className="p-8">Please log in to view profile.</div>;
 
   return (
     <div className="space-y-8 pb-12 max-w-5xl">
@@ -107,7 +225,7 @@ export default function ProfileSettingsPage() {
               "px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap",
               activeTab === tab.id
                 ? "text-green-700 bg-green-50"
-                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50",
             )}
           >
             {tab.label}
@@ -120,13 +238,23 @@ export default function ProfileSettingsPage() {
         <>
           {/* Avatar Section */}
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-pink-200 overflow-hidden relative border-4 border-white shadow-sm">
-              <Image
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt="Profile"
-                fill
-                className="object-cover"
-              />
+            <div className="w-20 h-20 rounded-full bg-gray-200 overflow-hidden relative border-4 border-white shadow-sm">
+              {storedUser.avatar ? (
+                <Image
+                  src={storedUser.avatar}
+                  alt="Profile"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-green-100 text-green-700 font-bold text-xl">
+                  {(
+                    storedUser.firstName?.[0] ||
+                    storedUser.email?.[0] ||
+                    "U"
+                  ).toUpperCase()}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <Button
@@ -135,10 +263,12 @@ export default function ProfileSettingsPage() {
               >
                 Change picture
               </Button>
-              <span className="text-sm font-medium text-orange-500 flex items-center gap-1.5">
-                Pending{" "}
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              </span>
+              {!storedUser.isServiceProviderVerified && (
+                <span className="text-sm font-medium text-orange-500 flex items-center gap-1.5">
+                  Pending{" "}
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                </span>
+              )}
             </div>
           </div>
 
@@ -148,49 +278,140 @@ export default function ProfileSettingsPage() {
               <h3 className="text-base font-bold text-gray-900">
                 Personal Information
               </h3>
-              <button className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </button>
+              {!isEditingPersonal ? (
+                <button
+                  onClick={() => setIsEditingPersonal(true)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsEditingPersonal(false);
+                      // Reset form
+                      setPersonalForm({
+                        firstName: storedUser.firstName || "",
+                        lastName: storedUser.lastName || "",
+                        phoneNumber: (storedUser as any).phoneNumber || "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      handleUpdateProfile(personalForm, "personal")
+                    }
+                    disabled={isLoading}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-gray-400" />
-                <span className="text-sm text-gray-900 font-medium">
-                  Robert Sam
-                </span>
+                <UserIcon className="w-5 h-5 text-gray-400" />
+                {isEditingPersonal ? (
+                  <div className="flex gap-2 w-full max-w-sm">
+                    <Input
+                      value={personalForm.firstName}
+                      onChange={(e) =>
+                        setPersonalForm({
+                          ...personalForm,
+                          firstName: e.target.value,
+                        })
+                      }
+                      placeholder="First Name"
+                    />
+                    <Input
+                      value={personalForm.lastName}
+                      onChange={(e) =>
+                        setPersonalForm({
+                          ...personalForm,
+                          lastName: e.target.value,
+                        })
+                      }
+                      placeholder="Last Name"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-900 font-medium">
+                    {storedUser.firstName} {storedUser.lastName}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center justify-between max-w-md">
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-900 font-medium">
-                    +233536845216
-                  </span>
+                <div className="flex items-center gap-3 w-full">
+                  <Phone className="w-5 h-5 text-gray-400 shrink-0" />
+                  {isEditingPersonal ? (
+                    <Input
+                      value={personalForm.phoneNumber}
+                      onChange={(e) =>
+                        setPersonalForm({
+                          ...personalForm,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                      placeholder="Phone Number"
+                      className="max-w-xs"
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-900 font-medium">
+                      {(storedUser as any).phoneNumber ||
+                        "No phone number added"}
+                    </span>
+                  )}
                 </div>
-                <span className="text-xs font-medium text-green-600">
-                  Verified
-                </span>
+                {!isEditingPersonal && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      storedUser.phoneVerified
+                        ? "text-green-600"
+                        : "text-amber-600",
+                    )}
+                  >
+                    {storedUser.phoneVerified ? "Verified" : "Not verified"}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center justify-between max-w-md">
                 <div className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-900 font-medium">
-                    robert.sam@example.com
+                    {storedUser.email}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-green-600">
-                  Not verified
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    storedUser.emailVerified
+                      ? "text-green-600"
+                      : "text-amber-600",
+                  )}
+                >
+                  {storedUser.emailVerified ? "Verified" : "Not verified"}
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-gray-400" />
                 <span className="text-sm text-gray-900 font-medium">
-                  Takoradi, Ama Akroma RD
+                  {primaryAddress
+                    ? primaryAddress.formattedAddress
+                    : "No address added"}
                 </span>
+                {/* Editing address is usually complex, redirect or separate modal might be better. Keeping read-only for now or add "Manage Addresses" link later */}
               </div>
             </div>
           </div>
@@ -201,10 +422,39 @@ export default function ProfileSettingsPage() {
               <h3 className="text-base font-bold text-gray-900">
                 Professional Information
               </h3>
-              <button className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </button>
+              {!isEditingProfessional ? (
+                <button
+                  onClick={() => setIsEditingProfessional(true)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsEditingProfessional(false);
+                      setProfessionalForm({
+                        bio: (storedUser as any).bio || "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      handleUpdateProfile(professionalForm, "professional")
+                    }
+                    disabled={isLoading}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Short Bio */}
@@ -212,14 +462,23 @@ export default function ProfileSettingsPage() {
               <label className="text-xs font-bold text-gray-900">
                 Short Bio
               </label>
-              <div className="border border-gray-200 rounded-lg p-4 text-sm text-gray-600 leading-relaxed bg-white">
-                As a skilled artisan, I specialize in creating unique
-                handcrafted pieces that blend traditional techniques with modern
-                design. My passion for craftsmanship drives me to explore new
-                materials and methods, ensuring each creation tells a story.
-                With years of experience, I take pride in delivering quality
-                work that resonates with my clients&apos; visions.
-              </div>
+              {isEditingProfessional ? (
+                <textarea
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={professionalForm.bio}
+                  onChange={(e) =>
+                    setProfessionalForm({
+                      ...professionalForm,
+                      bio: e.target.value,
+                    })
+                  }
+                  placeholder="Tell us about yourself..."
+                />
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-4 text-sm text-gray-600 leading-relaxed bg-white">
+                  {(storedUser as any).bio || "No bio added yet."}
+                </div>
+              )}
             </div>
 
             {/* Skills & Services */}
@@ -228,22 +487,23 @@ export default function ProfileSettingsPage() {
                 Skills & Services
               </label>
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded border border-gray-300 bg-green-50 flex items-center justify-center text-green-600">
-                    <CheckSquare className="w-3.5 h-3.5" />
+                {storedUser.interests && storedUser.interests.length > 0 ? (
+                  storedUser.interests.map((interest) => (
+                    <div key={interest.id} className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded border border-gray-300 bg-green-50 flex items-center justify-center text-green-600">
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900">
+                        {interest.category?.name || "Unknown Skill"}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    No skills listed
                   </div>
-                  <span className="text-sm font-bold text-gray-900">
-                    Architect & Interior Designer
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded border border-gray-300 bg-green-50 flex items-center justify-center text-green-600">
-                    <CheckSquare className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">
-                    Home Decor
-                  </span>
-                </div>
+                )}
+                {/* Adding skills involves a selection UI, keeping read-only for this iteration */}
               </div>
             </div>
 
@@ -253,22 +513,37 @@ export default function ProfileSettingsPage() {
                 Experience Level
               </label>
               <div className="bg-gray-50/50 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2 opacity-50">
-                  <Circle className="w-4 h-4 text-gray-300" />
-                  <span className="text-sm text-gray-500">Expert</span>
-                </div>
-                <div className="flex items-center gap-2 opacity-50">
-                  <Circle className="w-4 h-4 text-gray-300" />
-                  <span className="text-sm text-gray-500">Intermediate</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-green-600 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-green-600" />
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">
-                    Beginner
-                  </span>
-                </div>
+                {["BEGINNER", "INTERMEDIATE", "EXPERT"].map((level) => {
+                  const isSelected =
+                    storedUser.serviceProviderExperienceLevel === level;
+                  return (
+                    <div
+                      key={level}
+                      className={cn(
+                        "flex items-center gap-2",
+                        !isSelected && "opacity-50",
+                      )}
+                    >
+                      {isSelected ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-green-600 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-green-600" />
+                        </div>
+                      ) : (
+                        <Circle className="w-4 h-4 text-gray-300" />
+                      )}
+                      <span
+                        className={cn(
+                          "text-sm",
+                          isSelected
+                            ? "font-bold text-gray-900"
+                            : "text-gray-500",
+                        )}
+                      >
+                        {level.charAt(0) + level.slice(1).toLowerCase()}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -278,38 +553,45 @@ export default function ProfileSettingsPage() {
                 <h3 className="text-xs font-bold text-gray-900">
                   Verification & Trust
                 </h3>
-                <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900">
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </button>
               </div>
 
               <div className="space-y-2">
-                {[
-                  { status: "Not verified", color: "text-gray-400" },
-                  { status: "Not verified", color: "text-gray-400" },
-                  { status: "Verified", color: "text-green-600" },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between bg-gray-50/50 p-3 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
-                        <FileText className="w-4 h-4" />
+                {verificationDocs.length > 0 ? (
+                  verificationDocs.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between bg-gray-50/50 p-3 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                            {doc.fileName || doc.originalName || "Document"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {Math.round((doc.fileSize || 0) / 1024)} KB
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Tech design certificate.pdf
-                        </p>
-                        <p className="text-xs text-gray-500">200 KB</p>
-                      </div>
+                      <span
+                        className={cn(
+                          "text-xs font-medium",
+                          doc.status === "APPROVED"
+                            ? "text-green-600"
+                            : "text-gray-400",
+                        )}
+                      >
+                        {doc.status}
+                      </span>
                     </div>
-                    <span className={cn("text-xs font-medium", item.color)}>
-                      {item.status}
-                    </span>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    No verification documents uploaded
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -381,7 +663,8 @@ export default function ProfileSettingsPage() {
                   placeholder="**********"
                   className={cn(
                     "pl-10 pr-12 bg-white",
-                    !passwordsMatch && "border-red-300 focus-visible:ring-red-500"
+                    !passwordsMatch &&
+                      "border-red-300 focus-visible:ring-red-500",
                   )}
                   value={passwordForm.confirm}
                   onChange={(e) =>
@@ -411,8 +694,17 @@ export default function ProfileSettingsPage() {
               )}
             </div>
 
-            <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg">
-              Update password
+            <Button
+              onClick={handlePasswordUpdate}
+              disabled={
+                isLoading ||
+                !passwordsMatch ||
+                !passwordForm.new ||
+                !passwordForm.old
+              }
+              className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg"
+            >
+              {isLoading ? "Updating..." : "Update password"}
             </Button>
           </div>
 
@@ -450,7 +742,12 @@ export default function ProfileSettingsPage() {
               <h3 className="text-sm font-medium text-gray-700">
                 In-app Notifications
               </h3>
-              <Switch checked={inAppNotif} onCheckedChange={setInAppNotif} />
+              <Switch
+                checked={storedUser?.notificationsEnabled ?? true}
+                onCheckedChange={(val) =>
+                  handlePreferenceUpdate("notificationsEnabled", val)
+                }
+              />
             </div>
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
@@ -476,7 +773,12 @@ export default function ProfileSettingsPage() {
               <h3 className="text-sm font-medium text-gray-700">
                 Email Notifications
               </h3>
-              <Switch checked={emailNotif} onCheckedChange={setEmailNotif} />
+              <Switch
+                checked={storedUser?.emailNotificationsEnabled ?? true}
+                onCheckedChange={(val) =>
+                  handlePreferenceUpdate("emailNotificationsEnabled", val)
+                }
+              />
             </div>
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
@@ -502,7 +804,12 @@ export default function ProfileSettingsPage() {
               <h3 className="text-sm font-medium text-gray-700">
                 SMS Notifications
               </h3>
-              <Switch checked={smsNotif} onCheckedChange={setSmsNotif} />
+              <Switch
+                checked={storedUser?.smsNotificationsEnabled ?? false}
+                onCheckedChange={(val) =>
+                  handlePreferenceUpdate("smsNotificationsEnabled", val)
+                }
+              />
             </div>
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
@@ -525,7 +832,12 @@ export default function ProfileSettingsPage() {
             <h3 className="text-sm font-medium text-gray-700">
               Language Preference
             </h3>
-            <Select defaultValue="en-gb">
+            <Select
+              defaultValue={storedUser?.preferredLanguage || "en-gb"}
+              onValueChange={(val) =>
+                handlePreferenceUpdate("preferredLanguage", val)
+              }
+            >
               <SelectTrigger className="bg-white">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-gray-500" />

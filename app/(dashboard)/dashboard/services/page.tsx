@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
@@ -106,7 +107,7 @@ export default function ServicesPage() {
               </div>
             );
           },
-        }) as any
+        }) as any,
       );
     }
 
@@ -124,7 +125,7 @@ export default function ServicesPage() {
               GHS {info.getValue().toFixed(2)}
             </span>
           ),
-        }
+        },
       ),
       columnHelper.display({
         id: "orders",
@@ -139,8 +140,8 @@ export default function ServicesPage() {
             status === "PUBLISHED"
               ? "bg-green-50 text-green-700 border-green-200"
               : status === "DRAFT"
-              ? "bg-gray-100 text-gray-700 border-gray-200"
-              : "bg-red-50 text-red-700 border-red-200";
+                ? "bg-gray-100 text-gray-700 border-gray-200"
+                : "bg-red-50 text-red-700 border-red-200";
 
           const label = status
             ? status.charAt(0) + status.slice(1).toLowerCase()
@@ -157,25 +158,10 @@ export default function ServicesPage() {
       }),
       columnHelper.display({
         id: "actions",
-        cell: () => (
-          <div className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="w-4 h-4 text-gray-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit Service</DropdownMenuItem>
-                <DropdownMenuItem>View Details</DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        cell: (info) => (
+          <ActionsCell service={info.row.original} onDelete={handleDelete} />
         ),
-      })
+      }),
     );
     return cols;
   }, [isAdmin]);
@@ -203,6 +189,17 @@ export default function ServicesPage() {
       toast.error("Failed to load services");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiService.deleteService(id);
+      toast.success("Service deleted successfully");
+      fetchServices(); // Refresh list
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+      toast.error("Failed to delete service");
     }
   };
 
@@ -275,7 +272,7 @@ export default function ServicesPage() {
                       <th key={header.id} className="px-6 py-4 font-medium">
                         {flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                       </th>
                     ))}
@@ -303,7 +300,7 @@ export default function ServicesPage() {
                         <td key={cell.id} className="px-6 py-4">
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </td>
                       ))}
@@ -323,7 +320,7 @@ export default function ServicesPage() {
                 to{" "}
                 {Math.min(
                   (pagination.pageIndex + 1) * pagination.pageSize,
-                  total
+                  total,
                 )}{" "}
                 of {total} results
               </span>
@@ -352,3 +349,87 @@ export default function ServicesPage() {
     </div>
   );
 }
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const ActionsCell = ({
+  service,
+  onDelete,
+}: {
+  service: Service;
+  onDelete: (id: string) => void;
+}) => {
+  const router = useRouter();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  return (
+    <>
+      <div className="text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="w-4 h-4 text-gray-500" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => router.push(`/dashboard/services/${service.id}`)}
+            >
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                router.push(`/dashboard/services/${service.id}/edit`)
+              }
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Service</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this service? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                onDelete(service.id);
+                setShowDeleteDialog(false);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};

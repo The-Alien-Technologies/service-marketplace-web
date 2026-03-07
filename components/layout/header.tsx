@@ -169,13 +169,16 @@ export function Header() {
                     </>
                   ) : (
                     <>
-                      <DropdownMenuItem>
-                        <span>My Profile</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push("/orders")}>
+                      <DropdownMenuItem
+                        onClick={() => router.push("/dashboard/orders")}
+                      >
                         <span>My Orders</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push("/dashboard/profile?tab=general")
+                        }
+                      >
                         <span>Settings</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={signOut}>

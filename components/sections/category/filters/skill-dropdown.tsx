@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Skill {
   id: string;
@@ -61,7 +61,7 @@ export function SkillDropdown({
   const [searchQuery, setSearchQuery] = useState("");
   const [tempSelectedSkills, setTempSelectedSkills] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(["Home & Maintenance", "Beauty & Wellness"])
+    new Set(["Home & Maintenance", "Beauty & Wellness"]),
   );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +99,7 @@ export function SkillDropdown({
     setTempSelectedSkills((prev) =>
       prev.includes(skillId)
         ? prev.filter((id) => id !== skillId)
-        : [...prev, skillId]
+        : [...prev, skillId],
     );
   };
 
@@ -128,7 +128,7 @@ export function SkillDropdown({
     .map((category) => ({
       ...category,
       skills: category.skills.filter((skill) =>
-        skill.label.toLowerCase().includes(searchQuery.toLowerCase())
+        skill.label.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     }))
     .filter((category) => category.skills.length > 0);
