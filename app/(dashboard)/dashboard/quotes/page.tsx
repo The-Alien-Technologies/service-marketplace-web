@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { QuoteRequest, QuoteStatus } from "@/types/quote";
+import { useAuthStore } from "@/store/auth-store";
+import { useRouter } from "next/navigation";
 
 // --- Column Definitions ---
 
@@ -151,11 +153,20 @@ const tabs: { label: string; value: string | null }[] = [
 ];
 
 export default function QuoteRequestsPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Guard: only providers can access this page
+  useEffect(() => {
+    if (user && user.role !== "SERVICE_PROVIDER") {
+      router.replace("/dashboard/my-quotes");
+    }
+  }, [user, router]);
 
   const fetchQuotes = useCallback(async () => {
     setIsLoading(true);

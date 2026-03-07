@@ -25,6 +25,7 @@ import {
   Mail,
   ArrowRight,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
 import { toast } from "react-toastify";
 import { Order } from "@/types/order";
+import { ChatBox } from "@/components/sections/service-detail/chat-box";
+import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
 
 // --- Types ---
 
@@ -607,6 +610,15 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     Record<string, string | null>
   >({});
   const router = useRouter();
+  const [chatTarget, setChatTarget] = useState<{
+    id: string;
+    name: string;
+    avatar: string;
+  } | null>(null);
+  const [disputeTarget, setDisputeTarget] = useState<{
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -719,7 +731,9 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
             const statusStyles = getStatusStyles(order.status);
             // Determine who to show: if I am provider, show client. If I am client, show provider.
             const otherParty =
-              role === "SERVICE_PROVIDER" ? order.client : order.provider;
+              role === "SERVICE_PROVIDER"
+                ? order.client
+                : (order.provider ?? order.service?.provider);
 
             return (
               <div key={order.id} className="p-6 space-y-6">
@@ -823,6 +837,24 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                       </Link>
                     )}
 
+                    {/* Raise Dispute — users only, completed orders */}
+                    {order.status === "COMPLETED" &&
+                      role !== "SERVICE_PROVIDER" && (
+                        <Button
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50 gap-2 font-medium rounded-lg"
+                          onClick={() =>
+                            setDisputeTarget({
+                              orderId: order.id,
+                              orderNumber: order.orderNumber,
+                            })
+                          }
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          Raise Dispute
+                        </Button>
+                      )}
+
                     {/* Decline/Cancel Logic */}
                     {(order.status === "AWAITING" ||
                       order.status === "PENDING") && (
@@ -845,6 +877,16 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                     <Button
                       variant="outline"
                       className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
+                      onClick={() => {
+                        if (!otherParty) return;
+                        setChatTarget({
+                          id: otherParty.id,
+                          name:
+                            otherParty.displayName ||
+                            `${otherParty.firstName} ${otherParty.lastName}`,
+                          avatar: otherParty.avatar || "",
+                        });
+                      }}
                     >
                       <Mail className="w-4 h-4" />
                       {role === "SERVICE_PROVIDER"
@@ -872,6 +914,26 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
           </div>
         )}
       </div>
+
+      {/* Chat Box */}
+      {chatTarget && (
+        <ChatBox
+          isOpen={!!chatTarget}
+          onClose={() => setChatTarget(null)}
+          providerId={chatTarget.id}
+          providerName={chatTarget.name}
+          providerAvatar={chatTarget.avatar}
+        />
+      )}
+
+      {disputeTarget && (
+        <RaiseDisputeModal
+          orderId={disputeTarget.orderId}
+          orderNumber={disputeTarget.orderNumber}
+          isOpen={!!disputeTarget}
+          onClose={() => setDisputeTarget(null)}
+        />
+      )}
     </div>
   );
 }

@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { QuoteRequest, QuoteStatus } from "@/types/quote";
 import { toast } from "react-toastify";
+import { ChatBox } from "@/components/sections/service-detail/chat-box";
+import { useChatStore } from "@/store/chat-store";
 
 // --- Components ---
 
@@ -84,6 +86,8 @@ export default function QuoteDetailPage({
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("Too busy at the moment");
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const { startCustomConversation, setActiveConversation } = useChatStore();
 
   // Offer form state
   const [offerTitle, setOfferTitle] = useState("");
@@ -157,6 +161,17 @@ export default function QuoteDetailPage({
     } finally {
       setIsActionLoading(false);
     }
+  };
+
+  const handleMessageClient = async () => {
+    if (!quote) return;
+    try {
+      const conv = await startCustomConversation(quote.client.id);
+      if (conv) setActiveConversation(conv);
+    } catch {
+      // conversation may already exist; open anyway
+    }
+    setIsChatOpen(true);
   };
 
   if (isLoading) {
@@ -348,6 +363,7 @@ export default function QuoteDetailPage({
                 <Button
                   variant="outline"
                   className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
+                  onClick={handleMessageClient}
                 >
                   <Mail className="w-4 h-4" />
                   Message client
@@ -567,6 +583,16 @@ export default function QuoteDetailPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {quote && (
+        <ChatBox
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          providerId={quote.client.id}
+          providerName={`${quote.client.firstName} ${quote.client.lastName}`}
+          providerAvatar={quote.client.avatar ?? ""}
+        />
+      )}
     </div>
   );
 }

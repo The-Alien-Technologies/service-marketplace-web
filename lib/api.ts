@@ -8,7 +8,11 @@ import {
 } from "@/types/auth";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
 import { Order, Review, ReviewSummary } from "@/types/order";
-import { ProviderAnalytics, AdminAnalytics } from "@/types/analytics";
+import {
+  ProviderAnalytics,
+  AdminAnalytics,
+  UserAnalytics,
+} from "@/types/analytics";
 import { QuoteRequest } from "@/types/quote";
 
 const API_BASE_URL =
@@ -1110,6 +1114,11 @@ class ApiService {
     return response.data;
   }
 
+  async getUserAnalytics(): Promise<UserAnalytics> {
+    const response = await this.request<UserAnalytics>("/analytics/user");
+    return response.data;
+  }
+
   async getAdminAnalytics(): Promise<AdminAnalytics> {
     const response = await this.request<AdminAnalytics>("/analytics/admin");
     return response.data;
@@ -1190,6 +1199,21 @@ class ApiService {
     return response.data.quote;
   }
 
+  async respondToQuoteOffer(
+    id: string,
+    status: "ACCEPTED" | "DECLINED",
+    declineReason?: string,
+  ): Promise<QuoteRequest> {
+    const response = await this.request<{ quote: QuoteRequest }>(
+      `/quotes/${id}/respond`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status, declineReason }),
+      },
+    );
+    return response.data.quote;
+  }
+
   async sendQuoteOffer(
     id: string,
     data: {
@@ -1207,6 +1231,42 @@ class ApiService {
       },
     );
     return response.data.quote;
+  }
+
+  // ─── Disputes ────────────────────────────────────────────────────────────
+
+  async createDispute(data: {
+    orderId: string;
+    issueType: string;
+    description: string;
+  }) {
+    return this.request<any>("/disputes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAdminDisputes(status?: string) {
+    const qs = status ? `?status=${status}` : "";
+    const result = await this.request<any[]>(`/disputes${qs}`);
+    // backend returns array directly
+    return Array.isArray(result) ? result : ((result as any)?.disputes ?? []);
+  }
+
+  async getMyDisputes() {
+    const result = await this.request<any[]>("/disputes/my");
+    return Array.isArray(result) ? result : ((result as any)?.disputes ?? []);
+  }
+
+  async getDispute(id: string) {
+    return this.request<any>(`/disputes/${id}`);
+  }
+
+  async updateDisputeStatus(id: string, status: string, adminNote?: string) {
+    return this.request<any>(`/disputes/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, adminNote }),
+    });
   }
 }
 

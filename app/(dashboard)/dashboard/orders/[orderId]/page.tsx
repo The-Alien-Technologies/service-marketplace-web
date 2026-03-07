@@ -11,6 +11,7 @@ import { Order, OrderStatus } from "@/types/order";
 import { useState, useEffect, use } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { ChatBox } from "@/components/sections/service-detail/chat-box";
 
 // --- Helpers ---
 
@@ -81,6 +82,7 @@ function OrderDetailsView({
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -361,11 +363,11 @@ function OrderDetailsView({
                   </Link>
                 )}
 
-                {/* Message button — placeholder, left for future */}
+                {/* Message button */}
                 <Button
                   variant="outline"
                   className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
-                  disabled
+                  onClick={() => setIsChatOpen(true)}
                 >
                   <Mail className="w-4 h-4" />
                   {role === "SERVICE_PROVIDER"
@@ -501,6 +503,20 @@ function OrderDetailsView({
           </div>
         </div>
       </div>
+
+      {/* Chat Box */}
+      {otherParty && (
+        <ChatBox
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          providerId={otherParty.id}
+          providerName={
+            otherParty.displayName ||
+            `${otherParty.firstName} ${otherParty.lastName}`
+          }
+          providerAvatar={otherParty.avatar || ""}
+        />
+      )}
     </div>
   );
 }
