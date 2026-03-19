@@ -6,6 +6,7 @@ import {
   Category,
   VerificationDocument,
 } from "@/types/auth";
+import { BotChatResponse } from "@/types/bot";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
 import { Order, Review, ReviewSummary } from "@/types/order";
 import {
@@ -236,6 +237,42 @@ class ApiService {
     const result = await response.json();
     return result.data;
   }
+
+  //************************************** */
+  async chatBot(
+      prompt: string,
+      conversationId: string
+  ): Promise<BotChatResponse> {
+
+    const data = {
+      prompt,
+      conversationId
+    }
+
+    // const token = localStorage.getItem("auth_token");
+    const response = await fetch(`${API_BASE_URL}/support/bot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const {message} = await response.json();
+    console.log(message);
+    return { message };
+  }
+
+  //************************************** */
+
 
   async updateCategory(
     id: string,

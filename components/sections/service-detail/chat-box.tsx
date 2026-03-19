@@ -23,6 +23,7 @@ const quickMessages = [
   "Hi, are you available to take on a project right now?",
   "Can you share some recent projects you've worked on?",
   "What's the earliest you can start?",
+  "Are you available on Weekends"
 ];
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;

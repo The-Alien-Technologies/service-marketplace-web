@@ -21,8 +21,15 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/store/categories-store";
+import { useState } from "react";
+import { BotChatBox } from "../botChat/bot-chat-box";
 
-export function HomeHeader() {
+interface BotProps {
+  botName: string,
+  botAvatar: string
+}
+
+export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar} : BotProps) {
   const router = useRouter();
   const {
     isAuthenticated,
@@ -33,6 +40,14 @@ export function HomeHeader() {
     startProviderFlow,
   } = useAuthStore();
   const { topLevelCategories, isLoading: categoriesLoading } = useCategories();
+  const [isChatOpen, setIsChatOpen] = useState(false)
+
+  const handleChatOpen = () => {
+    setIsChatOpen(true);
+    console.log("ai bot btn click")
+  }
+
+
 
   const renderCategoriesDropdown = () => (
     <DropdownMenu>
@@ -66,6 +81,8 @@ export function HomeHeader() {
   );
 
   return (
+    <>
+    
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
@@ -85,13 +102,14 @@ export function HomeHeader() {
                     <span>Help & Support</span>
                     <ChevronDown className="w-4 h-4" />
                   </button>
+                  {/* <button onClick={handleChatOpen}>contact AI support</button> */}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem>
                     <span>Help Center</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <span>Contact Support</span>
+                    <span onClick={handleChatOpen}>Contact Support</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <span>Community</span>
@@ -277,5 +295,14 @@ export function HomeHeader() {
         </div>
       </div>
     </header>
+
+      {/* Chat Box */}
+      <BotChatBox
+      isOpen={isChatOpen}
+      onClose={() => setIsChatOpen(false)}
+      botName={botName}
+      botAvatar={botAvatar}
+      />
+    </>
   );
 }
