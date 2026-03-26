@@ -264,51 +264,53 @@ export default function ServicesPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="px-6 py-4 font-medium">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="px-6 py-12 text-center text-gray-500"
-                    >
-                      No services found. Create your first service to get
-                      started!
-                    </td>
-                  </tr>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-6 py-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left min-w-[600px]">
+                <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id} className="px-6 py-4 font-medium whitespace-nowrap">
                           {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                            header.column.columnDef.header,
+                            header.getContext(),
                           )}
-                        </td>
+                        </th>
                       ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {table.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={columns.length}
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
+                        No services found. Create your first service to get
+                        started!
+                      </td>
+                    </tr>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
