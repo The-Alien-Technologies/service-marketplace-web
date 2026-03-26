@@ -52,6 +52,12 @@ jobs:
           fi
           echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> $GITHUB_ENV
 
+      - name: Verify build args (debug)
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          echo "API URL domain: $(echo $NEXT_PUBLIC_API_URL | sed 's|https\?://||' | cut -d'/' -f1)"
+          echo "Auth URL domain: $(echo $NEXT_PUBLIC_BETTER_AUTH_URL | sed 's|https\?://||' | cut -d'/' -f1)"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 

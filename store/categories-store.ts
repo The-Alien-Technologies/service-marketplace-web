@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import { apiService } from "@/lib/api";
 import { Category } from "@/types/auth";
@@ -80,10 +81,12 @@ export const useCategoriesStore = create<CategoriesStore>()((set, get) => ({
 export function useCategories() {
   const store = useCategoriesStore();
 
-  // Auto-fetch on first access
-  if (!store.lastFetched && !store.isLoading) {
-    store.fetchCategories();
-  }
+  useEffect(() => {
+    if (!store.lastFetched && !store.isLoading) {
+      store.fetchCategories();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     categories: store.categories,
