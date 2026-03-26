@@ -267,11 +267,11 @@ export default function UsersPage() {
         header: "Date of Joining",
         cell: (info) => (
           <span className="text-gray-600">
-            {new Date(info.getValue()).toLocaleDateString("en-US", {
+            {info.getValue() ? new Date(info.getValue()!).toLocaleDateString("en-US", {
               day: "numeric",
               month: "short",
               year: "numeric",
-            })}
+            }) : "—"}
           </span>
         ),
       }),

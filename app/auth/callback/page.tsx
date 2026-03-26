@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 import { apiService } from '@/lib/api';
@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import { getOnboardingStatus } from '@/lib/field-based-onboarding';
 import { mapBackendStepToFrontendStep } from '@/types/auth';
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isProcessing, setIsProcessing] = useState(true);
@@ -172,4 +172,12 @@ export default function AuthCallback() {
   }
 
   return null;
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense>
+      <AuthCallbackInner />
+    </Suspense>
+  );
 }

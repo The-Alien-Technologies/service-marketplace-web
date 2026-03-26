@@ -15,6 +15,7 @@ import {
   UserAnalytics,
 } from "@/types/analytics";
 import { QuoteRequest } from "@/types/quote";
+import { Dispute } from "@/types/dispute";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -1295,15 +1296,17 @@ class ApiService {
     return Array.isArray(result) ? result : ((result as any)?.disputes ?? []);
   }
 
-  async getDispute(id: string) {
-    return this.request<any>(`/disputes/${id}`);
+  async getDispute(id: string): Promise<Dispute> {
+    const result = await this.request<any>(`/disputes/${id}`);
+    return (result?.data ?? result) as Dispute;
   }
 
-  async updateDisputeStatus(id: string, status: string, adminNote?: string) {
-    return this.request<any>(`/disputes/${id}/status`, {
+  async updateDisputeStatus(id: string, status: string, adminNote?: string): Promise<Dispute> {
+    const result = await this.request<any>(`/disputes/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status, adminNote }),
     });
+    return (result?.data ?? result) as Dispute;
   }
 }
 

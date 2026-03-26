@@ -36,7 +36,7 @@ interface PricingPlansProps {
     title: string;
     providerId: string;
     addons?: {
-      id: string;
+      id?: string;
       title: string;
       description?: string;
       price: number | string;

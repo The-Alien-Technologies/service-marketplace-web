@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -112,8 +112,9 @@ function PartyCard({
 export default function DisputeDetailsPage({
   params,
 }: {
-  params: { disputeId: string };
+  params: Promise<{ disputeId: string }>;
 }) {
+  const { disputeId } = use(params);
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<DisputeStatus>("OPEN");
@@ -123,7 +124,7 @@ export default function DisputeDetailsPage({
   const fetchDispute = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiService.getDispute(params.disputeId);
+      const data = await apiService.getDispute(disputeId);
       setDispute(data);
       setSelectedStatus(data.status);
       setAdminNote(data.adminNote ?? "");
@@ -132,7 +133,7 @@ export default function DisputeDetailsPage({
     } finally {
       setIsLoading(false);
     }
-  }, [params.disputeId]);
+  }, [disputeId]);
 
   useEffect(() => {
     fetchDispute();

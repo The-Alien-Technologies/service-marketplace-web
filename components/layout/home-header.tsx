@@ -26,11 +26,11 @@ import { useState } from "react";
 import { BotChatBox } from "../botChat/bot-chat-box";
 
 interface BotProps {
-  botName: string,
-  botAvatar: string
+  botName?: string,
+  botAvatar?: string
 }
 
-export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar} : BotProps) {
+export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : BotProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const {

@@ -1,4 +1,4 @@
-import { ServiceCardData } from "@/components/sections/service-card";
+import { ServiceCardData } from "@/components/sections/cards/service-card";
 
 export const mockCategoryResults: ServiceCardData[] = [
   {

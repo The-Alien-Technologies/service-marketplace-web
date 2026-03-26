@@ -26,7 +26,7 @@ interface CheckoutModalProps {
     title: string;
     providerId: string;
     addons?: {
-      id: string;
+      id?: string;
       title: string;
       description?: string;
       price: number | string;
@@ -51,12 +51,12 @@ export function CheckoutModal({
   const availableAddOns: AddOn[] =
     service?.addons?.map(
       (addon: {
-        id: string;
+        id?: string;
         title: string;
         description?: string;
         price: number | string;
       }) => ({
-        id: addon.id,
+        id: addon.id ?? "",
         name: addon.title,
         description: addon.description || "",
         price: Number(addon.price),
