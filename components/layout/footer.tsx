@@ -33,9 +33,9 @@ export function Footer() {
   return (
     <footer className="bg-black text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-12">
           {/* Logo and Social Icons */}
-          <div className="space-y-6 flex flex-col items-center text-center">
+          <div className="col-span-2 lg:col-span-1 space-y-6 flex flex-col items-start text-left">
             {/* Logo */}
             <Link href="/" className="inline-block">
               <Image
@@ -51,7 +51,7 @@ export function Footer() {
             <p className="text-sm text-gray-400">© AVADghana Ltd. 2025</p>
 
             {/* Social Media Icons */}
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-start gap-4 flex-wrap">
               <a
                 href="#"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -101,10 +101,11 @@ export function Footer() {
           <div>
             <h3 className="text-base font-semibold mb-4">Categories</h3>
             <ul className="space-y-2.5">
-              {isLoading ? (
+              {isLoading && (
                 <li className="text-sm text-gray-500">Loading...</li>
-              ) : topLevelCategories.length > 0 ? (
-                topLevelCategories.slice(0, 15).map((category) => (
+              )}
+              {!isLoading && topLevelCategories.length > 0 &&
+                topLevelCategories.slice(0, 8).map((category) => (
                   <li key={category.id}>
                     <Link
                       href={`/categories/${category.id}`}
@@ -113,8 +114,8 @@ export function Footer() {
                       {category.name}
                     </Link>
                   </li>
-                ))
-              ) : (
+                ))}
+              {!isLoading && topLevelCategories.length === 0 && (
                 <li className="text-sm text-gray-500">
                   No categories available
                 </li>
@@ -126,8 +127,8 @@ export function Footer() {
           <div>
             <h3 className="text-base font-semibold mb-4">Company</h3>
             <ul className="space-y-2.5">
-              {companyLinks.map((link, index) => (
-                <li key={index}>
+              {companyLinks.map((link) => (
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-sm text-gray-300 hover:text-white transition-colors"
@@ -143,8 +144,8 @@ export function Footer() {
           <div>
             <h3 className="text-base font-semibold mb-4">For Sellers</h3>
             <ul className="space-y-2.5">
-              {sellerLinks.map((link, index) => (
-                <li key={index}>
+              {sellerLinks.map((link) => (
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-sm text-gray-300 hover:text-white transition-colors"

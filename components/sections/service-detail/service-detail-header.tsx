@@ -30,7 +30,7 @@ export function ServiceDetailHeader({
         </div>
 
         {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm">
+        <nav className="flex items-center flex-wrap gap-2 text-sm">
           <Link
             href="/"
             className="text-gray-600 dark:text-gray-400 hover:text-brand-900 dark:hover:text-brand-500 transition-colors"

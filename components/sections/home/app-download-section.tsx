@@ -9,12 +9,21 @@ export function AppDownloadSection() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-0 items-center min-h-[400px] md:min-h-[500px]">
           {/* Left Side - Phone Image (2/5) */}
           <div className="relative md:col-span-2 h-[400px] md:h-[500px] flex items-center justify-center md:justify-start md:pl-8">
-            <div className="relative w-full h-full max-w-[400px]">
+            <div className="relative w-full h-full max-w-[400px] mx-auto">
+              {/* Desktop Image */}
               <Image
                 src="/assets/site-images/home_female_hand.png"
                 alt="Mobile app on phone"
                 fill
-                className="object-contain md:object-cover md:object-left"
+                className="hidden md:block object-cover object-left"
+                priority
+              />
+              {/* Mobile Image */}
+              <Image
+                src="/assets/site-images/home_female_hand_mobile.png"
+                alt="Mobile app on phone"
+                fill
+                className="block md:hidden object-contain object-center"
                 priority
               />
             </div>
