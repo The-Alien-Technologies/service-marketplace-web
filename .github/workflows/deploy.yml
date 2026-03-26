@@ -41,6 +41,17 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=staging-latest,enable=${{ github.ref == 'refs/heads/staging' }}
 
+      - name: Set build args based on branch
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_PROD }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_BETTER_AUTH_URL=${{ secrets.NEXT_PUBLIC_BETTER_AUTH_URL_PROD }}" >> $GITHUB_ENV
+          else
+            echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL_STAGING }}" >> $GITHUB_ENV
+            echo "NEXT_PUBLIC_BETTER_AUTH_URL=${{ secrets.NEXT_PUBLIC_BETTER_AUTH_URL_STAGING }}" >> $GITHUB_ENV
+          fi
+          echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> $GITHUB_ENV
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -58,3 +69,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_BETTER_AUTH_URL=${{ env.NEXT_PUBLIC_BETTER_AUTH_URL }}
+            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
