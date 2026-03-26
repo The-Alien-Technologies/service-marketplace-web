@@ -136,7 +136,7 @@ export function ChatBox({
   };
 
   return (
-    <div className="fixed right-4 bottom-4 w-full max-w-md h-[600px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl z-50 flex flex-col border border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 sm:inset-auto sm:right-4 sm:bottom-4 w-full h-[100dvh] sm:h-[600px] sm:max-w-md bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-2xl z-50 flex flex-col border-0 sm:border border-gray-200 dark:border-gray-700">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">

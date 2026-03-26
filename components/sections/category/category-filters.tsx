@@ -171,15 +171,15 @@ export function CategoryFilters({
       </div>
 
       {/* Results Header with Sort */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center flex-wrap gap-2 text-sm sm:text-base">
           <span className="text-gray-700 font-medium">
             Showing search results for
           </span>
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">
             &apos;{categoryName}&apos;
           </span>
-          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium">
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium shrink-0">
             {resultCount}
           </span>
         </div>
@@ -224,9 +224,9 @@ export function CategoryFilters({
       <HorizontalSeparator />
 
       {/* Filters Row */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap w-full">
         {/* Filters Label */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-2 text-gray-700 font-medium">
             <Filter className="w-5 h-5" />
             <span>Filters:</span>

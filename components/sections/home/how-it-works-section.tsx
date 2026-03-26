@@ -12,11 +12,11 @@ export function HowItWorksSection() {
             <h2 className="text-2xl md:text-3xl lg:text-3xl font-bold text-gray-900 dark:text-white">
               Trusted pros. Quality work.
             </h2>
-            <div className="flex items-center gap-2 bg-[#ECFDF3] rounded-3xl p-[4px]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-2 bg-[#ECFDF3] rounded-2xl sm:rounded-3xl p-2 sm:p-[4px]">
               <span className="inline-flex items-center bg-[#4A7C59] dark:bg-brand-900 text-white text-xs font-semibold px-5 py-2 rounded-full whitespace-nowrap">
                 How It Works
               </span>
-              <p className="text-sm font-[500] text-marketplace-400 dark:text-gray-400 rounded-sm">
+              <p className="text-sm font-[500] text-marketplace-400 dark:text-gray-400 rounded-sm px-2 sm:px-0">
                 A simple, safe process to get the job done right.
               </p>
             </div>

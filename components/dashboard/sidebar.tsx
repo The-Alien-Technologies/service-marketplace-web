@@ -20,6 +20,7 @@ import {
   ChevronUp,
   FileText,
   User as UserIcon,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -165,7 +166,13 @@ const accountItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+  onClose?: () => void;
+  className?: string;
+}
+
+export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
   const pathname = usePathname();
   const { signOut, user } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -203,27 +210,34 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 h-screen flex flex-col sticky top-0 transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64",
+        "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
+        !isMobile && isCollapsed ? "w-20" : "w-64",
+        className
       )}
     >
       <div
         className={cn(
           "h-16 flex items-center border-b border-gray-100",
-          isCollapsed ? "justify-center" : "justify-between px-6",
+          !isMobile && isCollapsed ? "justify-center" : "justify-between px-6",
         )}
       >
         {!isCollapsed && <Logo withLink={true} />}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          {isCollapsed ? (
-            <Logo withLink={false} showText={false} />
-          ) : (
-            <PanelLeftClose className="w-5 h-5" />
-          )}
-        </button>
+        {isMobile ? (
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-gray-500 hover:text-gray-700 cursor-pointer"
+          >
+            {isCollapsed ? (
+              <Logo withLink={false} showText={false} />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto py-6 space-y-8">
@@ -306,6 +320,9 @@ export function Sidebar() {
                               <Link
                                 key={subItem.href}
                                 href={subItem.href}
+                                onClick={() => {
+                                  if (isMobile) onClose?.();
+                                }}
                                 className={cn(
                                   "relative flex items-center text-sm font-medium transition-colors py-2 pl-2 hover:text-gray-900 block",
                                   isSubActive
@@ -331,6 +348,9 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => {
+                      if (isMobile) onClose?.();
+                    }}
                     className={cn(
                       "flex items-center rounded-lg text-sm font-medium transition-colors",
                       isCollapsed
@@ -369,6 +389,9 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => {
+                    if (isMobile) onClose?.();
+                  }}
                   className={cn(
                     "flex items-center rounded-lg text-sm font-medium transition-colors",
                     isCollapsed
