@@ -46,11 +46,13 @@ const columns = [
     header: "Name",
     cell: (info) => {
       const client = info.getValue();
-      const name = `${client.firstName} ${client.lastName}`;
+      const firstName = client?.firstName ?? "";
+      const lastName = client?.lastName ?? "";
+      const name = `${firstName} ${lastName}`.trim() || "Unknown";
       return (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-            {client.avatar ? (
+            {client?.avatar ? (
               <Image
                 src={client.avatar}
                 alt={name}
@@ -59,7 +61,7 @@ const columns = [
               />
             ) : (
               <span className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium uppercase text-sm">
-                {client.firstName?.charAt(0)}
+                {firstName.charAt(0) || "?"}
               </span>
             )}
           </div>

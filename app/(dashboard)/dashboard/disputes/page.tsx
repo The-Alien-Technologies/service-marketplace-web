@@ -90,25 +90,29 @@ const columns = [
     cell: (info) => (
       <div className="flex -space-x-2">
         {[info.row.original.client, info.row.original.provider].map(
-          (party, i) => (
-            <div
-              key={i}
-              className={`w-8 h-8 rounded-full overflow-hidden border-2 border-white relative ${i === 0 ? "z-20" : "z-10"}`}
-            >
-              {party.avatar ? (
-                <Image
-                  src={party.avatar}
-                  alt={party.firstName}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                  {party.firstName[0]}
-                </div>
-              )}
-            </div>
-          ),
+          (party, i) => {
+            const firstName = party?.firstName ?? "";
+            const initial = firstName.charAt(0) || "?";
+            return (
+              <div
+                key={i}
+                className={`w-8 h-8 rounded-full overflow-hidden border-2 border-white relative ${i === 0 ? "z-20" : "z-10"}`}
+              >
+                {party?.avatar ? (
+                  <Image
+                    src={party.avatar}
+                    alt={firstName || "User"}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                    {initial}
+                  </div>
+                )}
+              </div>
+            );
+          },
         )}
       </div>
     ),

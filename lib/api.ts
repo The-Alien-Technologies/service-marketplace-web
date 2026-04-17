@@ -267,9 +267,11 @@ class ApiService {
       );
     }
 
-    const {message} = await response.json();
-    console.log(message);
-    return { message };
+    const payload = await response.json().catch(() => ({}));
+    const message = (payload && typeof payload === "object" && "message" in payload)
+      ? (payload as { message: unknown }).message
+      : "";
+    return { message: typeof message === "string" ? message : "" };
   }
 
   //************************************** */

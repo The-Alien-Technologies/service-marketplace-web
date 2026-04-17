@@ -75,7 +75,7 @@ function AdminDashboard() {
     load();
   }, []);
 
-  if (loading || !data) {
+  if (loading || !data || !data.stats) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -85,10 +85,10 @@ function AdminDashboard() {
 
   const {
     stats,
-    orderStatusBreakdown,
-    topCategories,
-    revenueChart,
-    totalOrders,
+    orderStatusBreakdown = [],
+    topCategories = [],
+    revenueChart = [],
+    totalOrders = 0,
   } = data;
 
   const statCards = [
@@ -427,7 +427,7 @@ function ProviderDashboard() {
     load();
   }, []);
 
-  if (loading || !data) {
+  if (loading || !data || !data.stats) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -435,7 +435,12 @@ function ProviderDashboard() {
     );
   }
 
-  const { stats, orderStatusBreakdown, recentOrders, earningsChart } = data;
+  const {
+    stats,
+    orderStatusBreakdown = [],
+    recentOrders = [],
+    earningsChart = [],
+  } = data;
 
   const providerStats = [
     {
@@ -783,7 +788,7 @@ function UserDashboard() {
     load();
   }, []);
 
-  if (loading || !data) {
+  if (loading || !data || !data.stats) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -791,7 +796,12 @@ function UserDashboard() {
     );
   }
 
-  const { stats, orderStatusBreakdown, recentOrders, spendingChart } = data;
+  const {
+    stats,
+    orderStatusBreakdown = [],
+    recentOrders = [],
+    spendingChart = [],
+  } = data;
 
   const userStats = [
     {
