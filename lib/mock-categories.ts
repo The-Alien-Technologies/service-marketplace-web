@@ -1,4 +1,4 @@
-import { CategoryCardData } from "@/components/sections/category-card";
+import { CategoryCardData } from "@/components/sections/cards/category-card";
 
 export const mockPopularCategories: CategoryCardData[] = [
   {

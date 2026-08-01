@@ -19,6 +19,8 @@ import {
   ChevronDown,
   ChevronUp,
   Headphones,
+  FileText,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -133,11 +135,34 @@ const providerSidebarItems: SidebarGroup[] = [
   },
 ];
 
+const userSidebarItems: SidebarGroup[] = [
+  {
+    title: "MAIN",
+    items: [
+      {
+        icon: LayoutDashboard,
+        label: "Dashboard",
+        href: "/dashboard",
+      },
+      {
+        icon: ShoppingBag,
+        label: "My orders",
+        href: "/dashboard/orders",
+      },
+      {
+        icon: FileText,
+        label: "My quotes",
+        href: "/dashboard/my-quotes",
+      },
+    ],
+  },
+];
+
 const accountItems = [
   {
     icon: Settings,
     label: "Profile & settings",
-    href: "/dashboard/profile",
+    href: "/dashboard/profile?tab=general",
   },
   {
     icon: HelpCircle,
@@ -146,22 +171,39 @@ const accountItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobile?: boolean;
+  onClose?: () => void;
+  className?: string;
+}
+
+export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
   const pathname = usePathname();
   const { signOut, user } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(["Messages"]);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
+  // Determine sidebar items based on role
   const sidebarItems =
-    user?.role === "ADMIN" ? adminSidebarItems : providerSidebarItems;
-  const userRoleLabel = user?.role === "ADMIN" ? "Admin" : "Provider";
+    user?.role === "ADMIN"
+      ? adminSidebarItems
+      : user?.role === "SERVICE_PROVIDER"
+        ? providerSidebarItems
+        : userSidebarItems;
+
+  const userRoleLabel =
+    user?.role === "ADMIN"
+      ? "Admin"
+      : user?.role === "SERVICE_PROVIDER"
+        ? "Provider"
+        : "User";
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
       prev.includes(label)
         ? prev.filter((item) => item !== label)
-        : [...prev, label]
+        : [...prev, label],
     );
   };
 
@@ -173,27 +215,34 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 h-screen flex flex-col sticky top-0 transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64"
+        "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
+        !isMobile && isCollapsed ? "w-20" : "w-64",
+        className
       )}
     >
       <div
         className={cn(
           "h-16 flex items-center border-b border-gray-100",
-          isCollapsed ? "justify-center" : "justify-between px-6"
+          !isMobile && isCollapsed ? "justify-center" : "justify-between px-6",
         )}
       >
         {!isCollapsed && <Logo withLink={true} />}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          {isCollapsed ? (
-            <Logo withLink={false} showText={false} />
-          ) : (
-            <PanelLeftClose className="w-5 h-5" />
-          )}
-        </button>
+        {isMobile ? (
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-gray-500 hover:text-gray-700 cursor-pointer"
+          >
+            {isCollapsed ? (
+              <Logo withLink={false} showText={false} />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto py-6 space-y-8">
@@ -221,7 +270,7 @@ export function Sidebar() {
                     <item.icon
                       className={cn(
                         "w-5 h-5 shrink-0",
-                        isActive ? "text-green-600" : "text-gray-500"
+                        isActive ? "text-green-600" : "text-gray-500",
                       )}
                     />
                     {!isCollapsed && (
@@ -248,13 +297,13 @@ export function Sidebar() {
                           "w-full flex items-center rounded-lg text-sm font-medium transition-colors px-4 py-3 space-x-3",
                           isActive
                             ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-l-none -ml-4 pl-7" // Compensate padding
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                         )}
                       >
                         <item.icon
                           className={cn(
                             "w-5 h-5 shrink-0",
-                            isActive ? "text-green-600" : "text-gray-500"
+                            isActive ? "text-green-600" : "text-gray-500",
                           )}
                         />
                         <span className="flex-1 text-left">{item.label}</span>
@@ -276,11 +325,14 @@ export function Sidebar() {
                               <Link
                                 key={subItem.href}
                                 href={subItem.href}
+                                onClick={() => {
+                                  if (isMobile) onClose?.();
+                                }}
                                 className={cn(
                                   "relative flex items-center text-sm font-medium transition-colors py-2 pl-2 hover:text-gray-900 block",
                                   isSubActive
                                     ? "text-green-700 bg-green-50/50 rounded-md"
-                                    : "text-gray-500"
+                                    : "text-gray-500",
                                 )}
                               >
                                 {/* Curved Line for Tree Structure */}
@@ -301,6 +353,9 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => {
+                      if (isMobile) onClose?.();
+                    }}
                     className={cn(
                       "flex items-center rounded-lg text-sm font-medium transition-colors",
                       isCollapsed
@@ -308,14 +363,14 @@ export function Sidebar() {
                         : "space-x-3 px-4 py-3",
                       isActive
                         ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-none"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                     )}
                     title={isCollapsed ? item.label : undefined}
                   >
                     <item.icon
                       className={cn(
                         "w-5 h-5 shrink-0",
-                        isActive ? "text-green-600" : "text-gray-500"
+                        isActive ? "text-green-600" : "text-gray-500",
                       )}
                     />
                     {!isCollapsed && <span>{item.label}</span>}
@@ -339,6 +394,9 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => {
+                    if (isMobile) onClose?.();
+                  }}
                   className={cn(
                     "flex items-center rounded-lg text-sm font-medium transition-colors",
                     isCollapsed
@@ -346,14 +404,14 @@ export function Sidebar() {
                       : "space-x-3 px-4 py-3",
                     isActive
                       ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-none"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                   )}
                   title={isCollapsed ? item.label : undefined}
                 >
                   <item.icon
                     className={cn(
                       "w-5 h-5 shrink-0",
-                      isActive ? "text-green-600" : "text-gray-500"
+                      isActive ? "text-green-600" : "text-gray-500",
                     )}
                   />
                   {!isCollapsed && <span>{item.label}</span>}
@@ -364,7 +422,9 @@ export function Sidebar() {
               onClick={() => setShowLogoutDialog(true)}
               className={cn(
                 "w-full flex items-center rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3"
+                isCollapsed
+                  ? "justify-center px-2 py-3"
+                  : "space-x-3 px-4 py-3",
               )}
               title={isCollapsed ? "Logout" : undefined}
             >
@@ -379,13 +439,13 @@ export function Sidebar() {
       <div
         className={cn(
           "border-t border-gray-200",
-          isCollapsed ? "p-4 flex justify-center" : "p-4"
+          isCollapsed ? "p-4 flex justify-center" : "p-4",
         )}
       >
         <div
           className={cn(
             "flex items-center",
-            isCollapsed ? "justify-center" : "space-x-3"
+            isCollapsed ? "justify-center" : "space-x-3",
           )}
         >
           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shrink-0">

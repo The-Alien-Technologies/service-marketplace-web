@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -40,7 +40,12 @@ type Addon = {
 
 export default function AddServicePage() {
   const router = useRouter();
-  const { categories } = useCategoriesStore();
+  const { categories, fetchCategories } = useCategoriesStore();
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Service data state
   const [title, setTitle] = useState("");
@@ -53,20 +58,15 @@ export default function AddServicePage() {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string>("");
   const [portfolioImages, setPortfolioImages] = useState<File[]>([]);
+  const [portfolioImagePreviews, setPortfolioImagePreviews] = useState<
+    string[]
+  >([]);
 
   // Loading state
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDraftSaving, setIsDraftSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  const [plans, setPlans] = useState<Plan[]>([
-    {
-      id: "1",
-      title: "",
-      price: "",
-      inclusions: "",
-      isPopular: false,
-      isExpanded: true,
-    },
-  ]);
+  const [plans, setPlans] = useState<Plan[]>([]);
 
   const [addons, setAddons] = useState<Addon[]>([]);
 
@@ -74,7 +74,7 @@ export default function AddServicePage() {
 
   const togglePlanExpansion = (id: string) => {
     setPlans(
-      plans.map((p) => (p.id === id ? { ...p, isExpanded: !p.isExpanded } : p))
+      plans.map((p) => (p.id === id ? { ...p, isExpanded: !p.isExpanded } : p)),
     );
   };
 
@@ -151,6 +151,41 @@ export default function AddServicePage() {
     }
   };
 
+  const handlePortfolioImagesChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Limit to 10 total images
+    const remainingSlots = 10 - portfolioImages.length;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      toast.warning(
+        `Maximum 10 images allowed. Only ${remainingSlots} images will be added.`,
+      );
+    }
+
+    setPortfolioImages([...portfolioImages, ...filesToAdd]);
+
+    // Generate previews
+    filesToAdd.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPortfolioImagePreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePortfolioImage = (index: number) => {
+    setPortfolioImages(portfolioImages.filter((_, i) => i !== index));
+    setPortfolioImagePreviews(
+      portfolioImagePreviews.filter((_, i) => i !== index),
+    );
+  };
+
   // Tag management
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
@@ -179,7 +214,9 @@ export default function AddServicePage() {
       return;
     }
     if (plans.length === 0) {
-      toast.error("Please add at least one pricing plan");
+      toast.error(
+        "Please add at least one pricing plan using the 'Add another plan' button",
+      );
       return;
     }
 
@@ -192,7 +229,7 @@ export default function AddServicePage() {
       }
       if (!plan.price || Number.parseFloat(plan.price) <= 0) {
         toast.error(
-          `Plan ${i + 1} ("${plan.title}"): Please add a valid price`
+          `Plan ${i + 1} ("${plan.title}"): Please add a valid price`,
         );
         return;
       }
@@ -200,14 +237,18 @@ export default function AddServicePage() {
         toast.error(
           `Plan ${i + 1} ("${
             plan.title
-          }"): Please add plan inclusions (what's included)`
+          }"): Please add plan inclusions (what's included)`,
         );
         return;
       }
     }
 
     try {
-      setIsSubmitting(true);
+      if (status === "DRAFT") {
+        setIsDraftSaving(true);
+      } else {
+        setIsPublishing(true);
+      }
 
       // Prepare data
       const serviceData = {
@@ -236,10 +277,25 @@ export default function AddServicePage() {
       // Create service
       const service = await apiService.createService(
         serviceData,
-        coverImage || undefined
+        coverImage || undefined,
       );
 
       toast.success("Service created successfully!");
+
+      // Upload portfolio images if any
+      if (portfolioImages.length > 0) {
+        try {
+          await apiService.uploadServiceImages(service.id, portfolioImages);
+          toast.success(
+            `${portfolioImages.length} portfolio image(s) uploaded!`,
+          );
+        } catch (error) {
+          console.error("Failed to upload portfolio images:", error);
+          toast.warning(
+            "Service created but some portfolio images failed to upload",
+          );
+        }
+      }
 
       // If user wants to publish, update status
       if (status === "PUBLISHED") {
@@ -253,7 +309,8 @@ export default function AddServicePage() {
       console.error("Error creating service:", error);
       toast.error(error?.message || "Failed to create service");
     } finally {
-      setIsSubmitting(false);
+      setIsDraftSaving(false);
+      setIsPublishing(false);
     }
   };
 
@@ -448,12 +505,20 @@ export default function AddServicePage() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900">Catalogue</h2>
             <p className="text-sm text-gray-500 -mt-2">
-              Upload your best work to impress clients.
+              Upload your best work to impress clients. (Max 10 images)
             </p>
 
-            <button
-              type="button"
-              className="w-full border border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer"
+            <input
+              type="file"
+              id="portfolio-images-input"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePortfolioImagesChange}
+            />
+            <label
+              htmlFor="portfolio-images-input"
+              className="w-full border border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer block"
             >
               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center mb-3">
                 <Upload className="w-5 h-5 text-gray-400" />
@@ -465,33 +530,36 @@ export default function AddServicePage() {
                 </span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                JPG, PNG, PDF (max. 5MB)
+                JPG, PNG (max. 5MB each)
               </p>
-            </button>
+            </label>
 
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
-                const randomImg = i % 4 === 0 ? 4 : i % 4;
-                return (
+            {portfolioImagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                {portfolioImagePreviews.map((preview, index) => (
                   <div
-                    key={i}
+                    key={index}
                     className="aspect-[4/3] relative rounded-lg overflow-hidden bg-gray-100 group"
                   >
                     <Image
-                      src={`/assets/temp/products/p${randomImg}.jpg`}
-                      alt={`Work ${i}`}
+                      src={preview}
+                      alt={`Portfolio image ${index + 1}`}
                       fill
                       className="object-cover"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="w-6 h-6 rounded-full bg-white/90 text-gray-600 flex items-center justify-center hover:text-red-600 shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => removePortfolioImage(index)}
+                        className="w-6 h-6 rounded-full bg-white/90 text-gray-600 flex items-center justify-center hover:text-red-600 shadow-sm"
+                      >
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -538,7 +606,7 @@ export default function AddServicePage() {
                     "bg-white rounded-xl border transition-all duration-200",
                     plan.isExpanded
                       ? "border-gray-200 shadow-sm"
-                      : "border-transparent hover:border-gray-200"
+                      : "border-transparent hover:border-gray-200",
                   )}
                 >
                   {/* Header/Summary View */}
@@ -547,7 +615,7 @@ export default function AddServicePage() {
                     onClick={() => togglePlanExpansion(plan.id)}
                     className={cn(
                       "w-full flex items-center justify-between p-4 cursor-pointer outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 rounded-xl text-left",
-                      plan.isExpanded && "border-b border-gray-100"
+                      plan.isExpanded && "border-b border-gray-100",
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -556,7 +624,7 @@ export default function AddServicePage() {
                           "w-8 h-8 rounded-full flex items-center justify-center",
                           plan.isExpanded
                             ? "bg-green-50 text-green-600"
-                            : "bg-gray-100 text-gray-400"
+                            : "bg-gray-100 text-gray-400",
                         )}
                       >
                         <BoxIcon className="w-4 h-4" />
@@ -721,7 +789,7 @@ export default function AddServicePage() {
                   "flex items-center gap-2 text-sm font-medium transition-colors pl-1",
                   plans.length >= 5
                     ? "text-gray-400 cursor-not-allowed"
-                    : "text-[#15803d] hover:text-[#14532d] cursor-pointer"
+                    : "text-[#15803d] hover:text-[#14532d] cursor-pointer",
                 )}
               >
                 <Plus className="w-4 h-4" />
@@ -860,9 +928,9 @@ export default function AddServicePage() {
               variant="outline"
               className="w-full py-6 text-base font-medium"
               onClick={() => handleSubmit("DRAFT")}
-              disabled={isSubmitting}
+              disabled={isDraftSaving || isPublishing}
             >
-              {isSubmitting ? (
+              {isDraftSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Saving...
@@ -874,15 +942,15 @@ export default function AddServicePage() {
             <Button
               className="w-full py-6 text-base font-medium bg-[#15803d] hover:bg-[#14532d] text-white"
               onClick={() => handleSubmit("PUBLISHED")}
-              disabled={isSubmitting}
+              disabled={isDraftSaving || isPublishing}
             >
-              {isSubmitting ? (
+              {isPublishing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Publishing...
                 </>
               ) : (
-                "Preview & Publish"
+                "Publish"
               )}
             </Button>
           </div>

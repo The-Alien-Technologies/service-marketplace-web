@@ -1,3 +1,55 @@
+export interface Address {
+  id: string;
+  formattedAddress: string;
+  streetNumber?: string;
+  route?: string; // street
+  locality?: string; // city
+  administrativeAreaLevel1?: string; // state/region
+  administrativeAreaLevel2?: string; // county
+  country?: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  isPrimary: boolean;
+  label?: string; // e.g., "Home", "Work"
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  featured: boolean;
+  parentCategoryId?: string;
+  parentCategory?: { id: string; name: string };
+  subCategories?: { id: string; name: string; imageUrl?: string }[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UserInterest {
+  id: string;
+  categoryId: string;
+  category?: Category;
+  userId: string;
+}
+
+export interface VerificationDocument {
+  id: string;
+  type: string;
+  status: "UPLOADED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
+  url: string;
+  fileName?: string;
+  originalName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -10,12 +62,29 @@ export interface User {
   role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
   status?: "ACTIVE" | "SUSPENDED" | "DELETED";
   phoneVerified?: boolean;
+  phoneNumber?: string;
+  bio?: string;
+  serviceProviderExperienceLevel?: "BEGINNER" | "INTERMEDIATE" | "EXPERT";
+  notificationsEnabled?: boolean;
+  emailNotificationsEnabled?: boolean;
+  smsNotificationsEnabled?: boolean;
+  marketingNotifications?: boolean;
+  preferredLanguage?: string;
+
   hasCompletedOnboarding: boolean;
   profileCompleteness?: number;
   isServiceProviderVerified?: boolean;
   createdAt?: string;
   lastLoginAt?: string;
   lastActiveAt?: string;
+
+  addresses?: Address[];
+  interests?: UserInterest[];
+  verificationDocuments?: VerificationDocument[];
+  services?: any[]; // Keep any for services for now if type not known
+  _count?: {
+    services?: number;
+  };
 }
 
 export interface AuthState {
@@ -87,7 +156,7 @@ export const PROVIDER_AUTH_STEPS: ProviderAuthStep[] = [
 // Mapping function to convert backend onboarding steps to frontend steps
 export function mapBackendStepToFrontendStep(
   backendStep: string,
-  userRole: "USER" | "SERVICE_PROVIDER" | "ADMIN"
+  userRole: "USER" | "SERVICE_PROVIDER" | "ADMIN",
 ): UserAuthStep | ProviderAuthStep {
   if (userRole === "SERVICE_PROVIDER") {
     const providerStepMap: Record<string, ProviderAuthStep> = {
@@ -147,19 +216,8 @@ export interface ServiceCategory {
   icon: string;
 }
 
-export interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  isActive: boolean;
-  featured: boolean;
-  parentCategoryId?: string;
-  parentCategory?: { id: string; name: string };
-  subCategories?: { id: string; name: string; imageUrl?: string }[];
-  createdAt?: string;
-  updatedAt?: string;
-}
+// Ensure Category is not duplicated if possible, or merged.
+// The file previously had export interface Category. I moved it up.
 
 export interface OnboardingInterestsData {
   categories: string[];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Download,
   ArrowDown,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,255 +32,130 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { apiService } from "@/lib/api";
+import {
+  Dispute,
+  ISSUE_TYPE_LABELS,
+  DISPUTE_STATUS_LABELS,
+  DISPUTE_PRIORITY_LABELS,
+} from "@/types/dispute";
 
-// --- Types ---
-
-type Dispute = {
-  id: string;
-  orderId: string;
-  client: {
-    name: string;
-    avatar: string;
-  };
-  freelancer: {
-    name: string;
-    avatar: string;
-  };
-  priority: "Low" | "Medium" | "High";
-  issueType: string;
-  status: "Open" | "Awaiting" | "Review" | "Resolved" | "Closed";
-  dateSubmitted: string;
-};
-
-// --- Mock Data ---
-
-const disputes: Dispute[] = [
-  {
-    id: "ADM-00456",
-    orderId: "ADM-00456",
-    client: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Phoenix Baker",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Low",
-    issueType: "Late Delivery",
-    status: "Open",
-    dateSubmitted: "15 Mar, 2025",
-  },
-  {
-    id: "CLI-00789",
-    orderId: "CLI-00789",
-    client: {
-      name: "Lana Steiner",
-      avatar:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Demi Wilkinson",
-      avatar:
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Medium",
-    issueType: "Non-delivery",
-    status: "Awaiting",
-    dateSubmitted: "10 Aug, 2025",
-  },
-  {
-    id: "FRL-01011",
-    orderId: "FRL-01011",
-    client: {
-      name: "Candice Wu",
-      avatar:
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Natali Craig",
-      avatar:
-        "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "High",
-    issueType: "Payment dispute",
-    status: "Review",
-    dateSubmitted: "25 Oct, 2025",
-  },
-  {
-    id: "FRL-01234",
-    orderId: "FRL-01234",
-    client: {
-      name: "Drew Cano",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Orlando Diggs",
-      avatar:
-        "https://images.unsplash.com/photo-1527980965255-d3b416303d12?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Medium",
-    issueType: "Miscommunication",
-    status: "Open",
-    dateSubmitted: "30 Nov, 2025",
-  },
-  {
-    id: "FRL-01567",
-    orderId: "FRL-01567",
-    client: {
-      name: "Andi Lane",
-      avatar:
-        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Kate Morrison",
-      avatar:
-        "https://images.unsplash.com/photo-1517365830460-955ce3ccd263?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Medium",
-    issueType: "Late Delivery",
-    status: "Resolved",
-    dateSubmitted: "5 Apr, 2025",
-  },
-  {
-    id: "CLI-01890",
-    orderId: "CLI-01890",
-    client: {
-      name: "Koray Okumus",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Lana Steiner",
-      avatar:
-        "https://images.unsplash.com/photo-1554151228-14d9def656ec?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Low",
-    issueType: "Late Delivery",
-    status: "Closed",
-    dateSubmitted: "12 Feb, 2025",
-  },
-  {
-    id: "ADM-02123",
-    orderId: "ADM-02123",
-    client: {
-      name: "Mia Brown",
-      avatar:
-        "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    freelancer: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    priority: "Low",
-    issueType: "Late Delivery",
-    status: "Resolved",
-    dateSubmitted: "22 Jun, 2025",
-  },
-];
-
-// --- Column Helpers ---
+// --- Column Helper ---
 
 const columnHelper = createColumnHelper<Dispute>();
 
-// --- Column Definitions ---
+// --- Status badge helper ---
+
+function StatusBadge({ status }: { status: Dispute["status"] }) {
+  const styles: Record<Dispute["status"], string> = {
+    OPEN: "bg-red-50 text-red-700 border-red-200",
+    INVESTIGATING: "bg-amber-50 text-amber-700 border-amber-200",
+    RESOLVED: "bg-green-50 text-green-700 border-green-200",
+    CLOSED: "bg-gray-50 text-gray-700 border-gray-200",
+  };
+  const dots: Record<Dispute["status"], string> = {
+    OPEN: "bg-red-500",
+    INVESTIGATING: "bg-amber-500",
+    RESOLVED: "bg-green-500",
+    CLOSED: "bg-gray-500",
+  };
+  return (
+    <div
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dots[status]}`} />
+      {DISPUTE_STATUS_LABELS[status]}
+    </div>
+  );
+}
+
+// --- Columns ---
 
 const columns = [
   columnHelper.accessor("id", {
     header: "Dispute ID",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="text-gray-600 font-mono text-xs">
+        {info.getValue().slice(0, 8).toUpperCase()}
+      </span>
+    ),
   }),
-  columnHelper.accessor("orderId", {
+  columnHelper.accessor("order.orderNumber", {
     header: "Order ID",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
   }),
   columnHelper.display({
     id: "parties",
     header: "Parties Involved",
     cell: (info) => (
-      <div className="flex items-center gap-[-8px]">
-        <div className="flex -space-x-2">
-          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white relative z-20">
-            <Image
-              src={info.row.original.client.avatar}
-              alt={info.row.original.client.name}
-              fill
-              className="object-cover"
-            />
-          </div>
-          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white relative z-10">
-            <Image
-              src={info.row.original.freelancer.avatar}
-              alt={info.row.original.freelancer.name}
-              fill
-              className="object-cover"
-            />
-          </div>
-        </div>
+      <div className="flex -space-x-2">
+        {[info.row.original.client, info.row.original.provider].map(
+          (party, i) => {
+            const firstName = party?.firstName ?? "";
+            const initial = firstName.charAt(0) || "?";
+            return (
+              <div
+                key={i}
+                className={`w-8 h-8 rounded-full overflow-hidden border-2 border-white relative ${i === 0 ? "z-20" : "z-10"}`}
+              >
+                {party?.avatar ? (
+                  <Image
+                    src={party.avatar}
+                    alt={firstName || "User"}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                    {initial}
+                  </div>
+                )}
+              </div>
+            );
+          },
+        )}
       </div>
     ),
   }),
   columnHelper.accessor("priority", {
     header: "Priority Level",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="text-gray-600">
+        {DISPUTE_PRIORITY_LABELS[info.getValue()]}
+      </span>
+    ),
   }),
   columnHelper.accessor("issueType", {
     header: "Issue Type",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="text-gray-600">
+        {ISSUE_TYPE_LABELS[info.getValue()]}
+      </span>
+    ),
   }),
   columnHelper.accessor("status", {
-    header: ({ column }) => {
-      return (
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => column.toggleSorting()}
-        >
-          Status
-          <ArrowDown className="w-4 h-4 text-gray-500" />
-        </div>
-      );
-    },
-    cell: (info) => {
-      const status = info.getValue();
-      let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
-      let dotStyles = "bg-gray-500";
-
-      if (status === "Open") {
-        badgeStyles = "bg-red-50 text-red-700 border-red-200";
-        dotStyles = "bg-red-500";
-      } else if (status === "Awaiting") {
-        badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
-        dotStyles = "bg-orange-500";
-      } else if (status === "Review") {
-        badgeStyles = "bg-amber-50 text-amber-700 border-amber-200";
-        dotStyles = "bg-amber-500";
-      } else if (status === "Resolved") {
-        badgeStyles = "bg-green-50 text-green-700 border-green-200";
-        dotStyles = "bg-green-500";
-      } else if (status === "Closed") {
-        badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
-        dotStyles = "bg-gray-500";
-      }
-
-      return (
-        <div
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeStyles}`}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}
-          ></span>
-          {status}
-        </div>
-      );
-    },
+    header: ({ column }) => (
+      <div
+        className="flex items-center gap-1 cursor-pointer"
+        onClick={() => column.toggleSorting()}
+      >
+        Status
+        <ArrowDown className="w-4 h-4 text-gray-500" />
+      </div>
+    ),
+    cell: (info) => <StatusBadge status={info.getValue()} />,
   }),
-  columnHelper.accessor("dateSubmitted", {
+  columnHelper.accessor("createdAt", {
     header: "Date Submitted",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => (
+      <span className="text-gray-600">
+        {new Date(info.getValue()).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })}
+      </span>
+    ),
   }),
   columnHelper.display({
     id: "actions",
@@ -298,8 +174,6 @@ const columns = [
                 View Details
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Resolve Dispute</DropdownMenuItem>
-            <DropdownMenuItem>Contact Parties</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -313,32 +187,45 @@ const columns = [
 export default function DisputesPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchDisputes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiService.getAdminDisputes();
+      setDisputes(data ?? []);
+    } catch {
+      setDisputes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDisputes();
+  }, [fetchDisputes]);
 
   const table = useReactTable({
     data: disputes,
-    columns: columns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      sorting,
-      globalFilter,
-    },
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
   });
 
   return (
     <div className="space-y-8">
-      {/* Header Section */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
-          <p className="text-gray-500 mt-1">
-            Review and resolve conflicts between customers and freelancers.
-          </p>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
+        <p className="text-gray-500 mt-1">
+          Review and resolve conflicts between customers and service providers.
+        </p>
       </div>
 
       {/* Search and Actions */}
@@ -346,7 +233,7 @@ export default function DisputesPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
-            placeholder="search by order ID, freelancer, client, dispute ID..."
+            placeholder="Search by order ID, dispute ID, issue type..."
             className="pl-10 bg-white"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
@@ -383,7 +270,7 @@ export default function DisputesPage() {
                       "px-6 py-4 font-medium",
                       (header.column.columnDef.meta as any)?.align === "right"
                         ? "text-right"
-                        : ""
+                        : "",
                     )}
                     onClick={header.column.getToggleSortingHandler()}
                     style={{
@@ -397,12 +284,12 @@ export default function DisputesPage() {
                         "flex items-center gap-1",
                         (header.column.columnDef.meta as any)?.align === "right"
                           ? "justify-end"
-                          : ""
+                          : "",
                       )}
                     >
                       {flexRender(
                         header.column.columnDef.header,
-                        header.getContext()
+                        header.getContext(),
                       )}
                     </div>
                   </th>
@@ -411,14 +298,26 @@ export default function DisputesPage() {
             ))}
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {table.getRowModel().rows.length > 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
+                </td>
+              </tr>
+            ) : table.getRowModel().rows.length > 0 ? (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={row.id}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    window.location.href = `/dashboard/disputes/${row.original.id}`;
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-6 py-4">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </td>
                   ))}
@@ -449,51 +348,10 @@ export default function DisputesPage() {
             <ChevronLeft className="w-4 h-4" />
             Previous
           </Button>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 w-8 p-0 bg-green-50 text-green-700 border-0 font-medium"
-            >
-              1
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              2
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              3
-            </Button>
-            <span className="text-gray-400 px-2">...</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              8
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              9
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              10
-            </Button>
-          </div>
+          <span className="text-sm text-gray-600">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount() || 1}
+          </span>
           <Button
             variant="outline"
             size="sm"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,6 +13,7 @@ import {
   createColumnHelper,
   SortingState,
   ColumnDef,
+  PaginationState,
 } from "@tanstack/react-table";
 import {
   Search,
@@ -21,9 +22,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  ArrowDown,
   Mail,
   ArrowRight,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,8 +38,13 @@ import {
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useAuthStore } from "@/store/auth-store";
+import { apiService } from "@/lib/api";
+import { toast } from "react-toastify";
+import { Order } from "@/types/order";
+import { ChatBox } from "@/components/sections/service-detail/chat-box";
+import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
 
-// --- Admin Types ---
+// --- Types ---
 
 type Transaction = {
   id: string;
@@ -64,20 +71,7 @@ type CashoutRequest = {
   date: string;
 };
 
-type Order = {
-  id: string;
-  client: string;
-  provider: {
-    name: string;
-    avatar: string;
-  };
-  service: string;
-  amount: number;
-  paymentStatus: "Paid" | "Unpaid" | "Refunded" | "Failed";
-  orderStatus: "Completed" | "In progress" | "Awaiting" | "Declined";
-};
-
-// --- Admin Mock Data ---
+// --- Mock Data for Admin ---
 
 const transactions: Transaction[] = [
   {
@@ -92,84 +86,6 @@ const transactions: Transaction[] = [
     status: "Success",
     method: "Paystack",
     date: "15 Mar, 2025",
-  },
-  {
-    id: "CLI-00789",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 1500.0,
-    type: "Payout",
-    status: "Success",
-    method: "Paystack",
-    date: "10 Aug, 2025",
-  },
-  {
-    id: "FRL-01011",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 200.0,
-    type: "Refund",
-    status: "Success",
-    method: "Paystack",
-    date: "25 Oct, 2025",
-  },
-  {
-    id: "FRL-01234",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 2500.0,
-    type: "Commission",
-    status: "Failed",
-    method: "Paystack",
-    date: "30 Nov, 2025",
-  },
-  {
-    id: "FRL-01567",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 3000.0,
-    type: "Commission",
-    status: "Pending",
-    method: "Paystack",
-    date: "5 Apr, 2025",
-  },
-  {
-    id: "CLI-01890",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 350.0,
-    type: "Payout",
-    status: "Success",
-    method: "Paystack",
-    date: "12 Feb, 2025",
-  },
-  {
-    id: "ADM-02123",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 400.0,
-    type: "Payout",
-    status: "Success",
-    method: "Paystack",
-    date: "22 Jun, 2025",
   },
 ];
 
@@ -186,480 +102,97 @@ const cashoutRequests: CashoutRequest[] = [
     status: "Completed",
     date: "15 Mar, 2025",
   },
-  {
-    id: "CSH-002",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 1500.0,
-    method: "Paystack",
-    status: "Completed",
-    date: "10 Aug, 2025",
-  },
-  {
-    id: "CSH-003",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 200.0,
-    method: "Paystack",
-    status: "Completed",
-    date: "25 Oct, 2025",
-  },
-  {
-    id: "CSH-004",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 2500.0,
-    method: "Paystack",
-    status: "Completed",
-    date: "30 Nov, 2025",
-  },
-  {
-    id: "CSH-005",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 3000.0,
-    method: "Paystack",
-    status: "Pending",
-    date: "5 Apr, 2025",
-  },
-  {
-    id: "CSH-006",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 350.0,
-    method: "Paystack",
-    status: "Completed",
-    date: "12 Feb, 2025",
-  },
-  {
-    id: "CSH-007",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 400.0,
-    method: "Paystack",
-    status: "Failed",
-    date: "22 Jun, 2025",
-  },
 ];
 
-const orders: Order[] = [
-  {
-    id: "ADM-00456",
-    client: "Olivia Rhye",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Legal Consulting",
-    amount: 1000.0,
-    paymentStatus: "Paid",
-    orderStatus: "Completed",
-  },
-  {
-    id: "CLI-00789",
-    client: "Phoenix Baker",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Plumbing Services",
-    amount: 1500.0,
-    paymentStatus: "Unpaid",
-    orderStatus: "In progress",
-  },
-  {
-    id: "FRL-01011",
-    client: "Lana Steiner",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Graphic Design",
-    amount: 200.0,
-    paymentStatus: "Unpaid",
-    orderStatus: "Awaiting",
-  },
-  {
-    id: "FRL-01234",
-    client: "Demi Wilkinson",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Home Renovation",
-    amount: 2500.0,
-    paymentStatus: "Paid",
-    orderStatus: "Completed",
-  },
-  {
-    id: "FRL-01567",
-    client: "Candice Wu",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Writing Services",
-    amount: 3000.0,
-    paymentStatus: "Refunded",
-    orderStatus: "Declined",
-  },
-  {
-    id: "CLI-01890",
-    client: "Natali Craig",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Digital Marketing",
-    amount: 350.0,
-    paymentStatus: "Paid",
-    orderStatus: "Completed",
-  },
-  {
-    id: "ADM-02123",
-    client: "Drew Cano",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    service: "Tutoring Services",
-    amount: 400.0,
-    paymentStatus: "Failed",
-    orderStatus: "Declined",
-  },
-];
-
-// --- Admin Column Helpers & Defs ---
-
+// --- Column Helpers ---
+const orderColumnHelper = createColumnHelper<Order>();
 const transactionColumnHelper = createColumnHelper<Transaction>();
 const cashoutRequestColumnHelper = createColumnHelper<CashoutRequest>();
-const orderColumnHelper = createColumnHelper<Order>();
-
-const transactionColumns = [
-  transactionColumnHelper.accessor("id", {
-    header: "Transaction ID",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  transactionColumnHelper.accessor("user", {
-    header: "User",
-    cell: (info) => (
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-          <Image
-            src={info.row.original.user.avatar}
-            alt={info.row.original.user.name}
-            fill
-            className="object-cover"
-          />
-        </div>
-        <span className="font-medium text-gray-900">
-          {info.row.original.user.name}
-        </span>
-      </div>
-    ),
-  }),
-  transactionColumnHelper.accessor("amount", {
-    header: "Amount(GHS)",
-    cell: (info) => (
-      <span className="text-gray-600">{info.getValue().toFixed(2)}</span>
-    ),
-  }),
-  transactionColumnHelper.accessor("type", {
-    header: "Payment Type",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  transactionColumnHelper.accessor("status", {
-    header: "Payment Status",
-    cell: (info) => {
-      const status = info.getValue();
-      let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
-      let dotStyles = "bg-gray-500";
-
-      if (status === "Success") {
-        badgeStyles = "bg-green-50 text-green-700 border-green-200";
-        dotStyles = "bg-green-500";
-      } else if (status === "Pending") {
-        badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
-        dotStyles = "bg-orange-500";
-      } else if (status === "Failed") {
-        badgeStyles = "bg-red-50 text-red-700 border-red-200";
-        dotStyles = "bg-red-500";
-      }
-
-      return (
-        <div
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeStyles}`}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}
-          ></span>
-          {status}
-        </div>
-      );
-    },
-  }),
-  transactionColumnHelper.accessor("method", {
-    header: "Payment Method",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  transactionColumnHelper.accessor("date", {
-    header: "Date",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  transactionColumnHelper.display({
-    id: "actions",
-    header: "Action",
-    cell: () => (
-      <div className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="w-4 h-4 text-gray-500" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>View Details</DropdownMenuItem>
-            <DropdownMenuItem>Download Receipt</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    ),
-    meta: { align: "right" },
-  }),
-];
-
-const cashoutRequestColumns = [
-  cashoutRequestColumnHelper.accessor("provider", {
-    header: "Provider",
-    cell: (info) => (
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-          <Image
-            src={info.row.original.provider.avatar}
-            alt={info.row.original.provider.name}
-            fill
-            className="object-cover"
-          />
-        </div>
-        <span className="font-medium text-gray-900">
-          {info.row.original.provider.name}
-        </span>
-      </div>
-    ),
-  }),
-  cashoutRequestColumnHelper.accessor("amount", {
-    header: "Requested Amount(GHS)",
-    cell: (info) => (
-      <span className="text-gray-600">{info.getValue().toFixed(2)}</span>
-    ),
-  }),
-  cashoutRequestColumnHelper.accessor("method", {
-    header: "Payment Method",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  cashoutRequestColumnHelper.accessor("status", {
-    header: ({ column }) => {
-      return (
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => column.toggleSorting()}
-        >
-          Payment Status
-          <ArrowDown className="w-4 h-4 text-gray-500" />
-        </div>
-      );
-    },
-    cell: (info) => {
-      const status = info.getValue();
-      let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
-      let dotStyles = "bg-gray-500";
-
-      if (status === "Completed") {
-        badgeStyles = "bg-green-50 text-green-700 border-green-200";
-        dotStyles = "bg-green-500";
-      } else if (status === "Pending") {
-        badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
-        dotStyles = "bg-orange-500";
-      } else if (status === "Failed") {
-        badgeStyles = "bg-red-50 text-red-700 border-red-200";
-        dotStyles = "bg-red-500";
-      }
-
-      return (
-        <div
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeStyles}`}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}
-          ></span>
-          {status}
-        </div>
-      );
-    },
-  }),
-  cashoutRequestColumnHelper.accessor("date", {
-    header: "Date Requested",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  cashoutRequestColumnHelper.display({
-    id: "actions",
-    header: "Action",
-    cell: () => (
-      <div className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="w-4 h-4 text-gray-500" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Approve Request</DropdownMenuItem>
-            <DropdownMenuItem>Reject Request</DropdownMenuItem>
-            <DropdownMenuItem>View Details</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    ),
-    meta: { align: "right" },
-  }),
-];
 
 const orderColumns = [
-  orderColumnHelper.accessor("id", {
+  orderColumnHelper.accessor("orderNumber", {
     header: "Order ID",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
+    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
   }),
-  orderColumnHelper.accessor("client", {
-    header: "Client",
-    cell: (info) => (
-      <span className="font-medium text-gray-900">{info.getValue()}</span>
-    ),
-  }),
-  orderColumnHelper.accessor("provider", {
-    header: "Provider",
-    cell: (info) => (
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-          <Image
-            src={info.row.original.provider.avatar}
-            alt={info.row.original.provider.name}
-            fill
-            className="object-cover"
-          />
-        </div>
-        <span className="font-medium text-gray-900">
-          {info.row.original.provider.name}
-        </span>
-      </div>
-    ),
-  }),
-  orderColumnHelper.accessor("service", {
+  orderColumnHelper.accessor("service.title", {
     header: "Service",
-    cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
-  }),
-  orderColumnHelper.accessor("amount", {
-    header: "Amount(GHS)",
     cell: (info) => (
-      <span className="text-gray-600">{info.getValue().toFixed(2)}</span>
+      <span
+        className="text-gray-600 truncate max-w-[200px] block"
+        title={info.getValue()}
+      >
+        {info.getValue()}
+      </span>
     ),
   }),
-  orderColumnHelper.accessor("paymentStatus", {
-    header: ({ column }) => {
-      return (
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => column.toggleSorting()}
-        >
-          Payment Status
-          <ArrowDown className="w-4 h-4 text-gray-500" />
-        </div>
-      );
-    },
+  orderColumnHelper.accessor("service.category.name", {
+    header: "Category",
+    cell: (info) => (
+      <span className="text-gray-500 text-sm">{info.getValue()}</span>
+    ),
+  }),
+  orderColumnHelper.accessor((row) => row.service?.provider, {
+    id: "provider",
+    header: "Provider",
     cell: (info) => {
-      const status = info.getValue();
-      let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
-      let dotStyles = "bg-gray-500";
-
-      if (status === "Paid") {
-        badgeStyles = "bg-green-50 text-green-700 border-green-200";
-        dotStyles = "bg-green-500";
-      } else if (status === "Unpaid") {
-        badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
-        dotStyles = "bg-orange-500";
-      } else if (status === "Refunded") {
-        badgeStyles = "bg-blue-50 text-blue-700 border-blue-200";
-        dotStyles = "bg-blue-500";
-      } else if (status === "Failed") {
-        badgeStyles = "bg-red-50 text-red-700 border-red-200";
-        dotStyles = "bg-red-500";
-      }
-
+      const provider = info.getValue();
+      if (!provider)
+        return <span className="text-gray-400 italic">Unknown</span>;
       return (
-        <div
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeStyles}`}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}
-          ></span>
-          {status}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 relative">
+            <Image
+              src={
+                provider.avatar ||
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+              }
+              alt={provider.displayName || "Provider"}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <span className="font-medium text-gray-900 text-sm">
+            {provider.displayName ||
+              `${provider.firstName} ${provider.lastName}`}
+          </span>
         </div>
       );
     },
   }),
-  orderColumnHelper.accessor("orderStatus", {
-    header: ({ column }) => {
-      return (
-        <div
-          className="flex items-center gap-1 cursor-pointer"
-          onClick={() => column.toggleSorting()}
-        >
-          Order Status
-          <ArrowDown className="w-4 h-4 text-gray-500" />
-        </div>
-      );
-    },
+  orderColumnHelper.accessor("total", {
+    header: "Amount",
+    cell: (info) => (
+      <span className="text-gray-900 font-medium">
+        GHS {Number(info.getValue() || 0).toFixed(2)}
+      </span>
+    ),
+  }),
+  orderColumnHelper.accessor("status", {
+    header: "Status",
     cell: (info) => {
       const status = info.getValue();
-      let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
+      let badgeStyles = "bg-gray-100 text-gray-700";
       let dotStyles = "bg-gray-500";
 
-      if (status === "Completed") {
-        badgeStyles = "bg-green-50 text-green-700 border-green-200";
-        dotStyles = "bg-green-500";
-      } else if (status === "In progress") {
-        badgeStyles = "bg-blue-50 text-blue-700 border-blue-200";
-        dotStyles = "bg-blue-500";
-      } else if (status === "Awaiting") {
-        badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
-        dotStyles = "bg-orange-500";
-      } else if (status === "Declined") {
-        badgeStyles = "bg-red-50 text-red-700 border-red-200";
-        dotStyles = "bg-red-500";
+      switch (status) {
+        case "COMPLETED":
+          badgeStyles = "bg-green-50 text-green-700 border-green-200";
+          dotStyles = "bg-green-500";
+          break;
+        case "IN_PROGRESS":
+          badgeStyles = "bg-blue-50 text-blue-700 border-blue-200";
+          dotStyles = "bg-blue-500";
+          break;
+        case "AWAITING":
+        case "PENDING":
+          badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
+          dotStyles = "bg-orange-500";
+          break;
+        case "DECLINED":
+        case "REFUNDED":
+          badgeStyles = "bg-red-50 text-red-700 border-red-200";
+          dotStyles = "bg-red-500";
+          break;
       }
 
       return (
@@ -669,7 +202,7 @@ const orderColumns = [
           <span
             className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotStyles}`}
           ></span>
-          {status}
+          {status.replace("_", " ")}
         </div>
       );
     },
@@ -677,7 +210,7 @@ const orderColumns = [
   orderColumnHelper.display({
     id: "actions",
     header: "Action",
-    cell: () => (
+    cell: (info) => (
       <div className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -686,106 +219,75 @@ const orderColumns = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>View Details</DropdownMenuItem>
-            <DropdownMenuItem>Track Order</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/orders/${info.row.original.id}`}>
+                View Details
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     ),
-    meta: { align: "right" },
   }),
 ];
 
-// --- Provider Types & Mock Data ---
-
-type ProviderOrder = {
-  id: string;
-  client: {
-    name: string;
-    avatar: string;
-  };
-  date: string;
-  category: string;
-  status: "Awaiting" | "In-progress" | "Completed" | "Declined";
-  progress: number; // 1 to 4
-};
-
-const providerOrders: ProviderOrder[] = [
-  {
-    id: "5764892",
-    client: {
-      name: "Joel Smith",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 29, 2025",
-    category: "Architecture & Interior Design",
-    status: "Awaiting",
-    progress: 1, // 1=Awaiting
-  },
-  {
-    id: "5764893",
-    client: {
-      name: "Sarah Johnson",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 29, 2025",
-    category: "Architecture & Interior Design",
-    status: "In-progress",
-    progress: 2,
-  },
-  {
-    id: "5764894",
-    client: {
-      name: "Michael Brown",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 29, 2025",
-    category: "Architecture & Interior Design",
-    status: "In-progress",
-    progress: 2,
-  },
-  {
-    id: "5764895",
-    client: {
-      name: "Emily Davis",
-      avatar:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 29, 2025",
-    category: "Architecture & Interior Design",
-    status: "In-progress",
-    progress: 2,
-  },
-  {
-    id: "5764896",
-    client: {
-      name: "Robert Sam",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 29, 2025",
-    category: "Architecture & Interior Design",
-    status: "Completed",
-    progress: 3,
-  },
-  {
-    id: "5764899",
-    client: {
-      name: "David Wilson",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    date: "August 28, 2025",
-    category: "Architecture & Interior Design",
-    status: "Declined",
-    progress: 0,
-  },
+const transactionColumns = [
+  transactionColumnHelper.accessor("id", {
+    header: "Transaction ID",
+    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
+  }),
+  transactionColumnHelper.accessor("user.name", {
+    header: "User",
+    cell: (info) => (
+      <span className="text-gray-900 font-medium">{info.getValue()}</span>
+    ),
+  }),
+  transactionColumnHelper.accessor("amount", {
+    header: "Amount",
+    cell: (info) => (
+      <span className="text-gray-900">
+        GHS {Number(info.getValue() || 0).toFixed(2)}
+      </span>
+    ),
+  }),
+  transactionColumnHelper.accessor("status", {
+    header: "Status",
+    cell: (info) => (
+      <span className="text-sm px-2 py-1 bg-green-50 text-green-700 rounded-full">
+        {info.getValue()}
+      </span>
+    ),
+  }),
 ];
 
-const progressSteps = ["Order placed", "Awaiting", "In-progress", "Completed"];
+const cashoutRequestColumns = [
+  cashoutRequestColumnHelper.accessor("id", {
+    header: "Request ID",
+    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
+  }),
+  cashoutRequestColumnHelper.accessor("provider.name", {
+    header: "Provider",
+    cell: (info) => (
+      <span className="text-gray-900 font-medium">{info.getValue()}</span>
+    ),
+  }),
+  cashoutRequestColumnHelper.accessor("amount", {
+    header: "Amount",
+    cell: (info) => (
+      <span className="text-gray-900">
+        GHS {Number(info.getValue() || 0).toFixed(2)}
+      </span>
+    ),
+  }),
+  cashoutRequestColumnHelper.accessor("status", {
+    header: "Status",
+    cell: (info) => (
+      <span className="text-sm px-2 py-1 bg-green-50 text-green-700 rounded-full">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+];
 
 // --- Admin Orders Component ---
 
@@ -795,29 +297,54 @@ function AdminOrders() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [activeTab, setActiveTab] = useState("Orders");
 
-  const currentData = useMemo(() => {
-    if (activeTab === "Cashout Request") {
-      return cashoutRequests;
-    }
-    if (activeTab === "Transactions") {
-      return transactions;
-    }
+  // Orders State
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [pageCount, setPageCount] = useState(0);
+
+  // Fetch Orders
+  useEffect(() => {
     if (activeTab === "Orders") {
-      return orders;
+      const fetchOrders = async () => {
+        setIsLoading(true);
+        try {
+          const result = await apiService.getAdminOrders({
+            page: pagination.pageIndex + 1,
+            limit: pagination.pageSize,
+            search: globalFilter,
+          });
+          setOrders(result.data);
+          setPageCount(result.pagination.pages);
+        } catch (error) {
+          console.error("Failed to fetch orders:", error);
+          toast.error("Failed to fetch orders");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // Debounce search
+      const timer = setTimeout(() => {
+        fetchOrders();
+      }, 300);
+
+      return () => clearTimeout(timer);
     }
+  }, [activeTab, pagination.pageIndex, pagination.pageSize, globalFilter]);
+
+  const currentData = useMemo(() => {
+    if (activeTab === "Cashout Request") return cashoutRequests;
+    if (activeTab === "Transactions") return transactions;
     return orders;
-  }, [activeTab]);
+  }, [activeTab, orders]);
 
   const currentColumns = useMemo(() => {
-    if (activeTab === "Cashout Request") {
-      return cashoutRequestColumns;
-    }
-    if (activeTab === "Transactions") {
-      return transactionColumns;
-    }
-    if (activeTab === "Orders") {
-      return orderColumns;
-    }
+    if (activeTab === "Cashout Request") return cashoutRequestColumns;
+    if (activeTab === "Transactions") return transactionColumns;
     return orderColumns;
   }, [activeTab]);
 
@@ -838,9 +365,17 @@ function AdminOrders() {
     state: {
       sorting,
       globalFilter,
+      pagination: {
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+      },
     },
+    pageCount: activeTab === "Orders" ? pageCount : undefined,
+    manualPagination: activeTab === "Orders",
+    manualFiltering: activeTab === "Orders",
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
   });
 
   return (
@@ -864,12 +399,13 @@ function AdminOrders() {
               onClick={() => {
                 setActiveTab(tab);
                 setGlobalFilter("");
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
               }}
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
                 activeTab === tab
                   ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50",
               )}
             >
               {tab}
@@ -909,70 +445,82 @@ function AdminOrders() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className={cn(
-                      "px-6 py-4 font-medium",
-                      (header.column.columnDef.meta as any)?.align === "right"
-                        ? "text-right"
-                        : ""
-                    )}
-                    onClick={header.column.getToggleSortingHandler()}
-                    style={{
-                      cursor: header.column.getCanSort()
-                        ? "pointer"
-                        : "default",
-                    }}
-                  >
-                    <div
+        <div className="relative">
+          {isLoading && activeTab === "Orders" && (
+            <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+            </div>
+          )}
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
                       className={cn(
-                        "flex items-center gap-1",
+                        "px-6 py-4 font-medium",
                         (header.column.columnDef.meta as any)?.align === "right"
-                          ? "justify-end"
-                          : ""
+                          ? "text-right"
+                          : "",
                       )}
+                      onClick={header.column.getToggleSortingHandler()}
+                      style={{
+                        cursor: header.column.getCanSort()
+                          ? "pointer"
+                          : "default",
+                      }}
                     >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-6 py-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
+                      <div
+                        className={cn(
+                          "flex items-center gap-1",
+                          (header.column.columnDef.meta as any)?.align ===
+                            "right"
+                            ? "justify-end"
+                            : "",
+                        )}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                      </div>
+                    </th>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={currentColumns.length}
-                  className="px-6 py-8 text-center text-gray-500"
-                >
-                  No data available.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-6 py-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={currentColumns.length}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    {!isLoading && "No data available."}
+                    {isLoading && "Loading..."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
@@ -987,49 +535,10 @@ function AdminOrders() {
             Previous
           </Button>
           <div className="flex items-center gap-1">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 w-8 p-0 bg-green-50 text-green-700 border-0 font-medium"
-            >
-              1
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              2
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              3
-            </Button>
-            <span className="text-gray-400 px-2">...</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              8
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              9
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-gray-600"
-            >
-              10
-            </Button>
+            <span className="text-sm text-gray-600">
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount() || 1}
+            </span>
           </div>
           <Button
             variant="outline"
@@ -1047,40 +556,139 @@ function AdminOrders() {
   );
 }
 
-// --- Provider Orders Component ---
+// --- User Orders Component (Client + Provider) ---
 
-function ProviderOrders() {
+// Map backend statuses to frontend tabs
+const ORDER_TABS = ["Awaiting", "In-progress", "Completed", "Declined"];
+
+// Helper to map backend status to tab name
+const getTabFromStatus = (status: string) => {
+  switch (status) {
+    case "PENDING":
+    case "AWAITING":
+      return "Awaiting";
+    case "IN_PROGRESS":
+      return "In-progress";
+    case "COMPLETED":
+      return "Completed";
+    case "DECLINED":
+    case "REFUNDED":
+      return "Declined";
+    default:
+      return "Awaiting";
+  }
+};
+
+// Helper to map tab name to backend status for API call
+// Returns undefined (no filter) or a comma-separated status string
+const getStatusFromTab = (tab: string): string | undefined => {
+  switch (tab) {
+    case "Awaiting":
+      return "PENDING,AWAITING"; // New orders start as PENDING, then move to AWAITING
+    case "In-progress":
+      return "IN_PROGRESS";
+    case "Completed":
+      return "COMPLETED";
+    case "Declined":
+      return "DECLINED,REFUNDED";
+    default:
+      return undefined;
+  }
+};
+
+function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
   const searchParams = useSearchParams();
-  const tabs = ["Awaiting", "In-progress", "Completed", "Declined"];
-  
   const initialTab = searchParams.get("tab");
-  const defaultTab = tabs.includes(initialTab || "") ? initialTab! : "Awaiting";
+  const defaultTab = ORDER_TABS.includes(initialTab || "")
+    ? initialTab!
+    : "Awaiting";
 
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<
+    Record<string, string | null>
+  >({});
+  const router = useRouter();
+  const [chatTarget, setChatTarget] = useState<{
+    id: string;
+    name: string;
+    avatar: string;
+  } | null>(null);
+  const [disputeTarget, setDisputeTarget] = useState<{
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && tabs.includes(tab)) {
+    if (tab && ORDER_TABS.includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
 
-  const filteredOrders = providerOrders.filter(
-    (order) => order.status === activeTab
-  );
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        // Map tab to status. Special handling for "Awaiting" to include PENDING if needed
+        const status = getStatusFromTab(activeTab);
+
+        let response;
+        if (role === "SERVICE_PROVIDER") {
+          response = await apiService.getProviderOrders({ status, limit: 50 });
+        } else {
+          response = await apiService.getMyOrders({ status, limit: 50 });
+        }
+
+        setOrders(response.data);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        toast.error("Failed to load orders");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [activeTab, role]);
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Awaiting":
+      case "PENDING":
+      case "AWAITING":
         return { dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700" };
-      case "In-progress":
+      case "IN_PROGRESS":
         return { dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700" };
-      case "Completed":
+      case "COMPLETED":
         return { dot: "bg-green-500", badge: "bg-green-50 text-green-700" };
-      case "Declined":
+      case "DECLINED":
+      case "REFUNDED":
         return { dot: "bg-red-500", badge: "bg-red-50 text-red-700" };
       default:
         return { dot: "bg-gray-500", badge: "bg-gray-50 text-gray-700" };
+    }
+  };
+
+  const handleOrderAction = async (
+    orderId: string,
+    newStatus: "IN_PROGRESS" | "COMPLETED" | "DECLINED",
+  ) => {
+    setActionLoading((prev) => ({ ...prev, [orderId]: newStatus }));
+    try {
+      await apiService.updateOrderStatus(orderId, newStatus);
+      const messages: Record<string, string> = {
+        IN_PROGRESS: "Order accepted",
+        COMPLETED: "Order marked as completed",
+        DECLINED: "Order declined",
+      };
+      toast.success(messages[newStatus]);
+      // Remove from current list since status changed
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update order");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [orderId]: null }));
     }
   };
 
@@ -1095,16 +703,16 @@ function ProviderOrders() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2">
-        {tabs.map((tab) => (
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {ORDER_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-4 py-1.5 text-sm font-bold rounded-full transition-all",
+              "px-4 py-1.5 text-sm font-bold rounded-full transition-all whitespace-nowrap",
               activeTab === tab
                 ? "bg-green-50 text-green-700"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
             )}
           >
             {tab}
@@ -1113,152 +721,219 @@ function ProviderOrders() {
       </div>
 
       {/* Orders List */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100">
-        {filteredOrders.map((order) => {
-          const statusStyles = getStatusStyles(order.status);
-          return (
-            <div key={order.id} className="p-6 space-y-6">
-              {/* Row 1: User Info & Date */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-                    <Image
-                      src={order.client.avatar}
-                      alt={order.client.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <span className="font-bold text-gray-900">
-                    {order.client.name}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-500">{order.date}</span>
-              </div>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-100 min-h-[300px]">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+          </div>
+        ) : orders.length > 0 ? (
+          orders.map((order) => {
+            const statusStyles = getStatusStyles(order.status);
+            // Determine who to show: if I am provider, show client. If I am client, show provider.
+            const otherParty =
+              role === "SERVICE_PROVIDER"
+                ? order.client
+                : (order.provider ?? order.service?.provider);
 
-              {/* Row 2: Details & Actions */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                {/* Left: Details */}
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="font-bold text-gray-900">
-                    Order ID: #{order.id}
-                  </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="text-gray-500">{order.category}</span>
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${statusStyles.dot}`}
-                    ></span>
-                    <span
-                      className={`font-bold px-2 py-0.5 rounded-full text-xs ${statusStyles.badge}`}
-                    >
-                      {order.status}
+            return (
+              <div key={order.id} className="p-6 space-y-6">
+                {/* Row 1: User Info & Date */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
+                      {otherParty ? (
+                        <Image
+                          src={
+                            otherParty.avatar ||
+                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                          }
+                          alt={
+                            otherParty.displayName ||
+                            otherParty.firstName ||
+                            "User"
+                          }
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200" />
+                      )}
+                    </div>
+                    <span className="font-bold text-gray-900">
+                      {otherParty
+                        ? otherParty.displayName ||
+                          `${otherParty.firstName} ${otherParty.lastName}`
+                        : "Unknown User"}
                     </span>
                   </div>
+                  <span className="text-sm text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
 
-                {/* Right: Actions */}
-                <div className="flex items-center gap-3">
-                  {order.status === "Awaiting" && (
-                    <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[120px] rounded-lg">
-                      Accept Order
-                    </Button>
-                  )}
-                  {order.status === "In-progress" && (
-                    <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                      Mark as completed
-                    </Button>
-                  )}
-                  {order.status === "Completed" && (
-                    <Link href={`/orders/${order.id}/review`}>
-                      <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                        Leave a review
-                      </Button>
-                    </Link>
-                  )}
-
-                  {(order.status === "Awaiting" ||
-                    order.status === "In-progress") && (
-                    <Button
-                      variant="ghost"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
-                    >
-                      Decline Order
-                    </Button>
-                  )}
-
-                  {order.status === "Completed" && (
-                    <Button
-                      variant="ghost"
-                      className="text-gray-700 hover:text-gray-900 hover:bg-gray-100 font-medium"
-                    >
-                      Raise dispute
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Message Client
-                  </Button>
-                </div>
-              </div>
-
-              {/* Row 3: Order Details Link */}
-              <div>
-                <Link
-                  href={`/dashboard/orders/${order.id}`}
-                  className="flex items-center text-green-600 text-sm font-medium hover:underline gap-1"
-                >
-                  Order details <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-
-              {/* Row 4: Progress Bar */}
-              {order.status === "Declined" ? (
-                <div className="max-w-md pt-2">
-                  <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 px-3 py-2 rounded-lg w-fit border border-red-100">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    This order was declined
-                  </div>
-                </div>
-              ) : (
-                <div className="max-w-md pt-2">
-                  <div className="relative h-1.5 bg-gray-100 rounded-full mb-2">
-                    <div
-                      className="absolute h-full bg-green-500 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${
-                          (order.progress / (progressSteps.length - 1)) * 100
-                        }%`,
-                      }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    {progressSteps.map((step, index) => (
+                {/* Row 2: Details & Actions */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Left: Details */}
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className="font-bold text-gray-900">
+                      Order ID: #{order.orderNumber}
+                    </span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-gray-500">{order.service.title}</span>
+                    <div className="flex items-center gap-1.5 ml-2">
                       <span
-                        key={step}
-                        className={cn(
-                          index <= order.progress ? "text-green-600" : ""
-                        )}
+                        className={`w-1.5 h-1.5 rounded-full ${statusStyles.dot}`}
+                      ></span>
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-full text-xs ${statusStyles.badge}`}
                       >
-                        {step}
+                        {order.status.replace("_", " ")}
                       </span>
-                    ))}
+                    </div>
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {role === "SERVICE_PROVIDER" &&
+                      (order.status === "AWAITING" ||
+                        order.status === "PENDING") && (
+                        <Button
+                          className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[120px] rounded-lg"
+                          onClick={() =>
+                            handleOrderAction(order.id, "IN_PROGRESS")
+                          }
+                          disabled={!!actionLoading[order.id]}
+                        >
+                          {actionLoading[order.id] === "IN_PROGRESS" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Accept Order"
+                          )}
+                        </Button>
+                      )}
+
+                    {role === "SERVICE_PROVIDER" &&
+                      order.status === "IN_PROGRESS" && (
+                        <Button
+                          className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg"
+                          onClick={() =>
+                            handleOrderAction(order.id, "COMPLETED")
+                          }
+                          disabled={!!actionLoading[order.id]}
+                        >
+                          {actionLoading[order.id] === "COMPLETED" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Mark as completed"
+                          )}
+                        </Button>
+                      )}
+
+                    {order.status === "COMPLETED" && (
+                      <Link href={`/orders/${order.id}/review`}>
+                        <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
+                          Leave a review
+                        </Button>
+                      </Link>
+                    )}
+
+                    {/* Raise Dispute — users only, completed orders */}
+                    {order.status === "COMPLETED" &&
+                      role !== "SERVICE_PROVIDER" && (
+                        <Button
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50 gap-2 font-medium rounded-lg"
+                          onClick={() =>
+                            setDisputeTarget({
+                              orderId: order.id,
+                              orderNumber: order.orderNumber,
+                            })
+                          }
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          Raise Dispute
+                        </Button>
+                      )}
+
+                    {/* Decline/Cancel Logic */}
+                    {(order.status === "AWAITING" ||
+                      order.status === "PENDING") && (
+                      <Button
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
+                        onClick={() => handleOrderAction(order.id, "DECLINED")}
+                        disabled={!!actionLoading[order.id]}
+                      >
+                        {actionLoading[order.id] === "DECLINED" ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : role === "SERVICE_PROVIDER" ? (
+                          "Decline Order"
+                        ) : (
+                          "Cancel Order"
+                        )}
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
+                      onClick={() => {
+                        if (!otherParty) return;
+                        setChatTarget({
+                          id: otherParty.id,
+                          name:
+                            otherParty.displayName ||
+                            `${otherParty.firstName} ${otherParty.lastName}`,
+                          avatar: otherParty.avatar || "",
+                        });
+                      }}
+                    >
+                      <Mail className="w-4 h-4" />
+                      {role === "SERVICE_PROVIDER"
+                        ? "Message Client"
+                        : "Message Provider"}
+                    </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-        {filteredOrders.length === 0 && (
+
+                {/* Row 3: Order Details Link */}
+                <div>
+                  <Link
+                    href={`/dashboard/orders/${order.id}`}
+                    className="flex items-center text-green-600 text-sm font-medium hover:underline gap-1"
+                  >
+                    Order details <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            );
+          })
+        ) : (
           <div className="p-12 text-center text-gray-500">
             No orders found in this category.
           </div>
         )}
       </div>
+
+      {/* Chat Box */}
+      {chatTarget && (
+        <ChatBox
+          isOpen={!!chatTarget}
+          onClose={() => setChatTarget(null)}
+          providerId={chatTarget.id}
+          providerName={chatTarget.name}
+          providerAvatar={chatTarget.avatar}
+        />
+      )}
+
+      {disputeTarget && (
+        <RaiseDisputeModal
+          orderId={disputeTarget.orderId}
+          orderNumber={disputeTarget.orderNumber}
+          isOpen={!!disputeTarget}
+          onClose={() => setDisputeTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1266,9 +941,18 @@ function ProviderOrders() {
 export default function OrdersPage() {
   const { user } = useAuthStore();
 
-  if (user?.role === "ADMIN") {
+  // Ensure we have a role, default to user if not
+  const role =
+    user?.role === "SERVICE_PROVIDER" || user?.role === "ADMIN"
+      ? (user.role as "SERVICE_PROVIDER" | "ADMIN")
+      : "USER";
+
+  if (role === "ADMIN") {
     return <AdminOrders />;
   }
 
-  return <ProviderOrders />;
+  // Cast role to "USER" | "SERVICE_PROVIDER" for UserOrdersList
+  const listRole = role === "SERVICE_PROVIDER" ? "SERVICE_PROVIDER" : "USER";
+
+  return <UserOrdersList role={listRole} />;
 }

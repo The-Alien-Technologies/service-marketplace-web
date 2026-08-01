@@ -31,16 +31,30 @@ interface PricingPlansProps {
   plans: PricingPlan[];
   providerName: string;
   providerAvatar: string;
+  service: {
+    id: string;
+    title: string;
+    providerId: string;
+    addons?: {
+      id?: string;
+      title: string;
+      description?: string;
+      price: number | string;
+    }[];
+  };
+  serviceId: string;
 }
 
 export function PricingPlans({
   plans,
   providerName,
   providerAvatar,
+  service,
+  serviceId,
 }: PricingPlansProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>(plans[0]?.id || "");
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
-    new Set([plans[0]?.id || ""])
+    new Set([plans[0]?.id || ""]),
   );
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -195,7 +209,7 @@ export function PricingPlans({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleContactClick}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -225,6 +239,7 @@ export function PricingPlans({
       <ChatBox
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+        providerId={service.providerId}
         providerName={providerName}
         providerAvatar={providerAvatar}
       />
@@ -233,6 +248,8 @@ export function PricingPlans({
       <QuoteRequestModal
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}
+        providerId={service.providerId}
+        serviceId={serviceId}
       />
 
       {/* Checkout Modal */}
@@ -240,6 +257,8 @@ export function PricingPlans({
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
         selectedPlan={getSelectedPlanData()}
+        service={service}
+        serviceId={serviceId}
       />
     </>
   );

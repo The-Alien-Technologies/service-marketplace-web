@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ChevronDown, Filter, X } from "lucide-react";
+import { Search, ChevronDown, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,80 +9,73 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HorizontalSeparator } from "../../layout/horizontal-separator";
-import { SkillDropdown } from "./filters/skill-dropdown";
+
 import { PriceRangeDropdown } from "./filters/price-range-dropdown";
 import { RatingDropdown } from "./filters/rating-dropdown";
-import { DeliveryTimeDropdown } from "./filters/delivery-time-dropdown";
+
+const SORT_OPTIONS = [
+  { label: "Best match", value: "best_match" },
+  { label: "Most popular", value: "popular" },
+  { label: "Highest rated", value: "rating" },
+  { label: "Lowest price", value: "price_asc" },
+  { label: "Highest price", value: "price_desc" },
+];
 
 interface CategoryFiltersProps {
   categoryName: string;
   resultCount: number;
+  onFilterChange?: (filters: {
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
+    sortBy?: string;
+  }) => void;
 }
 
 export function CategoryFilters({
   categoryName,
   resultCount,
+  onFilterChange,
 }: CategoryFiltersProps) {
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  // const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({
     min: 0,
     max: 50000,
   });
   const [ratingIds, setRatingIds] = useState<string[]>([]);
-  const [deliveryTime, setDeliveryTime] = useState<string>("");
-  const [sortBy, setSortBy] = useState<string>("Best match");
+  // const [deliveryTime, setDeliveryTime] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("best_match");
 
-  // Skill mapping for display
-  const skillLabels: Record<string, string> = {
-    plumbing: "Plumbing",
-    carpentry: "Carpentry",
-    "painting-decorating": "Painting & decorating",
-    packaging: "Packaging",
-    electrical: "Electrical",
-    hvac: "HVAC",
-    hairdressing: "Hairdressing",
-    "makeup-services": "Makeup services",
-    skincare: "Skincare",
-    massage: "Massage therapy",
-    "nail-care": "Nail care",
-    "logo-design": "Logo Design",
-    "brand-identity": "Brand Identity",
-    illustration: "Illustration",
-    "ui-ux": "UI/UX Design",
-  };
+  // Commented out for now - will be implemented later
+  // const MAX_VISIBLE_FILTERS = 1;
+  // const visibleSkills = selectedSkillIds.slice(0, MAX_VISIBLE_FILTERS);
+  // const hiddenSkillCount = selectedSkillIds.length - MAX_VISIBLE_FILTERS;
 
-  const MAX_VISIBLE_FILTERS = 1;
-  const visibleSkills = selectedSkillIds.slice(0, MAX_VISIBLE_FILTERS);
-  const hiddenSkillCount = selectedSkillIds.length - MAX_VISIBLE_FILTERS;
-
-  const removeSkill = (skillId: string) => {
-    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skillId));
-  };
+  // const removeSkill = (skillId: string) => {
+  //   setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skillId));
+  // };
 
   const clearAllFilters = () => {
-    setSelectedSkillIds([]);
+    setSearchQuery("");
+    // setSelectedSkillIds([]);
     setPriceRange({ min: 0, max: 50000 });
     setRatingIds([]);
-    setDeliveryTime("");
+    // setDeliveryTime("");
+    setSortBy("best_match");
+    triggerFilterChange("", { min: 0, max: 50000 }, [], "best_match");
   };
 
-  const handleSkillsApply = (skills: string[]) => {
-    setSelectedSkillIds(skills);
-  };
-
-  const handlePriceRangeApply = (range: { min: number; max: number }) => {
-    setPriceRange(range);
-  };
+  // const handleSkillsApply = (skills: string[]) => {
+  //   setSelectedSkillIds(skills);
+  // };
 
   const getPriceRangeDisplay = () => {
     if (priceRange.min === 0 && priceRange.max === 50000) {
       return "Price range";
     }
     return `$${priceRange.min.toLocaleString()}-$${priceRange.max.toLocaleString()}`;
-  };
-
-  const handleRatingApply = (ratings: string[]) => {
-    setRatingIds(ratings);
   };
 
   const getRatingDisplay = () => {
@@ -99,18 +92,61 @@ export function CategoryFilters({
     return `${ratingIds.length} selected`;
   };
 
-  const handleDeliveryTimeApply = (deliveryTimeId: string) => {
-    setDeliveryTime(deliveryTimeId);
+  const triggerFilterChange = (
+    search?: string,
+    price?: { min: number; max: number },
+    ratings?: string[],
+    sort?: string,
+  ) => {
+    const searchValue = search !== undefined ? search : searchQuery;
+    const priceValue = price || priceRange;
+    const ratingsValue = ratings || ratingIds;
+    const sortValue = sort || sortBy;
+
+    // Map rating IDs to numeric values
+    let minRating: number | undefined;
+    if (ratingsValue.length > 0) {
+      const ratingMap: Record<string, number> = {
+        "top-rated": 4.5,
+        reliable: 4.0,
+        "good-service": 3.5,
+        all: 0,
+      };
+      minRating = Math.max(...ratingsValue.map((id) => ratingMap[id] || 0));
+    }
+
+    onFilterChange?.({
+      search: searchValue || undefined,
+      minPrice: priceValue.min > 0 ? priceValue.min : undefined,
+      maxPrice: priceValue.max < 50000 ? priceValue.max : undefined,
+      minRating,
+      sortBy: sortValue,
+    });
   };
 
-  const getDeliveryTimeDisplay = () => {
-    const deliveryLabels: Record<string, string> = {
-      "24-hours": "24 hours",
-      "1-3-days": "1-3 Days",
-      "4-7-days": "4-7 Days",
-      flexible: "Flexible timeline",
-    };
-    return deliveryLabels[deliveryTime] || "Delivery time";
+  const handlePriceRangeApply = (range: { min: number; max: number }) => {
+    setPriceRange(range);
+    triggerFilterChange(undefined, range);
+  };
+
+  const handleRatingApply = (ratings: string[]) => {
+    setRatingIds(ratings);
+    triggerFilterChange(undefined, undefined, ratings);
+  };
+
+  const handleSortByChange = (sort: string) => {
+    setSortBy(sort);
+    triggerFilterChange(undefined, undefined, undefined, sort);
+  };
+
+  const handleSearch = () => {
+    triggerFilterChange(searchQuery);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   return (
@@ -121,21 +157,29 @@ export function CategoryFilters({
         <input
           type="text"
           placeholder="What service are you looking for"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
           className="w-full pl-12 pr-28 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
         />
-        <button className="absolute right-0 top-0 bottom-0 px-6 bg-brand-900 hover:bg-brand-700 text-white font-medium rounded-r-lg transition-colors">
+        <button
+          onClick={handleSearch}
+          className="absolute right-0 top-0 bottom-0 px-6 bg-brand-900 hover:bg-brand-700 text-white font-medium rounded-r-lg transition-colors"
+        >
           Search
         </button>
       </div>
 
       {/* Results Header with Sort */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center flex-wrap gap-2 text-sm sm:text-base">
           <span className="text-gray-700 font-medium">
             Showing search results for
           </span>
-          <span className="font-bold text-gray-900">'{categoryName}'</span>
-          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium">
+          <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">
+            &apos;{categoryName}&apos;
+          </span>
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium shrink-0">
             {resultCount}
           </span>
         </div>
@@ -146,26 +190,31 @@ export function CategoryFilters({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-white">
-                <span className="font-medium text-gray-900">{sortBy}</span>
+                <span className="font-medium text-gray-900">
+                  {SORT_OPTIONS.find((opt) => opt.value === sortBy)?.label ||
+                    "Best match"}
+                </span>
                 <ChevronDown className="w-4 h-4 text-gray-600" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setSortBy("Best match")}>
-                <span>Best match</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("Most popular")}>
-                <span>Most popular</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("Highest rated")}>
-                <span>Highest rated</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("Lowest price")}>
-                <span>Lowest price</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy("Highest price")}>
-                <span>Highest price</span>
-              </DropdownMenuItem>
+              {SORT_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => handleSortByChange(option.value)}
+                  className="cursor-pointer"
+                >
+                  <span
+                    className={
+                      sortBy === option.value
+                        ? "font-medium text-brand-900"
+                        : ""
+                    }
+                  >
+                    {option.label}
+                  </span>
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -175,57 +224,17 @@ export function CategoryFilters({
       <HorizontalSeparator />
 
       {/* Filters Row */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Filters Label with Selected Skills */}
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap w-full">
+        {/* Filters Label */}
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-2 text-gray-700 font-medium">
             <Filter className="w-5 h-5" />
             <span>Filters:</span>
           </div>
-
-          {/* First Selected Skill Chip */}
-          {visibleSkills.map((skillId) => (
-            <div
-              key={skillId}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm"
-            >
-              <span>{skillLabels[skillId] || skillId}</span>
-              <button
-                onClick={() => removeSkill(skillId)}
-                className="hover:bg-gray-200 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-
-          {/* Hidden Skill Count Dropdown */}
-          {hiddenSkillCount > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
-                  +{hiddenSkillCount}
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                {selectedSkillIds.slice(MAX_VISIBLE_FILTERS).map((skillId) => (
-                  <DropdownMenuItem
-                    key={skillId}
-                    onClick={() => removeSkill(skillId)}
-                    className="flex items-center justify-between"
-                  >
-                    <span>{skillLabels[skillId] || skillId}</span>
-                    <X className="w-4 h-4 text-gray-500" />
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
 
-        {/* Add More Skills - New Dialog */}
-        <SkillDropdown
+        {/* Commented out - Skill Filter */}
+        {/* <SkillDropdown
           selectedSkills={selectedSkillIds}
           onApply={handleSkillsApply}
           trigger={
@@ -236,7 +245,7 @@ export function CategoryFilters({
               <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
           }
-        />
+        /> */}
 
         {/* Price Range Filter */}
         <PriceRangeDropdown
@@ -266,8 +275,8 @@ export function CategoryFilters({
           }
         />
 
-        {/* Delivery Time Filter */}
-        <DeliveryTimeDropdown
+        {/* Commented out - Delivery Time Filter */}
+        {/* <DeliveryTimeDropdown
           selectedDeliveryTime={deliveryTime}
           onApply={handleDeliveryTimeApply}
           trigger={
@@ -278,14 +287,13 @@ export function CategoryFilters({
               <ChevronDown className="w-4 h-4 text-gray-600" />
             </button>
           }
-        />
+        /> */}
 
         {/* Clear All Link */}
-        {(selectedSkillIds.length > 0 ||
+        {(searchQuery ||
           priceRange.min !== 0 ||
           priceRange.max !== 50000 ||
-          ratingIds.length > 0 ||
-          deliveryTime) && (
+          ratingIds.length > 0) && (
           <button
             onClick={clearAllFilters}
             className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors ml-auto"

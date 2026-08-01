@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   ChevronRight,
-  Download,
   Mail,
   Phone,
-  ArrowLeft,
-  ChevronDown,
-  Paperclip,
+  Loader2,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,88 +20,156 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { apiService } from "@/lib/api";
+import {
+  Dispute,
+  DisputeStatus,
+  ISSUE_TYPE_LABELS,
+  DISPUTE_STATUS_LABELS,
+  DISPUTE_PRIORITY_LABELS,
+} from "@/types/dispute";
+import { toast } from "react-toastify";
 
-// --- Mock Data ---
+// ─── Status badge ─────────────────────────────────────────────────────────────
 
-const disputeDetail = {
-  id: "ADM-00456",
-  orderId: "5764892",
-  orderCategory: "Architecture & Interior Design",
-  orderStatus: "Open",
-  dateSubmitted: "August 29, 2025",
-  client: {
-    name: "Olivia Rhye",
-    role: "Client",
-    email: "sarah.j@example.com",
-    phone: "+23359 987 6543",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  freelancer: {
-    name: "Michael Chen",
-    role: "Freelancer",
-    email: "michael.c@example.com",
-    phone: "+23359 987 6543",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-  },
-  issueType: "Late Delivery",
-  description:
-    "The freelancer missed the agreed delivery deadline by 5 days. I have an urgent client presentation and this delay has caused significant issues. I requested updates multiple times but received minimal communication.",
-  status: "Open",
-  evidence: {
-    client: [
-      {
-        id: "1",
-        name: "chat-screenshot.png",
-        date: "September 12, 2025 10:30 AM",
-        preview:
-          "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      },
-    ],
-    freelancer: [],
-    admin: [],
-  },
-  timeline: [
-    {
-      id: 1,
-      title: "Dispute opened by Sarah Johnson",
-      date: "August 29, 2025 10:30 AM",
-      role: "Client",
-      description: "",
-    },
-    {
-      id: 2,
-      title: "Client submitted evidence",
-      date: "August 30, 2025 10:30 AM",
-      role: "Client",
-      description: "",
-    },
-    {
-      id: 3,
-      title: "Freelancer responded with evidence",
-      date: "August 30, 2025 10:30 AM",
-      role: "Client", // Note: The design shows "Client" tag here? Or maybe typo in design. Usually Freelancer events have Freelancer tag. I'll stick to design screenshot "Client" if unsure, but logically it should be Freelancer. Screenshot shows "Client" badge for Freelancer response. I'll keep it as "Client" to match pixel perfect request, but might correct it if user complains. Actually looking closely at screenshot: "Freelancer responded with evidence" has "Client" badge underneath. This is likely a mistake in the design mockup. I will use "Client" to match the screenshot "pixel perfect" instruction, but add a comment.
-      description: "",
-    },
-    {
-      id: 4,
-      title: 'Status changed to "Review"',
-      date: "August 30, 2025 10:30 AM",
-      role: "Admin",
-      description: "",
-    },
-  ],
-};
+function StatusBadge({ status }: { status: DisputeStatus }) {
+  const styles: Record<DisputeStatus, string> = {
+    OPEN: "bg-red-50 text-red-700 border-red-200",
+    INVESTIGATING: "bg-amber-50 text-amber-700 border-amber-200",
+    RESOLVED: "bg-green-50 text-green-700 border-green-200",
+    CLOSED: "bg-gray-50 text-gray-700 border-gray-200",
+  };
+  const dots: Record<DisputeStatus, string> = {
+    OPEN: "bg-red-500",
+    INVESTIGATING: "bg-amber-500",
+    RESOLVED: "bg-green-500",
+    CLOSED: "bg-gray-500",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dots[status]}`} />
+      {DISPUTE_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+// ─── Party card ───────────────────────────────────────────────────────────────
+
+function PartyCard({
+  party,
+  role,
+}: {
+  party: Dispute["client"];
+  role: "Client" | "Provider";
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+        {party.avatar ? (
+          <Image
+            src={party.avatar}
+            alt={party.firstName}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center font-bold text-gray-500 text-sm">
+            {party.firstName?.[0]}
+          </div>
+        )}
+      </div>
+      <div className="space-y-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-medium text-gray-900 text-sm">
+            {party.firstName} {party.lastName}
+          </span>
+          <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full">
+            {role}
+          </span>
+        </div>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Mail className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{party.email}</span>
+          </div>
+          {party.phoneNumber && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Phone className="w-3 h-3 flex-shrink-0" />
+              {party.countryCode} {party.phoneNumber}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DisputeDetailsPage({
   params,
 }: {
-  params: { disputeId: string };
+  params: Promise<{ disputeId: string }>;
 }) {
-  const [activeTab, setActiveTab] = useState("client");
+  const { disputeId } = use(params);
+  const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState<DisputeStatus>("OPEN");
+  const [adminNote, setAdminNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchDispute = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiService.getDispute(disputeId);
+      setDispute(data);
+      setSelectedStatus(data.status);
+      setAdminNote(data.adminNote ?? "");
+    } catch {
+      toast.error("Failed to load dispute");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [disputeId]);
+
+  useEffect(() => {
+    fetchDispute();
+  }, [fetchDispute]);
+
+  const handleSaveResolution = async () => {
+    if (!dispute) return;
+    setIsSaving(true);
+    try {
+      const updated = await apiService.updateDisputeStatus(
+        dispute.id,
+        selectedStatus,
+        adminNote,
+      );
+      setDispute(updated);
+      toast.success("Dispute updated successfully");
+    } catch {
+      toast.error("Failed to update dispute");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (!dispute) {
+    return (
+      <div className="text-center py-20 text-gray-500">Dispute not found.</div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-[1200px]">
@@ -111,11 +178,10 @@ export default function DisputeDetailsPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
           <p className="text-gray-500 mt-1">
-            Review and resolve conflicts between customers and freelancers.
+            Review and resolve conflicts between customers and service
+            providers.
           </p>
         </div>
-
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Link
             href="/dashboard/disputes"
@@ -124,320 +190,266 @@ export default function DisputeDetailsPage({
             Disputes
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900 font-medium">
-            {disputeDetail.id}
+          <span className="text-gray-900 font-medium font-mono">
+            {dispute.id.slice(0, 8).toUpperCase()}
           </span>
         </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-8">
-        {/* Left Column: Main Content */}
+        {/* ── Left Column ─────────────────────────────────────────────── */}
         <div className="flex-1 space-y-8">
-          {/* Header Row */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">
-              #{disputeDetail.id}
-            </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">
-                Change status
-              </span>
-              <Select defaultValue={disputeDetail.status}>
-                <SelectTrigger className="w-[120px] bg-white border-gray-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="Review">Review</SelectItem>
-                  <SelectItem value="Resolved">Resolved</SelectItem>
-                  <SelectItem value="Closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Title row */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-gray-900 font-mono">
+                #{dispute.id.slice(0, 8).toUpperCase()}
+              </h2>
+              <StatusBadge status={dispute.status} />
             </div>
+            <span className="text-sm text-gray-500">
+              {new Date(dispute.createdAt).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
           </div>
 
-          {/* Order Info */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <span className="font-bold text-gray-900">
-              Order ID: #{disputeDetail.orderId}
-            </span>
-            <span className="text-gray-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-900 font-medium">
-                {disputeDetail.orderCategory}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5"></span>
-                {disputeDetail.orderStatus}
+          {/* Order info */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm bg-gray-50 rounded-xl p-4">
+            <div>
+              <span className="text-gray-500 text-xs block">Order</span>
+              <span className="font-bold text-gray-900">
+                #{dispute.order.orderNumber}
               </span>
             </div>
-            <span className="ml-auto text-gray-500">
-              {disputeDetail.dateSubmitted}
-            </span>
+            <span className="text-gray-300">|</span>
+            <div>
+              <span className="text-gray-500 text-xs block">Service</span>
+              <span className="font-medium text-gray-900">
+                {dispute.order.service.title}
+              </span>
+            </div>
+            <span className="text-gray-300">|</span>
+            <div>
+              <span className="text-gray-500 text-xs block">Plan</span>
+              <span className="font-medium text-gray-900">
+                {dispute.order.planTitle}
+              </span>
+            </div>
+            <span className="text-gray-300">|</span>
+            <div>
+              <span className="text-gray-500 text-xs block">Total</span>
+              <span className="font-bold text-gray-900">
+                GHS {Number(dispute.order.total).toFixed(2)}
+              </span>
+            </div>
+            <span className="text-gray-300">|</span>
+            <div>
+              <span className="text-gray-500 text-xs block">Priority</span>
+              <span
+                className={cn(
+                  "font-medium",
+                  dispute.priority === "HIGH"
+                    ? "text-red-600"
+                    : dispute.priority === "MEDIUM"
+                      ? "text-amber-600"
+                      : "text-gray-600",
+                )}
+              >
+                {DISPUTE_PRIORITY_LABELS[dispute.priority]}
+              </span>
+            </div>
           </div>
 
           {/* Parties Involved */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">Parties Involved</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Client Card */}
-              <div className="bg-white p-0 rounded-none border-0">
-                <div className="flex items-start gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                    <Image
-                      src={disputeDetail.client.avatar}
-                      alt={disputeDetail.client.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
-                        {disputeDetail.client.name}
-                      </span>
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                        {disputeDetail.client.role}
-                      </span>
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Mail className="w-3 h-3" />
-                        {disputeDetail.client.email}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Phone className="w-3 h-3" />
-                        {disputeDetail.client.phone}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Freelancer Card */}
-              <div className="bg-white p-0 rounded-none border-0">
-                <div className="flex items-start gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                    <Image
-                      src={disputeDetail.freelancer.avatar}
-                      alt={disputeDetail.freelancer.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
-                        {disputeDetail.freelancer.name}
-                      </span>
-                      <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                        {disputeDetail.freelancer.role}
-                      </span>
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Mail className="w-3 h-3" />
-                        {disputeDetail.freelancer.email}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Phone className="w-3 h-3" />
-                        {disputeDetail.freelancer.phone}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <h3 className="text-sm font-bold text-gray-900">
+              Parties Involved
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white border border-gray-100 rounded-xl">
+              <PartyCard party={dispute.client} role="Client" />
+              <PartyCard party={dispute.provider} role="Provider" />
             </div>
-
             <Link
-              href={`/dashboard/orders/${disputeDetail.orderId}`}
-              className="inline-flex items-center text-sm text-[#15803d] font-medium hover:underline mt-2"
+              href={`/dashboard/orders/${dispute.orderId}`}
+              className="inline-flex items-center text-sm text-green-700 font-medium hover:underline"
             >
-              View order summary <span className="ml-1">→</span>
+              View order summary →
             </Link>
           </div>
 
           {/* Issue Summary */}
           <div className="space-y-4">
             <h3 className="text-lg font-bold text-gray-900">Issue summary</h3>
-            <div className="space-y-4">
+            <div className="space-y-4 p-5 bg-white border border-gray-100 rounded-xl">
               <div>
-                <span className="block text-sm text-gray-500 mb-1">
+                <span className="block text-xs text-gray-500 mb-1">
                   Issue Type
                 </span>
-                <span className="text-base text-gray-900 font-medium">
-                  {disputeDetail.issueType}
+                <span className="text-sm font-medium text-gray-900">
+                  {ISSUE_TYPE_LABELS[dispute.issueType]}
                 </span>
               </div>
               <div>
-                <span className="block text-sm text-gray-500 mb-1">
+                <span className="block text-xs text-gray-500 mb-1">
                   Description
                 </span>
-                <p className="text-base text-gray-900 leading-relaxed">
-                  {disputeDetail.description}
+                <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">
+                  {dispute.description}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Evidence Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">Evidence</h3>
-            <Tabs
-              defaultValue="client"
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full"
-            >
-              <TabsList className="bg-gray-100/50 p-1 h-auto rounded-lg inline-flex justify-start w-fit mb-4">
-                <TabsTrigger
-                  value="client"
-                  className="rounded-md px-4 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-gray-500 hover:text-gray-700"
-                >
-                  Client evidence
-                </TabsTrigger>
-                <TabsTrigger
-                  value="freelancer"
-                  className="rounded-md px-4 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-gray-500 hover:text-gray-700"
-                >
-                  Freelancer evidence
-                </TabsTrigger>
-                <TabsTrigger
-                  value="admin"
-                  className="rounded-md px-4 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm text-gray-500 hover:text-gray-700"
-                >
-                  Admin notes
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="client" className="space-y-4 mt-0">
-                {disputeDetail.evidence.client.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-gray-200 rounded-xl p-4 space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
-                          <Paperclip className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-gray-500">{item.date}</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Download className="w-4 h-4 text-gray-500" />
-                      </Button>
-                    </div>
-                    {item.preview && (
-                      <div className="relative aspect-[2/1] w-full rounded-lg overflow-hidden bg-gray-50">
-                        <Image
-                          src={item.preview}
-                          alt="Evidence preview"
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </TabsContent>
-              <TabsContent value="freelancer" className="mt-0">
-                <div className="text-sm text-gray-500 italic py-4">
-                  No evidence submitted yet.
-                </div>
-              </TabsContent>
-              <TabsContent value="admin" className="mt-0">
-                <div className="text-sm text-gray-500 italic py-4">
-                  No notes added yet.
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-
-        {/* Right Column: Sidebar */}
-        <div className="w-full xl:w-[380px] space-y-8">
-          {/* Admin Resolution Actions */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">
-              Admin Resolution Actions
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Choose resolution
-                </label>
-                <Select>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="select an option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="refund">Refund Client</SelectItem>
-                    <SelectItem value="release">Release Payment</SelectItem>
-                    <SelectItem value="split">Split Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Message
-                </label>
-                <Textarea
-                  placeholder="Add a message for the parties involved..."
-                  className="min-h-[120px] bg-white resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button className="w-full bg-[#15803d] hover:bg-[#14532d] text-white">
-                  Resolve Dispute
-                </Button>
-                <Button variant="outline" className="w-full border-gray-200">
-                  Request more Info
-                </Button>
+          {/* Resolution status */}
+          {(dispute.status === "RESOLVED" || dispute.status === "CLOSED") && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-green-800 text-sm mb-1">
+                  Dispute {DISPUTE_STATUS_LABELS[dispute.status]}
+                </h4>
+                {dispute.adminNote && (
+                  <p className="text-sm text-green-700">{dispute.adminNote}</p>
+                )}
+                {dispute.resolvedAt && (
+                  <p className="text-xs text-green-600 mt-1">
+                    {new Date(dispute.resolvedAt).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* ── Right Column ─────────────────────────────────────────────── */}
+        <div className="w-full xl:w-[360px] space-y-6">
+          {/* Admin Resolution Panel */}
+          <div className="bg-white border border-gray-100 rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">
+              Admin Resolution
+            </h3>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700">
+                Update status
+              </label>
+              <Select
+                value={selectedStatus}
+                onValueChange={(v) => setSelectedStatus(v as DisputeStatus)}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="INVESTIGATING">Investigating</SelectItem>
+                  <SelectItem value="RESOLVED">Resolved</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700">
+                Resolution note{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <Textarea
+                placeholder="Add an internal note about how this dispute was resolved..."
+                className="min-h-[120px] bg-white resize-none text-sm"
+                value={adminNote}
+                onChange={(e) => setAdminNote(e.target.value)}
+              />
+            </div>
+
+            <Button
+              className="w-full bg-[#15803d] hover:bg-[#14532d] text-white flex items-center gap-2 justify-center"
+              onClick={handleSaveResolution}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              {isSaving ? "Saving..." : "Save Resolution"}
+            </Button>
           </div>
 
-          {/* Activity Timeline */}
-          <div className="border border-gray-200 rounded-xl p-6 bg-white">
-            <h3 className="text-sm font-bold text-gray-900 mb-6">
-              Activity Timeline
-            </h3>
-            <div className="relative space-y-8 pl-2">
-              {/* Vertical Line */}
+          {/* Timeline */}
+          <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">Timeline</h3>
+            <div className="relative space-y-6 pl-2">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" />
 
-              {disputeDetail.timeline.map((event, index) => (
-                <div key={event.id} className="relative pl-6">
-                  {/* Dot */}
-                  <div className="absolute left-0 top-1.5 w-[22px] h-[22px] bg-white flex items-center justify-center">
-                    <div
-                      className={cn(
-                        "w-2.5 h-2.5 rounded-full",
-                        index === 0 ? "bg-[#15803d]" : "bg-[#15803d]" // All green dots in mockup
-                      )}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900 leading-none">
-                      {event.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{event.date}</p>
-                    {event.role && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-gray-100 text-gray-600 mt-1">
-                        {event.role}
-                      </span>
-                    )}
-                  </div>
+              {/* Submitted */}
+              <div className="relative pl-6">
+                <div className="absolute left-0 top-1.5 w-[22px] h-[22px] bg-white flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
                 </div>
-              ))}
+                <p className="text-sm font-medium text-gray-900 leading-none">
+                  Dispute opened
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {new Date(dispute.createdAt).toLocaleString()}
+                </p>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-gray-100 text-gray-600 mt-1">
+                  Client
+                </span>
+              </div>
+
+              {/* Current status */}
+              {dispute.status !== "OPEN" && (
+                <div className="relative pl-6">
+                  <div className="absolute left-0 top-1.5 w-[22px] h-[22px] bg-white flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 leading-none">
+                    Status changed to &quot;
+                    {DISPUTE_STATUS_LABELS[dispute.status]}&quot;
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {new Date(dispute.updatedAt).toLocaleString()}
+                  </p>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-gray-100 text-gray-600 mt-1">
+                    Admin
+                  </span>
+                </div>
+              )}
+
+              {/* Resolved */}
+              {dispute.resolvedAt && (
+                <div className="relative pl-6">
+                  <div className="absolute left-0 top-1.5 w-[22px] h-[22px] bg-white flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 leading-none">
+                    Dispute{" "}
+                    {DISPUTE_STATUS_LABELS[dispute.status].toLowerCase()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {new Date(dispute.resolvedAt).toLocaleString()}
+                  </p>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-green-100 text-green-700 mt-1">
+                    Admin
+                  </span>
+                </div>
+              )}
+
+              {/* Pending */}
+              {dispute.status === "OPEN" && (
+                <div className="relative pl-6">
+                  <div className="absolute left-0 top-1.5 w-[22px] h-[22px] bg-white flex items-center justify-center">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-400 leading-none italic">
+                    Awaiting review
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -445,4 +457,3 @@ export default function DisputeDetailsPage({
     </div>
   );
 }
-

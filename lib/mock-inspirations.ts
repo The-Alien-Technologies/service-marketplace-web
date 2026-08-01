@@ -1,4 +1,4 @@
-import { InspirationCardData } from "@/components/sections/inspiration-card";
+import { InspirationCardData } from "@/components/sections/cards/inspiration-card";
 
 export const mockInspirations: InspirationCardData[] = [
   {
