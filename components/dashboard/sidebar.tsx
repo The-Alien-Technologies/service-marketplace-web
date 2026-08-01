@@ -18,8 +18,8 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  Headphones,
   FileText,
-  User as UserIcon,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,6 +83,11 @@ const adminSidebarItems: SidebarGroup[] = [
         icon: Scale,
         label: "Disputes",
         href: "/dashboard/disputes",
+      },
+      {
+        icon: Headphones,
+        label: "Support Chat",
+        href: "/dashboard/support-chat",
       },
       {
         icon: Settings,

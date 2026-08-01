@@ -8,6 +8,11 @@ import {
 } from "@/types/auth";
 import { BotChatResponse } from "@/types/bot";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
+import {
+  SupportConversation,
+  SupportMessage,
+  AdminConversationsResponse,
+} from "@/types/support";
 import { Order, Review, ReviewSummary } from "@/types/order";
 import {
   ProviderAnalytics,
@@ -892,11 +897,77 @@ class ApiService {
     return response.data;
   }
 
+  // ─── Support Chat ____________________________________________
+
+  async startSupportConversation(): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      "/support/conversations",
+      { method: "POST" }
+    );
+    return response.data.conversation;
+  }
+
+  async getMySupportConversations(): Promise<SupportConversation[]> {
+    const response = await this.request<{
+      conversations: SupportConversation[];
+    }>("/support/conversations/my");
+    return response.data.conversations;
+  }
+
+  async getSupportConversation(id: string): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${id}`
+    );
+    return response.data.conversation;
+  }
+
+  async sendSupportMessage(
+    conversationId: string,
+    content: string
+  ): Promise<{ userMessage: SupportMessage; botMessage?: SupportMessage }> {
+    const response = await this.request<{
+      userMessage: SupportMessage;
+      botMessage?: SupportMessage;
+    }>(`/support/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    return response.data;
+  }
+
   async updateUserProfile(data: Partial<User>): Promise<{ user: User }> {
     const response = await this.request<{ user: User }>("/auth/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+    return response.data;
+  }
+
+  async escalateSupportConversation(
+    conversationId: string
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${conversationId}/escalate`,
+      { method: "PATCH" }
+    );
+    return response.data.conversation;
+  }
+
+  async closeSupportConversation(
+    conversationId: string
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${conversationId}/close`,
+      { method: "PATCH" }
+    );
+    return response.data.conversation;
+  }
+
+  // Admin support endpoints
+  async getAdminSupportConversations(): Promise<AdminConversationsResponse> {
+    const response = await this.request<AdminConversationsResponse>(
+      "/support/admin/conversations"
+    );
     return response.data;
   }
 
@@ -1128,6 +1199,26 @@ class ApiService {
       `/reviews/order/${orderId}`,
     );
     return response.data;
+  }
+
+  async adminJoinSupportConversation( 
+    conversationId: string
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/admin/conversations/${conversationId}/join`,
+      { method: "PATCH" }
+    );
+    return response.data.conversation;
+  }
+
+  async adminCloseSupportConversation(
+    conversationId: string
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/admin/conversations/${conversationId}/close`,
+      { method: "PATCH" }
+    );
+    return response.data.conversation;
   }
 
   async respondToReview(

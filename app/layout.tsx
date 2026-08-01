@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { SupportChatWidget } from "@/components/supportChat/support-chat-widget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +27,9 @@ export const metadata: Metadata = {
   title: "Service Marketplace",
   description: "Find and hire trusted service providers with ease",
 };
+interface SupportChatProps {
+  isOpenChat: boolean;
+}
 
 export default function RootLayout({
   children,
@@ -54,6 +58,7 @@ export default function RootLayout({
             pauseOnHover
             theme="light"
           />
+          <SupportChatWidget />
         </ThemeProvider>
         <AuthModal />
       </body>

@@ -23,14 +23,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/store/categories-store";
 import { useState } from "react";
-import { BotChatBox } from "../botChat/bot-chat-box";
+import { useSupportChatStore } from "@/store/support-chat-store";
 
-interface BotProps {
-  botName?: string,
-  botAvatar?: string
-}
-
-export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : BotProps) {
+export function HomeHeader() {
+  const openChat = useSupportChatStore((state) => state.openChat);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const {
@@ -42,14 +38,10 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
     startProviderFlow,
   } = useAuthStore();
   const { topLevelCategories, isLoading: categoriesLoading } = useCategories();
-  const [isChatOpen, setIsChatOpen] = useState(false)
 
   const handleChatOpen = () => {
-    setIsChatOpen(true);
-    console.log("ai bot btn click")
-  }
-
-
+    openChat();
+  };
 
   const renderCategoriesDropdown = () => (
     <DropdownMenu>
@@ -105,7 +97,6 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                     <span>Help & Support</span>
                     <ChevronDown className="w-4 h-4" />
                   </button>
-                  {/* <button onClick={handleChatOpen}>contact AI support</button> */}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                   <DropdownMenuItem>
@@ -184,7 +175,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                       )}
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      {user?.firstName || "User"}
+                      {user?.role === "SERVICE_PROVIDER" ? "Provider" : "User"}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
@@ -248,7 +239,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                     <DropdownMenuItem>
                       <span>Help Center</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleChatOpen}>
                       <span>Contact Support</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
@@ -280,7 +271,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                   Sign in
                 </Button>
                 <Button
-                  onClick={startUserFlow}
+                  onClick={() => showAuth("signup")}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-6 py-2 rounded-lg"
                 >
@@ -313,7 +304,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           <div className="flex flex-col space-y-6">
             {isAuthenticated ? (
               <div className="flex flex-col space-y-4">
@@ -422,7 +413,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                       )}
                     </div>
                   </details>
-                  
+
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                       Help & Support
@@ -430,7 +421,15 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       <button className="text-left text-gray-600 text-base py-1">Help Center</button>
-                      <button className="text-left text-gray-600 text-base py-1">Contact Support</button>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          handleChatOpen();
+                        }}
+                        className="text-left text-gray-600 text-base py-1"
+                      >
+                        Contact Support
+                      </button>
                       <button className="text-left text-gray-600 text-base py-1">Community</button>
                       <button className="text-left text-gray-600 text-base py-1">Trust & Safety</button>
                     </div>
@@ -480,7 +479,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                       )}
                     </div>
                   </details>
-                  
+
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                       Help & Support
@@ -488,7 +487,15 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       <button className="text-left text-gray-600 text-base py-1">Help Center</button>
-                      <button className="text-left text-gray-600 text-base py-1">Contact Support</button>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          handleChatOpen();
+                        }}
+                        className="text-left text-gray-600 text-base py-1"
+                      >
+                        Contact Support
+                      </button>
                     </div>
                   </details>
                 </div>
@@ -529,14 +536,7 @@ export function HomeHeader({ botName = "AI Agent Kwadwo" , botAvatar = ""} : Bot
         </div>
       )}
     </header>
-
-      {/* Chat Box */}
-      <BotChatBox
-      isOpen={isChatOpen}
-      onClose={() => setIsChatOpen(false)}
-      botName={botName}
-      botAvatar={botAvatar}
-      />
     </>
+    
   );
 }

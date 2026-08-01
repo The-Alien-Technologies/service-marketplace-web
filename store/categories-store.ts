@@ -21,16 +21,16 @@ interface CategoriesStore extends CategoriesState {
   getCategoryById: (id: string) => Category | undefined;
 }
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;// 5 minutes
 
-export const useCategoriesStore = create<CategoriesStore>()((set, get) => ({
+export const useCategoriesStore = create<CategoriesStore>((set, get) => ({
   // Initial state
   categories: [],
   isLoading: false,
   error: null,
   lastFetched: null,
 
-  // Computed getters
+// Computed getters
   featuredCategories: () => {
     return get().categories.filter((cat) => cat.featured);
   },
@@ -43,26 +43,36 @@ export const useCategoriesStore = create<CategoriesStore>()((set, get) => ({
   fetchCategories: async (force = false) => {
     const { lastFetched, isLoading } = get();
 
-    // Check cache validity
-    if (!force && lastFetched && Date.now() - lastFetched < CACHE_DURATION) {
+// Check cache validity
+    if (
+      !force &&
+      lastFetched &&
+      Date.now() - lastFetched < CACHE_DURATION
+    ) {
       return;
     }
-
-    // Prevent duplicate fetches
+// Prevent duplicate fetches
     if (isLoading) return;
 
     try {
-      set({ isLoading: true, error: null });
+      set({
+        isLoading: true,
+        error: null,
+      });
+
       const response = await apiService.getCategories();
       set({
-        categories: response.categories,
+        categories: response.categories ?? [],
         lastFetched: Date.now(),
         isLoading: false,
+        error: null,
       });
     } catch (err) {
       set({
         error:
-          err instanceof Error ? err.message : "Failed to fetch categories",
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch categories",
         isLoading: false,
       });
     }
@@ -85,7 +95,8 @@ export function useCategories() {
     if (!store.lastFetched && !store.isLoading) {
       store.fetchCategories();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // The store handles caching; consumers only need to trigger the first fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
