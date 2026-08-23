@@ -36,8 +36,8 @@ NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
-# Google Maps
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-key
+# OpenStreetMap-backed location search (Photon demo by default)
+NEXT_PUBLIC_GEOCODING_API_URL=https://photon.komoot.io
 ```
 
 **Variable types:**
@@ -64,17 +64,21 @@ The pipeline is defined in `.github/workflows/deploy.yml` and triggers on pushes
 | `main` | `latest`, `main`, `main-<sha>` |
 | `staging` | `staging-latest`, `staging`, `staging-<sha>` |
 
-### Required GitHub Secrets
+### Required GitHub secrets and variables
 
 Set these in **GitHub → Settings → Secrets and variables → Actions**:
 
-| Secret | Description |
-|--------|-------------|
-| `NEXT_PUBLIC_API_URL_PROD` | Production backend API URL (e.g. `https://api.yourdomain.com/api`) |
-| `NEXT_PUBLIC_API_URL_STAGING` | Staging backend API URL (e.g. `https://api-staging.yourdomain.com/api`) |
-| `NEXT_PUBLIC_BETTER_AUTH_URL_PROD` | Production auth URL |
-| `NEXT_PUBLIC_BETTER_AUTH_URL_STAGING` | Staging auth URL |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps API key (shared across environments) |
+| Name | Type | Description |
+|------|------|-------------|
+| `NEXT_PUBLIC_API_URL_PROD` | Secret | Production backend API URL (e.g. `https://api.yourdomain.com/api`) |
+| `NEXT_PUBLIC_API_URL_STAGING` | Secret | Staging backend API URL (e.g. `https://api-staging.yourdomain.com/api`) |
+| `NEXT_PUBLIC_BETTER_AUTH_URL_PROD` | Secret | Production auth URL |
+| `NEXT_PUBLIC_BETTER_AUTH_URL_STAGING` | Secret | Staging auth URL |
+| `NEXT_PUBLIC_GEOCODING_API_URL` | Repository variable | Optional Photon endpoint; use a private/self-hosted instance for production volume |
+
+The public Photon endpoint is a demo service with no uptime guarantee and may
+throttle extensive use. Pavodah debounces and caches browser searches, but a
+self-hosted Photon endpoint is recommended as traffic grows.
 
 > **Important:** `NEXT_PUBLIC_*` variables are compiled into the JS bundle — they cannot be changed after the image is built. Each environment needs its own image built with the correct values.
 
@@ -100,7 +104,7 @@ These are **not** build args — pass them as environment variables when running
 docker build \
   --build-arg NEXT_PUBLIC_API_URL=http://localhost:3000/api \
   --build-arg NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001 \
-  --build-arg NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-key \
+  --build-arg NEXT_PUBLIC_GEOCODING_API_URL=https://photon.komoot.io \
   -t service-marketplace-web .
 ```
 

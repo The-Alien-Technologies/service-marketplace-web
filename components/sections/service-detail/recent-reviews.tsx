@@ -107,11 +107,11 @@ export function RecentReviews({
 
               {/* Provider Response */}
               {review.response && (
-                <div className="mb-3 ml-2 pl-3 border-l-2 border-green-200 bg-green-50/60 dark:bg-green-900/10 rounded-r-lg py-2 pr-3">
+                <div className="mb-3 rounded-lg bg-green-50 px-4 py-3 dark:bg-green-900/10">
                   <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
                     Provider response
                   </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-green-950 dark:text-green-100">
                     {review.response.comment}
                   </p>
                 </div>

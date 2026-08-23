@@ -207,7 +207,7 @@ export function ProviderDocumentsForm() {
   const isUploading = documents.some(doc => doc.isUploading) || isLoading;
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-500 mb-2">

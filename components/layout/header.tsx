@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronDown, Globe, Bell, Mail, ShoppingBag, Menu, X } from "lucide-react";
+import {
+  ChevronDown,
+  Globe,
+  Bell,
+  Mail,
+  ShoppingBag,
+  Menu,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,14 +21,40 @@ import Image from "next/image";
 import { Logo } from "./logo";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/store/categories-store";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from "@/lib/languages";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import {
+  HelpSupportDropdownItems,
+  HelpSupportMobileLinks,
+} from "./help-support-menu";
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
-  const { isAuthenticated, user, showAuth, signOut, startUserFlow, startProviderFlow } =
-    useAuthStore();
+  const {
+    isAuthenticated,
+    user,
+    showAuth,
+    signOut,
+    startUserFlow,
+    startProviderFlow,
+  } = useAuthStore();
   const { topLevelCategories, isLoading: categoriesLoading } = useCategories();
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <header className="bg-white border-b border-gray-200">
@@ -45,7 +79,8 @@ export function Header() {
                     <span className="text-gray-400">Loading...</span>
                   </DropdownMenuItem>
                 )}
-                {!categoriesLoading && topLevelCategories.length > 0 &&
+                {!categoriesLoading &&
+                  topLevelCategories.length > 0 &&
                   topLevelCategories.map((category) => (
                     <DropdownMenuItem
                       key={category.id}
@@ -71,18 +106,7 @@ export function Header() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem>
-                  <span>Help Center</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Contact Support</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Community</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Trust & Safety</span>
-                </DropdownMenuItem>
+                <HelpSupportDropdownItems />
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -94,38 +118,42 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-green-600 cursor-pointer">
                   <Globe className="w-5 h-5" />
-                  <span className="text-sm font-medium">EN</span>
+                  <span className="text-sm font-medium">
+                    {DEFAULT_LANGUAGE.shortLabel}
+                  </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32">
-                <DropdownMenuItem>
-                  <span>English</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Français</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span>Español</span>
-                </DropdownMenuItem>
+                {SUPPORTED_LANGUAGES.map((language) => (
+                  <DropdownMenuItem key={language.value}>
+                    <span>{language.label}</span>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Notification Icon */}
-            <button className="relative text-gray-700 hover:text-green-600 cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-
-            {/* Messages Icon */}
-            <button className="text-gray-700 hover:text-green-600 cursor-pointer">
-              <Mail className="w-5 h-5" />
-            </button>
-
-            {/* Shopping Bag Icon */}
-            <button className="text-gray-700 hover:text-green-600 cursor-pointer">
-              <ShoppingBag className="w-5 h-5" />
-            </button>
+            {isAuthenticated && (
+              <>
+                <NotificationBell className="p-0 text-gray-700 hover:bg-transparent hover:text-green-600" />
+                <button
+                  type="button"
+                  onClick={() => router.push("/dashboard/messages")}
+                  className="rounded-md text-gray-700 hover:text-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                  aria-label="Messages"
+                >
+                  <Mail className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/dashboard/orders")}
+                  className="rounded-md text-gray-700 hover:text-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                  aria-label="Orders"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                </button>
+              </>
+            )}
 
             {/* User Profile / Auth */}
             {isAuthenticated ? (
@@ -207,12 +235,14 @@ export function Header() {
               </div>
             )}
           </div>
-          
+
           {/* Mobile Menu Toggle */}
           <div className="lg:hidden flex items-center">
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="text-gray-700 hover:text-green-600 p-2 cursor-pointer"
+              aria-label="Open navigation"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -222,17 +252,24 @@ export function Header() {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-4 px-6 overflow-y-auto lg:hidden">
+        <div
+          className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
+        >
           <div className="flex justify-between items-center mb-8">
             <Logo />
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full cursor-pointer"
+              aria-label="Close navigation"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           <div className="flex flex-col space-y-6">
             {isAuthenticated ? (
               <div className="flex flex-col space-y-4">
@@ -265,7 +302,8 @@ export function Header() {
 
                 {/* Dashboard & Profile Links */}
                 <div className="flex flex-col space-y-4 pb-4 border-b border-gray-100">
-                  {user?.role === "ADMIN" || user?.role === "SERVICE_PROVIDER" ? (
+                  {user?.role === "ADMIN" ||
+                  user?.role === "SERVICE_PROVIDER" ? (
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
@@ -301,17 +339,35 @@ export function Header() {
 
                 {/* Notifications & Messages */}
                 <div className="flex flex-col space-y-4 pb-4 border-b border-gray-100">
-                  <button className="flex items-center space-x-3 text-gray-800 cursor-pointer">
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      router.push("/dashboard/notifications");
+                    }}
+                    className="flex items-center space-x-3 text-gray-800 cursor-pointer"
+                  >
                     <Bell className="w-5 h-5 text-gray-600" />
                     <span className="font-medium text-lg">Notifications</span>
                   </button>
-                  <button className="flex items-center space-x-3 text-gray-800 cursor-pointer">
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      router.push("/dashboard/messages");
+                    }}
+                    className="flex items-center space-x-3 text-gray-800 cursor-pointer"
+                  >
                     <Mail className="w-5 h-5 text-gray-600" />
                     <span className="font-medium text-lg">Messages</span>
                   </button>
-                  <button className="flex items-center space-x-3 text-gray-800 cursor-pointer">
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      router.push("/dashboard/orders");
+                    }}
+                    className="flex items-center space-x-3 text-gray-800 cursor-pointer"
+                  >
                     <ShoppingBag className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">Cart</span>
+                    <span className="font-medium text-lg">Orders</span>
                   </button>
                 </div>
 
@@ -341,23 +397,22 @@ export function Header() {
                       )}
                     </div>
                   </details>
-                  
+
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                       Help & Support
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
-                    <div className="mt-3 flex flex-col space-y-3 pl-4">
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Help Center</button>
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Contact Support</button>
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Community</button>
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Trust & Safety</button>
-                    </div>
+                    <HelpSupportMobileLinks
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                    />
                   </details>
 
                   <div className="flex justify-between items-center font-medium text-lg text-gray-800 pt-2 cursor-pointer">
                     Language
-                    <span className="text-gray-500 text-base">EN</span>
+                    <span className="text-gray-500 text-base">
+                      {DEFAULT_LANGUAGE.shortLabel}
+                    </span>
                   </div>
                 </div>
 
@@ -399,16 +454,15 @@ export function Header() {
                       )}
                     </div>
                   </details>
-                  
+
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                       Help & Support
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
-                    <div className="mt-3 flex flex-col space-y-3 pl-4">
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Help Center</button>
-                      <button className="text-left text-gray-600 text-base py-1 cursor-pointer">Contact Support</button>
-                    </div>
+                    <HelpSupportMobileLinks
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                    />
                   </details>
                 </div>
 
@@ -433,15 +487,15 @@ export function Header() {
                     Sign up
                   </Button>
                   {startProviderFlow && (
-                     <button
-                       onClick={() => {
-                         startProviderFlow();
-                         setIsMobileMenuOpen(false);
-                       }}
-                       className="text-center font-medium text-green-600 border-t border-gray-100 pt-6 mt-2 cursor-pointer"
-                     >
-                       Become a seller
-                     </button>
+                    <button
+                      onClick={() => {
+                        startProviderFlow();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="text-center font-medium text-green-600 border-t border-gray-100 pt-6 mt-2 cursor-pointer"
+                    >
+                      Become a seller
+                    </button>
                   )}
                 </div>
               </div>

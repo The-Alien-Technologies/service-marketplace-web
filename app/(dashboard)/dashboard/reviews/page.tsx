@@ -168,8 +168,8 @@ export default function ReviewsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-2 sm:justify-start">
               <span className="text-sm font-medium text-gray-700">Filter</span>
               <Select
                 value={ratingFilter}
@@ -191,7 +191,7 @@ export default function ReviewsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 sm:justify-start">
               <span className="text-sm font-medium text-gray-700">Sort by</span>
               <Select
                 value={sort}
@@ -272,11 +272,11 @@ export default function ReviewsPage() {
 
                   {/* Provider response */}
                   {review.response && (
-                    <div className="mt-3 ml-4 pl-4 border-l-2 border-green-200 bg-green-50/50 rounded-r-lg py-2 pr-3">
+                    <div className="mt-3 rounded-lg bg-green-50 px-4 py-3">
                       <p className="text-xs font-semibold text-green-700 mb-1">
                         Your response
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-green-950">
                         {review.response.comment}
                       </p>
                     </div>

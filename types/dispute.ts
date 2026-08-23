@@ -9,12 +9,16 @@ export type DisputeIssueType =
 export type DisputeStatus = "OPEN" | "INVESTIGATING" | "RESOLVED" | "CLOSED";
 
 export type DisputePriority = "LOW" | "MEDIUM" | "HIGH";
+export type DisputeResolutionType =
+  | "RELEASE_PROVIDER"
+  | "FULL_REFUND"
+  | "PARTIAL_REFUND";
 
 export interface DisputeParty {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   avatar: string | null;
   phoneNumber: string | null;
   countryCode: string | null;
@@ -25,7 +29,9 @@ export interface DisputeOrder {
   planTitle: string;
   planPrice?: string;
   total: string;
+  commissionRate?: string | number;
   createdAt?: string;
+  refunds?: Array<{ amount: string | number }>;
   service: { title: string };
 }
 
@@ -45,6 +51,9 @@ export interface Dispute {
   status: DisputeStatus;
   adminNote: string | null;
   resolvedAt: string | null;
+  resolutionType?: DisputeResolutionType | null;
+  resolutionRefundAmount?: string | number | null;
+  resolutionRequestedAt?: string | null;
 }
 
 export const ISSUE_TYPE_LABELS: Record<DisputeIssueType, string> = {

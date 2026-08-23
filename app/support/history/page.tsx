@@ -97,7 +97,7 @@ function TranscriptBubble({
           <p className="text-[10px] text-gray-400 mb-1 ml-1">
             {name} · Agent
           </p>
-          <div className="px-3 py-2 bg-green-50 border border-green-100 rounded-xl rounded-tl-none text-sm text-gray-900 prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none rounded-xl rounded-tl-none border border-green-100 bg-green-50 px-3 py-2 text-sm text-green-950">
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
           <p className="text-[10px] text-gray-400 mt-1 ml-1">{time}</p>
@@ -170,10 +170,10 @@ export default function SupportHistoryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4">
+      <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <button
           onClick={() => router.back()}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
         >
           <ArrowLeft className="w-4 h-4 text-gray-600" />
         </button>
@@ -185,9 +185,11 @@ export default function SupportHistoryPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto p-6 flex gap-6 h-[calc(100vh-73px)]">
+      <div className="mx-auto flex h-[calc(100dvh-69px)] max-w-5xl gap-6 p-3 sm:p-5 lg:p-6">
         {/* ── Conversation list ──────────────────────────────────────── */}
-        <div className="w-80 shrink-0 bg-white rounded-xl border border-gray-200 overflow-y-auto">
+        <div
+          className={`${selected ? "hidden lg:block" : "block"} w-full shrink-0 overflow-y-auto rounded-xl border border-gray-200 bg-white lg:w-80`}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="w-5 h-5 animate-spin text-green-600" />
@@ -266,7 +268,9 @@ export default function SupportHistoryPage() {
         </div>
 
         {/* ── Transcript panel ───────────────────────────────────────── */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-200 flex flex-col overflow-hidden">
+        <div
+          className={`${selected ? "flex" : "hidden lg:flex"} flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white`}
+        >
           {isLoadingMessages ? (
             <div className="flex items-center justify-center flex-1">
               <Loader2 className="w-6 h-6 animate-spin text-green-600" />
@@ -284,9 +288,18 @@ export default function SupportHistoryPage() {
           ) : (
             <>
               {/* Transcript header */}
-              <div className="px-5 py-3 border-b border-gray-100 shrink-0">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="shrink-0 border-b border-gray-100 px-3 py-3 sm:px-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(null)}
+                      aria-label="Back to support conversations"
+                      className="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900">
                       Conversation on{" "}
                       {new Date(selected.createdAt).toLocaleDateString([], {
@@ -296,7 +309,7 @@ export default function SupportHistoryPage() {
                         year: "numeric",
                       })}
                     </p>
-                    <div className="flex items-center gap-3 mt-0.5">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span
                         className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                           STATUS_META[selected.status].badgeBg
@@ -321,13 +334,14 @@ export default function SupportHistoryPage() {
                         </span>
                       )}
                     </div>
+                    </div>
                   </div>
 
                   {/* Continue chat button if still open */}
                   {selected.status !== "CLOSED" && (
                     <button
                       onClick={() => window.scrollTo({ top: 0 })}
-                      className="text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg transition-colors"
+                      className="shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 sm:px-4"
                     >
                       Continue chat
                     </button>
@@ -336,7 +350,7 @@ export default function SupportHistoryPage() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+              <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4 sm:px-5">
                 {(selected.messages ?? []).length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">
                     No messages in this conversation

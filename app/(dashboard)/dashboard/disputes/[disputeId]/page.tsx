@@ -20,16 +20,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import {
+  isValidPartialRefund,
+  remainingRefundAmount,
+} from "@/lib/payment-state";
+import {
   Dispute,
+  DisputeResolutionType,
   DisputeStatus,
   ISSUE_TYPE_LABELS,
   DISPUTE_STATUS_LABELS,
   DISPUTE_PRIORITY_LABELS,
 } from "@/types/dispute";
 import { toast } from "react-toastify";
+import { useAuthStore } from "@/store/auth-store";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -91,10 +106,12 @@ function PartyCard({
           </span>
         </div>
         <div className="space-y-0.5">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Mail className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{party.email}</span>
-          </div>
+          {party.email && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Mail className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{party.email}</span>
+            </div>
+          )}
           {party.phoneNumber && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Phone className="w-3 h-3 flex-shrink-0" />
@@ -115,11 +132,25 @@ export default function DisputeDetailsPage({
   params: Promise<{ disputeId: string }>;
 }) {
   const { disputeId } = use(params);
+  const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<DisputeStatus>("OPEN");
   const [adminNote, setAdminNote] = useState("");
+  const [resolutionType, setResolutionType] =
+    useState<DisputeResolutionType>("RELEASE_PROVIDER");
+  const [refundAmount, setRefundAmount] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [resolveConfirmOpen, setResolveConfirmOpen] = useState(false);
+  const refundableAmount = dispute
+    ? remainingRefundAmount(
+        dispute.order.total,
+        dispute.order.refunds?.reduce(
+          (sum, refund) => sum + Number(refund.amount),
+          0,
+        ) ?? 0,
+      )
+    : 0;
 
   const fetchDispute = useCallback(async () => {
     setIsLoading(true);
@@ -128,6 +159,10 @@ export default function DisputeDetailsPage({
       setDispute(data);
       setSelectedStatus(data.status);
       setAdminNote(data.adminNote ?? "");
+      if (data.resolutionType) setResolutionType(data.resolutionType);
+      if (data.resolutionRefundAmount) {
+        setRefundAmount(String(data.resolutionRefundAmount));
+      }
     } catch {
       toast.error("Failed to load dispute");
     } finally {
@@ -139,7 +174,7 @@ export default function DisputeDetailsPage({
     fetchDispute();
   }, [fetchDispute]);
 
-  const handleSaveResolution = async () => {
+  const handleSaveStatus = async () => {
     if (!dispute) return;
     setIsSaving(true);
     try {
@@ -149,9 +184,49 @@ export default function DisputeDetailsPage({
         adminNote,
       );
       setDispute(updated);
-      toast.success("Dispute updated successfully");
+      toast.success("Review status updated");
     } catch {
       toast.error("Failed to update dispute");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const requestResolution = () => {
+    if (!dispute) return;
+    if (resolutionType === "PARTIAL_REFUND") {
+      const amount = Number(refundAmount);
+      if (!isValidPartialRefund(amount, refundableAmount)) {
+        toast.error(
+          `Enter a partial refund below the remaining GHS ${refundableAmount.toFixed(2)} balance`,
+        );
+        return;
+      }
+    }
+    setResolveConfirmOpen(true);
+  };
+
+  const handleResolve = async () => {
+    if (!dispute) return;
+    setIsSaving(true);
+    try {
+      await apiService.resolveDispute(
+        dispute.id,
+        resolutionType,
+        resolutionType === "PARTIAL_REFUND" ? Number(refundAmount) : undefined,
+        adminNote,
+      );
+      toast.success(
+        resolutionType === "RELEASE_PROVIDER"
+          ? "Provider earnings released"
+          : "Refund submitted to Paystack",
+      );
+      setResolveConfirmOpen(false);
+      await fetchDispute();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to resolve dispute",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -178,8 +253,9 @@ export default function DisputeDetailsPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
           <p className="text-gray-500 mt-1">
-            Review and resolve conflicts between customers and service
-            providers.
+            {isAdmin
+              ? "Review and resolve conflicts between customers and service providers."
+              : "Review the dispute status and resolution for this order."}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -327,37 +403,139 @@ export default function DisputeDetailsPage({
         {/* ── Right Column ─────────────────────────────────────────────── */}
         <div className="w-full xl:w-[360px] space-y-6">
           {/* Admin Resolution Panel */}
+          {isAdmin && (
           <div className="bg-white border border-gray-100 rounded-xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-gray-900">
               Admin Resolution
             </h3>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-700">
-                Update status
-              </label>
-              <Select
-                value={selectedStatus}
-                onValueChange={(v) => setSelectedStatus(v as DisputeStatus)}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OPEN">Open</SelectItem>
-                  <SelectItem value="INVESTIGATING">Investigating</SelectItem>
-                  <SelectItem value="RESOLVED">Resolved</SelectItem>
-                  <SelectItem value="CLOSED">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" ? (
+              <>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="dispute-review-status"
+                    className="text-xs font-medium text-gray-700"
+                  >
+                    Review status
+                  </label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={(v) =>
+                        setSelectedStatus(v as DisputeStatus)
+                      }
+                    >
+                      <SelectTrigger
+                        id="dispute-review-status"
+                        className="bg-white"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OPEN">Open</SelectItem>
+                        <SelectItem value="INVESTIGATING">
+                          Investigating
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      onClick={handleSaveStatus}
+                      disabled={isSaving || selectedStatus === dispute.status}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="dispute-financial-outcome"
+                    className="text-xs font-medium text-gray-700"
+                  >
+                    Financial outcome
+                  </label>
+                  <Select
+                    value={resolutionType}
+                    onValueChange={(value) =>
+                      setResolutionType(value as DisputeResolutionType)
+                    }
+                  >
+                    <SelectTrigger
+                      id="dispute-financial-outcome"
+                      className="bg-white"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="RELEASE_PROVIDER">
+                        Release provider earnings
+                      </SelectItem>
+                      <SelectItem value="FULL_REFUND">
+                        Full customer refund
+                      </SelectItem>
+                      <SelectItem value="PARTIAL_REFUND">
+                        Partial customer refund
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {resolutionType === "PARTIAL_REFUND" && (
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="dispute-refund-amount"
+                      className="text-xs font-medium text-gray-700"
+                    >
+                      Customer refund amount (GHS)
+                    </label>
+                    <Input
+                      id="dispute-refund-amount"
+                      type="number"
+                      min="0.01"
+                      max={Math.max(0, Number(dispute.order.total) - 0.01)}
+                      step="0.01"
+                      value={refundAmount}
+                      onChange={(event) => setRefundAmount(event.target.value)}
+                      placeholder="0.00"
+                      className="bg-white"
+                    />
+                    {Number(refundAmount) > 0 && (
+                      <p className="text-xs leading-relaxed text-gray-500">
+                        The remaining GHS{" "}
+                        {Math.max(
+                          0,
+                          refundableAmount - Number(refundAmount),
+                        ).toFixed(2)}{" "}
+                        is split using the order’s original{" "}
+                        {Number(dispute.order.commissionRate ?? 10)}% commission
+                        rate.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                Financial outcome:{" "}
+                {dispute.resolutionType?.replaceAll("_", " ").toLowerCase() ||
+                  "resolved"}
+                {dispute.resolutionRefundAmount
+                  ? ` · GHS ${Number(dispute.resolutionRefundAmount).toFixed(2)} refund`
+                  : ""}
+              </div>
+            )}
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-gray-700">
+              <label
+                htmlFor="dispute-resolution-note"
+                className="text-xs font-medium text-gray-700"
+              >
                 Resolution note{" "}
                 <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <Textarea
+                id="dispute-resolution-note"
                 placeholder="Add an internal note about how this dispute was resolved..."
                 className="min-h-[120px] bg-white resize-none text-sm"
                 value={adminNote}
@@ -365,19 +543,26 @@ export default function DisputeDetailsPage({
               />
             </div>
 
-            <Button
-              className="w-full bg-[#15803d] hover:bg-[#14532d] text-white flex items-center gap-2 justify-center"
-              onClick={handleSaveResolution}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4" />
-              )}
-              {isSaving ? "Saving..." : "Save Resolution"}
-            </Button>
+            {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" && (
+              <Button
+                className="w-full bg-[#15803d] hover:bg-[#14532d] text-white flex items-center gap-2 justify-center"
+                onClick={requestResolution}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                {isSaving
+                  ? "Submitting..."
+                  : resolutionType === "RELEASE_PROVIDER"
+                    ? "Release earnings"
+                    : "Submit refund"}
+              </Button>
+            )}
           </div>
+          )}
 
           {/* Timeline */}
           <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
@@ -454,6 +639,46 @@ export default function DisputeDetailsPage({
           </div>
         </div>
       </div>
+
+      <Dialog open={resolveConfirmOpen} onOpenChange={setResolveConfirmOpen}>
+        <DialogContent className="bg-white sm:max-w-md dark:bg-gray-900">
+          <DialogHeader>
+            <DialogTitle>
+              {resolutionType === "RELEASE_PROVIDER"
+                ? "Release provider earnings?"
+                : resolutionType === "FULL_REFUND"
+                  ? `Refund the remaining GHS ${refundableAmount.toFixed(2)}?`
+                  : `Refund GHS ${Number(refundAmount || 0).toFixed(2)}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {resolutionType === "RELEASE_PROVIDER"
+                ? "This makes the provider’s earnings eligible for withdrawal and resolves the dispute."
+                : "This submits a real Paystack refund and reserves the order while the provider confirms it. This action cannot be undone in Pavodah."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            Order #{dispute.order.orderNumber} · Remaining refundable GHS{" "}
+            {refundableAmount.toFixed(2)}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResolveConfirmOpen(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-700 text-white hover:bg-green-800"
+              onClick={handleResolve}
+              disabled={isSaving}
+            >
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm resolution
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

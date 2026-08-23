@@ -345,8 +345,8 @@ export default function UsersPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder="Search by name or email..."
@@ -355,7 +355,7 @@ export default function UsersPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex w-full items-center gap-2 sm:w-auto">
           <Filter className="w-4 h-4" />
           Filters
         </Button>
@@ -369,7 +369,8 @@ export default function UsersPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left">
+            <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[760px] w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -435,9 +436,10 @@ export default function UsersPage() {
                 )}
               </tbody>
             </table>
+            </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
               <Button
                 variant="outline"
                 size="sm"

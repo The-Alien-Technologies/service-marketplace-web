@@ -11,7 +11,7 @@ export function ResetPasswordSuccess() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Success Content */}
       <div className="text-center">
         {/* Success Check Icon */}

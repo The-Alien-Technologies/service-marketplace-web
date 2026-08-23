@@ -482,7 +482,7 @@ export default function CategoriesPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center space-x-2 bg-gray-100/50 w-fit p-1 rounded-lg">
+        <div className="flex w-full items-center gap-2 overflow-x-auto rounded-lg bg-gray-100/50 p-1 sm:w-fit">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -505,8 +505,8 @@ export default function CategoriesPage() {
       </div>
 
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder={"Search by category name..."}
@@ -515,9 +515,9 @@ export default function CategoriesPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <Button
-            className="bg-green-700 hover:bg-green-800 text-white gap-2"
+            className="w-full gap-2 bg-green-700 text-white hover:bg-green-800 sm:w-auto"
             onClick={() => {
               if (activeTab === "Categories") {
                 resetForm();
@@ -539,7 +539,8 @@ export default function CategoriesPage() {
       ) : (
         /* Table */
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-          <table className="w-full text-sm text-left">
+          <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-[720px] w-full text-sm text-left">
             <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -594,9 +595,10 @@ export default function CategoriesPage() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
             <Button
               variant="outline"
               size="sm"

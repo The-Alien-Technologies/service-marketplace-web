@@ -53,6 +53,10 @@ export function RaiseDisputeModal({
       toast.error("Please select an issue type");
       return;
     }
+    if (!description.trim()) {
+      toast.error("Please describe what went wrong");
+      return;
+    }
     setIsLoading(true);
     try {
       await apiService.createDispute({ orderId, issueType, description });
@@ -90,14 +94,17 @@ export function RaiseDisputeModal({
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="dispute-issue-type"
+              className="text-sm font-medium text-gray-700"
+            >
               Issue type
             </label>
             <Select
               value={issueType}
               onValueChange={(v) => setIssueType(v as DisputeIssueType)}
             >
-              <SelectTrigger className="bg-white">
+              <SelectTrigger id="dispute-issue-type" className="bg-white">
                 <SelectValue placeholder="Select the issue type" />
               </SelectTrigger>
               <SelectContent>
@@ -111,11 +118,17 @@ export function RaiseDisputeModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="dispute-description"
+              className="text-sm font-medium text-gray-700"
+            >
               Describe the issue{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+              <span className="text-red-600" aria-hidden="true">
+                *
+              </span>
             </label>
             <Textarea
+              id="dispute-description"
               placeholder="Please describe the issue in detail so we can resolve it quickly..."
               className="bg-white resize-none min-h-[120px]"
               value={description}
@@ -145,7 +158,7 @@ export function RaiseDisputeModal({
             <Button
               type="submit"
               className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
-              disabled={isLoading || !issueType}
+              disabled={isLoading || !issueType || !description.trim()}
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               Submit Dispute
