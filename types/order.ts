@@ -1,3 +1,10 @@
+import type {
+  OrderPaymentStatus,
+  PaymentRefundStatus,
+  PaymentTransactionStatus,
+} from "./payment";
+import type { OrderSettlement } from "./payout";
+
 export type OrderStatus =
   | "PENDING"
   | "AWAITING"
@@ -21,7 +28,13 @@ export type Order = {
   couponCode?: string;
   couponDiscount?: number;
   total: number;
+  currency: string;
   status: OrderStatus;
+  paymentStatus: OrderPaymentStatus;
+  source: "SERVICE_PLAN" | "QUOTE";
+  paidAt?: string | null;
+  commissionRate?: number | string;
+  settlement?: OrderSettlement | null;
   createdAt: string;
   updatedAt: string;
   client?: {
@@ -58,6 +71,27 @@ export type Order = {
     title: string;
     description?: string;
     price: number;
+  }>;
+  paymentTransactions?: Array<{
+    id: string;
+    reference: string;
+    status: PaymentTransactionStatus;
+    amount: number | string;
+    currency: string;
+    channel?: string | null;
+    paidAt?: string | null;
+    createdAt: string;
+  }>;
+  refunds?: Array<{
+    id: string;
+    amount: number | string;
+    currency: string;
+    status: PaymentRefundStatus;
+    affectsOrderBalance: boolean;
+    reason?: string | null;
+    failureMessage?: string | null;
+    processedAt?: string | null;
+    createdAt: string;
   }>;
 };
 

@@ -138,7 +138,7 @@ export function SignInForm() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Logo and Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 mx-auto mb-4">

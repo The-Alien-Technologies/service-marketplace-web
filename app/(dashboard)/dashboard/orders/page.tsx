@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -43,21 +43,10 @@ import { toast } from "react-toastify";
 import { Order } from "@/types/order";
 import { ChatBox } from "@/components/sections/service-detail/chat-box";
 import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
+import { AdminPaymentTransaction } from "@/types/payment";
+import { isSessionExpiredError } from "@/lib/client-session";
 
 // --- Types ---
-
-type Transaction = {
-  id: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  amount: number;
-  type: "Payment" | "Payout" | "Refund" | "Commission";
-  status: "Success" | "Failed" | "Pending";
-  method: string;
-  date: string;
-};
 
 type CashoutRequest = {
   id: string;
@@ -72,22 +61,6 @@ type CashoutRequest = {
 };
 
 // --- Mock Data for Admin ---
-
-const transactions: Transaction[] = [
-  {
-    id: "ADM-00456",
-    user: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 1000.0,
-    type: "Payment",
-    status: "Success",
-    method: "Paystack",
-    date: "15 Mar, 2025",
-  },
-];
 
 const cashoutRequests: CashoutRequest[] = [
   {
@@ -106,7 +79,7 @@ const cashoutRequests: CashoutRequest[] = [
 
 // --- Column Helpers ---
 const orderColumnHelper = createColumnHelper<Order>();
-const transactionColumnHelper = createColumnHelper<Transaction>();
+const transactionColumnHelper = createColumnHelper<AdminPaymentTransaction>();
 const cashoutRequestColumnHelper = createColumnHelper<CashoutRequest>();
 
 const orderColumns = [
@@ -232,29 +205,87 @@ const orderColumns = [
 ];
 
 const transactionColumns = [
-  transactionColumnHelper.accessor("id", {
-    header: "Transaction ID",
-    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
-  }),
-  transactionColumnHelper.accessor("user.name", {
-    header: "User",
+  transactionColumnHelper.accessor("reference", {
+    header: "Reference",
     cell: (info) => (
-      <span className="text-gray-900 font-medium">{info.getValue()}</span>
+      <span
+        className="block max-w-[170px] truncate text-gray-600"
+        title={info.getValue()}
+      >
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  transactionColumnHelper.accessor((row) => row.client, {
+    id: "client",
+    header: "Customer",
+    cell: (info) => {
+      const client = info.getValue();
+      return (
+        <div className="min-w-0">
+          <p className="truncate font-medium text-gray-900">
+            {client.displayName ||
+              [client.firstName, client.lastName].filter(Boolean).join(" ") ||
+              client.email}
+          </p>
+          <p className="truncate text-xs text-gray-500">{client.email}</p>
+        </div>
+      );
+    },
+  }),
+  transactionColumnHelper.accessor("order.service.title", {
+    header: "Service",
+    cell: (info) => (
+      <span
+        className="block max-w-[180px] truncate text-gray-600"
+        title={info.getValue()}
+      >
+        {info.getValue()}
+      </span>
     ),
   }),
   transactionColumnHelper.accessor("amount", {
     header: "Amount",
     cell: (info) => (
       <span className="text-gray-900">
-        GHS {Number(info.getValue() || 0).toFixed(2)}
+        {info.row.original.currency} {Number(info.getValue() || 0).toFixed(2)}
+      </span>
+    ),
+  }),
+  transactionColumnHelper.accessor("channel", {
+    header: "Channel",
+    cell: (info) => (
+      <span className="text-gray-600 capitalize">
+        {(info.getValue() || "Paystack").replaceAll("_", " ")}
       </span>
     ),
   }),
   transactionColumnHelper.accessor("status", {
     header: "Status",
+    cell: (info) => {
+      const status = info.getValue();
+      const styles =
+        status === "SUCCESS"
+          ? "bg-green-50 text-green-700"
+          : status === "PENDING" || status === "INITIALIZED"
+            ? "bg-amber-50 text-amber-700"
+            : "bg-red-50 text-red-700";
+      return (
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles}`}
+        >
+          {status.replace("_", " ")}
+        </span>
+      );
+    },
+  }),
+  transactionColumnHelper.accessor("createdAt", {
+    header: "Created",
     cell: (info) => (
-      <span className="text-sm px-2 py-1 bg-green-50 text-green-700 rounded-full">
-        {info.getValue()}
+      <span className="text-gray-500">
+        {new Intl.DateTimeFormat("en-GH", { dateStyle: "medium" }).format(
+          new Date(info.getValue()),
+        )}
       </span>
     ),
   }),
@@ -292,13 +323,16 @@ const cashoutRequestColumns = [
 // --- Admin Orders Component ---
 
 function AdminOrders() {
-  const tabs = ["Orders", "Transactions", "Cashout Request"];
+  const tabs = ["Orders", "Transactions"];
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [activeTab, setActiveTab] = useState("Orders");
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
+  const [transactions, setTransactions] = useState<AdminPaymentTransaction[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -336,11 +370,35 @@ function AdminOrders() {
     }
   }, [activeTab, pagination.pageIndex, pagination.pageSize, globalFilter]);
 
+  useEffect(() => {
+    if (activeTab !== "Transactions") return;
+
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const result = await apiService.getAdminPayments({
+          page: pagination.pageIndex + 1,
+          limit: pagination.pageSize,
+          search: globalFilter,
+        });
+        setTransactions(result.data);
+        setPageCount(result.pagination.pages);
+      } catch (error) {
+        console.error("Failed to fetch payments:", error);
+        toast.error("Failed to fetch payments");
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, pagination.pageIndex, pagination.pageSize, globalFilter]);
+
   const currentData = useMemo(() => {
     if (activeTab === "Cashout Request") return cashoutRequests;
     if (activeTab === "Transactions") return transactions;
     return orders;
-  }, [activeTab, orders]);
+  }, [activeTab, orders, transactions]);
 
   const currentColumns = useMemo(() => {
     if (activeTab === "Cashout Request") return cashoutRequestColumns;
@@ -370,9 +428,9 @@ function AdminOrders() {
         pageSize: pagination.pageSize,
       },
     },
-    pageCount: activeTab === "Orders" ? pageCount : undefined,
-    manualPagination: activeTab === "Orders",
-    manualFiltering: activeTab === "Orders",
+    pageCount,
+    manualPagination: true,
+    manualFiltering: true,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
@@ -392,7 +450,7 @@ function AdminOrders() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center space-x-2 bg-gray-100/50 w-fit p-1 rounded-lg">
+        <div className="flex w-full items-center gap-2 overflow-x-auto rounded-lg bg-gray-100/50 p-1 sm:w-fit">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -415,8 +473,8 @@ function AdminOrders() {
       </div>
 
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="relative w-full md:max-w-md md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder={getSearchPlaceholder()}
@@ -425,7 +483,7 @@ function AdminOrders() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center md:gap-3">
           <Button
             variant="outline"
             className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
@@ -445,13 +503,13 @@ function AdminOrders() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <div className="relative">
-          {isLoading && activeTab === "Orders" && (
+        <div className="relative overflow-x-auto">
+          {isLoading && (
             <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-green-600" />
             </div>
           )}
-          <table className="w-full text-sm text-left">
+          <table className="min-w-[900px] w-full text-sm text-left">
             <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -523,7 +581,7 @@ function AdminOrders() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+        <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
           <Button
             variant="outline"
             size="sm"
@@ -561,24 +619,6 @@ function AdminOrders() {
 // Map backend statuses to frontend tabs
 const ORDER_TABS = ["Awaiting", "In-progress", "Completed", "Declined"];
 
-// Helper to map backend status to tab name
-const getTabFromStatus = (status: string) => {
-  switch (status) {
-    case "PENDING":
-    case "AWAITING":
-      return "Awaiting";
-    case "IN_PROGRESS":
-      return "In-progress";
-    case "COMPLETED":
-      return "Completed";
-    case "DECLINED":
-    case "REFUNDED":
-      return "Declined";
-    default:
-      return "Awaiting";
-  }
-};
-
 // Helper to map tab name to backend status for API call
 // Returns undefined (no filter) or a comma-separated status string
 const getStatusFromTab = (tab: string): string | undefined => {
@@ -609,7 +649,6 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
   const [actionLoading, setActionLoading] = useState<
     Record<string, string | null>
   >({});
-  const router = useRouter();
   const [chatTarget, setChatTarget] = useState<{
     id: string;
     name: string;
@@ -643,6 +682,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
 
         setOrders(response.data);
       } catch (error) {
+        if (isSessionExpiredError(error)) return;
         console.error("Failed to fetch orders:", error);
         toast.error("Failed to load orders");
       } finally {
@@ -674,6 +714,12 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     orderId: string,
     newStatus: "IN_PROGRESS" | "COMPLETED" | "DECLINED",
   ) => {
+    if (
+      newStatus === "DECLINED" &&
+      !window.confirm("Cancel this unpaid order?")
+    ) {
+      return;
+    }
     setActionLoading((prev) => ({ ...prev, [orderId]: newStatus }));
     try {
       await apiService.updateOrderStatus(orderId, newStatus);
@@ -709,7 +755,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-4 py-1.5 text-sm font-bold rounded-full transition-all whitespace-nowrap",
+              "flex-none px-4 py-1.5 text-sm font-bold rounded-full transition-all whitespace-nowrap",
               activeTab === tab
                 ? "bg-green-50 text-green-700"
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
@@ -736,10 +782,10 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                 : (order.provider ?? order.service?.provider);
 
             return (
-              <div key={order.id} className="p-6 space-y-6">
+              <div key={order.id} className="space-y-5 p-4 sm:space-y-6 sm:p-6">
                 {/* Row 1: User Info & Date */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
                       {otherParty ? (
                         <Image
@@ -759,14 +805,14 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                         <div className="w-full h-full bg-gray-200" />
                       )}
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="truncate font-bold text-gray-900">
                       {otherParty
                         ? otherParty.displayName ||
                           `${otherParty.firstName} ${otherParty.lastName}`
                         : "Unknown User"}
                     </span>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className="shrink-0 text-xs text-gray-500 sm:text-sm">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </span>
                 </div>
@@ -793,7 +839,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-3 [&>a]:w-full [&>a>button]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>a>button]:w-auto sm:[&>button]:w-auto">
                     {role === "SERVICE_PROVIDER" &&
                       (order.status === "AWAITING" ||
                         order.status === "PENDING") && (
@@ -829,17 +875,37 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                         </Button>
                       )}
 
-                    {order.status === "COMPLETED" && (
-                      <Link href={`/orders/${order.id}/review`}>
-                        <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                          Leave a review
-                        </Button>
-                      </Link>
-                    )}
+                    {order.status === "COMPLETED" &&
+                      role === "USER" &&
+                      order.settlement &&
+                      ["ELIGIBLE", "RESERVED", "PAID"].includes(
+                        order.settlement.status,
+                      ) && (
+                        <Link href={`/orders/${order.id}/review`}>
+                          <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
+                            Leave a review
+                          </Button>
+                        </Link>
+                      )}
 
                     {/* Raise Dispute — users only, completed orders */}
                     {order.status === "COMPLETED" &&
-                      role !== "SERVICE_PROVIDER" && (
+                      role === "USER" &&
+                      (!order.settlement ||
+                        (order.settlement.status === "HELD" &&
+                          !order.settlement.acceptedAt)) && (
+                        <Link href={`/dashboard/orders/${order.id}`}>
+                          <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg">
+                            Review delivery
+                          </Button>
+                        </Link>
+                      )}
+
+                    {order.status === "COMPLETED" &&
+                      role === "USER" &&
+                      (!order.settlement ||
+                        (order.settlement.status === "HELD" &&
+                          !order.settlement.acceptedAt)) && (
                         <Button
                           variant="outline"
                           className="text-red-600 border-red-200 hover:bg-red-50 gap-2 font-medium rounded-lg"
@@ -857,22 +923,25 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
 
                     {/* Decline/Cancel Logic */}
                     {(order.status === "AWAITING" ||
-                      order.status === "PENDING") && (
-                      <Button
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
-                        onClick={() => handleOrderAction(order.id, "DECLINED")}
-                        disabled={!!actionLoading[order.id]}
-                      >
-                        {actionLoading[order.id] === "DECLINED" ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : role === "SERVICE_PROVIDER" ? (
-                          "Decline Order"
-                        ) : (
-                          "Cancel Order"
-                        )}
-                      </Button>
-                    )}
+                      order.status === "PENDING") &&
+                      role === "USER" &&
+                      (order.paymentStatus === "UNPAID" ||
+                        order.paymentStatus === "FAILED") && (
+                        <Button
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
+                          onClick={() =>
+                            handleOrderAction(order.id, "DECLINED")
+                          }
+                          disabled={!!actionLoading[order.id]}
+                        >
+                          {actionLoading[order.id] === "DECLINED" ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Cancel Order"
+                          )}
+                        </Button>
+                      )}
 
                     <Button
                       variant="outline"

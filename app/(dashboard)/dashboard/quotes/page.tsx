@@ -241,7 +241,8 @@ export default function QuoteRequestsPage() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[760px] w-full text-sm text-left">
           <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -334,9 +335,10 @@ export default function QuoteRequestsPage() {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+        <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
           <Button
             variant="outline"
             size="sm"

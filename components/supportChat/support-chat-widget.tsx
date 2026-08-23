@@ -20,6 +20,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { usePathname } from "next/navigation";
 
 
 import { useAuthStore } from "@/store/auth-store";
@@ -123,7 +124,7 @@ function MessageBubble({
           <p className="text-[10px] text-gray-400 mb-1 ml-1">
             {name} · Agent
           </p>
-          <div className="px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-100 rounded-xl rounded-tl-none text-sm text-gray-900 dark:text-white prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none rounded-xl rounded-tl-none border border-green-100 bg-green-50 px-3 py-2 text-sm text-green-950 dark:bg-green-900/20 dark:text-white">
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
           <p className="text-[10px] text-gray-400 mt-1 ml-1">{time}</p>
@@ -152,9 +153,9 @@ function TypingDots() {
         <Bot className="w-4 h-4 text-blue-600" />
       </div>
       <div className="flex gap-1 px-3 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl">
-        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-gray-400 [animation-delay:0ms]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-gray-400 [animation-delay:180ms]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-gray-400 [animation-delay:360ms]" />
       </div>
     </div>
   );
@@ -262,6 +263,12 @@ function HistoryRow({
 
 export function SupportChatWidget() {
   const { user, isAuthenticated, hasHydrated } = useAuthStore();
+  const pathname = usePathname();
+  const isSupportHiddenRoute =
+    pathname.startsWith("/dashboard/messages") ||
+    pathname === "/checkout" ||
+    pathname.startsWith("/support/history") ||
+    /^\/orders\/[^/]+\/review$/.test(pathname);
 
   const { isOpen, openChat, closeChat } = useSupportChatStore();
 
@@ -533,7 +540,13 @@ export function SupportChatWidget() {
   // ── Guard ──────────────────────────────────────────────────────────────────
 
   // Only show for authenticated non-admin users
-  if (!hasHydrated || !isAuthenticated || user?.role === "ADMIN") return null;
+  if (
+    !hasHydrated ||
+    !isAuthenticated ||
+    user?.role === "ADMIN" ||
+    isSupportHiddenRoute
+  )
+    return null;
 
   const status: SupportConversationStatus = conversation?.status ?? "BOT";
   const cfg = STATUS_CONFIG[status];
@@ -556,7 +569,7 @@ export function SupportChatWidget() {
             setView("chat");
           }}
           aria-label="Open support chat"
-          className="fixed bottom-6 right-6 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-xl flex items-center justify-center z-50 transition-transform hover:scale-110"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl transition-transform hover:scale-105 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2 motion-reduce:transform-none"
         >
           <MessageCircle className="w-6 h-6" />
         </button>
@@ -564,11 +577,11 @@ export function SupportChatWidget() {
 
       {/* Panel */}
       {isOpen && (
-        <div className="fixed right-4 bottom-4 w-full max-w-md h-[600px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 flex flex-col border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-50 flex h-[min(42rem,calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] max-w-md flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:left-auto sm:right-4 sm:bottom-[max(1rem,env(safe-area-inset-bottom))] sm:w-[calc(100%-2rem)]">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-3 dark:border-gray-700 sm:px-4">
+            <div className="flex min-w-0 items-center gap-2">
               {view === "history" && (
                 <button
                   onClick={() => setView("chat")}
@@ -587,11 +600,11 @@ export function SupportChatWidget() {
                   className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${cfg.dotColor}`}
                 />
               </div>
-              <div>
-                <h3 className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white">
                   {view === "history" ? "Chat History" : cfg.label}
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="truncate text-xs text-gray-500">
                   {view === "history"
                     ? "Your past conversations"
                     : cfg.subLabel}
@@ -599,19 +612,20 @@ export function SupportChatWidget() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={() =>
                   setView((v) => (v === "chat" ? "history" : "chat"))
                 }
                 title="Toggle history"
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <History className="w-4 h-4 text-gray-500" />
               </button>
               <button
                 onClick={closeChat}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Close support chat"
+                className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <X className="w-4 h-4 text-gray-500" />
               </button>
@@ -684,7 +698,7 @@ export function SupportChatWidget() {
               </div>
 
               {/* Action buttons row */}
-              <div className="px-4 py-1.5 flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-1.5 sm:px-4">
                 {isBot && conversation && (
                   <button
                     onClick={escalate}
@@ -711,7 +725,7 @@ export function SupportChatWidget() {
                 {!isClosed && conversation && (
                   <button
                     onClick={closeConversation}
-                    className="ml-auto text-xs text-gray-400 hover:text-gray-600 px-2 py-1 transition-colors"
+                    className="ml-auto min-h-11 px-2 py-1 text-xs text-gray-500 transition-colors hover:text-gray-700"
                   >
                     End chat
                   </button>
@@ -720,7 +734,7 @@ export function SupportChatWidget() {
 
               {/* Input */}
               {!isClosed && (
-                <div className="px-4 pb-4 pt-2 border-t border-gray-100 dark:border-gray-700 shrink-0">
+                <div className="shrink-0 border-t border-gray-100 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 dark:border-gray-700 sm:px-4 sm:pb-4">
                   <div className="flex items-center gap-2">
                     <input
                       ref={inputRef}
@@ -739,7 +753,7 @@ export function SupportChatWidget() {
                           : "Type your message…"
                       }
                       disabled={isSending || isWaiting || isLoading || !conversation}
-                      className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-500"
+                      className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-white sm:text-sm"
                     />
                     <button
                       onClick={sendMessage}
@@ -750,7 +764,8 @@ export function SupportChatWidget() {
                         isLoading ||
                         !conversation
                       }
-                      className="w-9 h-9 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                      aria-label="Send message"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isSending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

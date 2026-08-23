@@ -617,7 +617,7 @@ export default function EditServicePage() {
             </label>
 
             {portfolioImagePreviews.length > 0 && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                 {portfolioImagePreviews.map((preview, index) => (
                   <div
                     key={index}

@@ -105,8 +105,8 @@ export function QuoteRequestModal({
       <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden pointer-events-auto flex">
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="pointer-events-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800 sm:max-h-[calc(100dvh-2rem)]">
           {/* Left Side - Image */}
           <div className="hidden md:block md:w-[50%] relative">
             <img
@@ -119,7 +119,7 @@ export function QuoteRequestModal({
           {/* Right Side - Form */}
           <div className="w-full md:w-[50%] flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -131,8 +131,10 @@ export function QuoteRequestModal({
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ml-4"
+                  aria-label="Close quote request"
+                  className="ml-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 sm:ml-4"
                 >
                   <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </button>
@@ -140,7 +142,7 @@ export function QuoteRequestModal({
             </div>
 
             {/* Form Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <form
                 id="quote-form"
                 onSubmit={handleSubmit}
@@ -289,7 +291,7 @@ export function QuoteRequestModal({
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="border-t border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div className="flex gap-3">
                 <button
                   type="button"

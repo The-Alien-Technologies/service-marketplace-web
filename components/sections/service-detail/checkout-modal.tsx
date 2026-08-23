@@ -108,6 +108,9 @@ export function CheckoutModal({
         id: selectedPlan.id,
         name: selectedPlan.name,
         price: planPrice,
+        inclusions: selectedPlan.features
+          .map((feature) => feature.text)
+          .join("\n"),
       },
       addOns: selectedAddOnsData,
       addOnsTotal,

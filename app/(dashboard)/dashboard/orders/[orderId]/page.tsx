@@ -1,17 +1,36 @@
 "use client";
 
-import { ChevronRight, Mail, Layers, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Mail,
+  Layers,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
+import { remainingRefundAmount } from "@/lib/payment-state";
 import { Order, OrderStatus } from "@/types/order";
 import { useState, useEffect, use } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { ChatBox } from "@/components/sections/service-detail/chat-box";
+import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // --- Helpers ---
 
@@ -83,6 +102,9 @@ function OrderDetailsView({
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAcceptOpen, setIsAcceptOpen] = useState(false);
+  const [isDisputeOpen, setIsDisputeOpen] = useState(false);
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -127,6 +149,7 @@ function OrderDetailsView({
 
   const handleClientCancel = async () => {
     if (!order) return;
+    if (!window.confirm(`Cancel order #${order.orderNumber}?`)) return;
     setActionLoading("DECLINED");
     try {
       const updated = await apiService.updateOrderStatus(order.id, "DECLINED");
@@ -135,6 +158,59 @@ function OrderDetailsView({
       router.push("/dashboard/orders?tab=Declined");
     } catch (error: any) {
       toast.error(error?.message || "Failed to cancel order");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!order) return;
+    setActionLoading("REFUND");
+    try {
+      const result = await apiService.refundOrderPayment(
+        order.id,
+        `Refund remaining balance for order ${order.orderNumber}`,
+        refundableAmount,
+      );
+      const updatedOrder = await apiService.getOrder(order.id);
+      setOrder(updatedOrder);
+      setIsRefundOpen(false);
+      toast.success(
+        result.paymentStatus === "REFUNDED"
+          ? "Refund completed"
+          : "Refund initiated. Paystack is processing it.",
+      );
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to initiate refund");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAcceptWork = async () => {
+    if (!order) return;
+    setActionLoading("ACCEPT_WORK");
+    try {
+      const settlement = await apiService.acceptOrder(order.id);
+      setOrder({ ...order, settlement });
+      setIsAcceptOpen(false);
+      toast.success("Work accepted. The provider can now request payout.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to accept the completed work");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReleaseReview = async () => {
+    if (!order) return;
+    setActionLoading("RELEASE_REVIEW");
+    try {
+      const settlement = await apiService.requestOrderReleaseReview(order.id);
+      setOrder({ ...order, settlement });
+      toast.success("Admin review requested");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to request an admin review");
     } finally {
       setActionLoading(null);
     }
@@ -171,10 +247,34 @@ function OrderDetailsView({
       ? order.client
       : (order.provider ?? order.service?.provider);
 
-  const subtotal = Number(order.subtotal ?? order.planPrice ?? 0);
+  const subtotal = Number(order.planPrice ?? order.subtotal ?? 0);
   const addOnsTotal = Number(order.addOnsTotal ?? 0);
   const couponDiscount = Number(order.couponDiscount ?? 0);
   const total = Number(order.total ?? 0);
+  const processedRefundAmount =
+    order.refunds
+      ?.filter(
+        (refund) =>
+          refund.affectsOrderBalance && refund.status === "PROCESSED",
+      )
+      .reduce((sum, refund) => sum + Number(refund.amount), 0) ??
+    Number(order.settlement?.refundedAmount ?? 0);
+  const refundableAmount = remainingRefundAmount(
+    total,
+    processedRefundAmount,
+  );
+  const settlementHeld =
+    order.status === "COMPLETED" &&
+    (!order.settlement ||
+      (order.settlement.status === "HELD" && !order.settlement.acceptedAt));
+  const settlementAcceptedButHeld =
+    order.status === "COMPLETED" &&
+    order.settlement?.status === "HELD" &&
+    Boolean(order.settlement.acceptedAt);
+  const settlementReleased =
+    order.settlement?.status === "ELIGIBLE" ||
+    order.settlement?.status === "RESERVED" ||
+    order.settlement?.status === "PAID";
 
   return (
     <div className="space-y-8">
@@ -276,6 +376,18 @@ function OrderDetailsView({
                   {getStatusLabel(order.status)}
                 </span>
               </div>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-semibold",
+                  order.paymentStatus === "PAID"
+                    ? "bg-green-50 text-green-700"
+                    : order.paymentStatus === "PROCESSING"
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-gray-100 text-gray-700",
+                )}
+              >
+                Payment: {order.paymentStatus.replace("_", " ")}
+              </span>
             </div>
           </div>
 
@@ -307,18 +419,6 @@ function OrderDetailsView({
                           "Accept Order"
                         )}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
-                        onClick={() => handleStatusUpdate("DECLINED")}
-                        disabled={actionLoading !== null}
-                      >
-                        {actionLoading === "DECLINED" ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Decline Order"
-                        )}
-                      </Button>
                     </>
                   )}
 
@@ -339,8 +439,90 @@ function OrderDetailsView({
 
                 {/* Client actions */}
                 {role === "USER" &&
-                  (order.status === "PENDING" ||
-                    order.status === "AWAITING") && (
+                  order.paymentStatus !== "PAID" &&
+                  order.paymentStatus !== "REFUNDED" &&
+                  order.paymentStatus !== "REFUND_PENDING" &&
+                  order.paymentStatus !== "PARTIALLY_REFUNDED" && (
+                    <Button
+                      className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[130px] rounded-lg"
+                      onClick={() =>
+                        router.push(`/checkout?orderId=${order.id}`)
+                      }
+                    >
+                      {order.paymentStatus === "PROCESSING"
+                        ? "Resume Payment"
+                        : "Pay Now"}
+                    </Button>
+                  )}
+
+                {role === "USER" && settlementHeld && (
+                  <>
+                    <Button
+                      className="bg-[#15803d] hover:bg-[#14532d] text-white font-semibold min-w-[150px] rounded-lg"
+                      onClick={() => setIsAcceptOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Accept work
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-amber-200 text-amber-800 hover:bg-amber-50"
+                      onClick={() => setIsDisputeOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      Raise dispute
+                    </Button>
+                  </>
+                )}
+
+                {role === "SERVICE_PROVIDER" && settlementHeld && (
+                  <Button
+                    variant="outline"
+                    className="border-gray-300 text-gray-800 hover:bg-gray-50"
+                    onClick={handleReleaseReview}
+                    disabled={
+                      actionLoading !== null ||
+                      order.settlement?.releaseReviewStatus === "REQUESTED"
+                    }
+                  >
+                    {actionLoading === "RELEASE_REVIEW" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Clock3 className="w-4 h-4" />
+                    )}
+                    {order.settlement?.releaseReviewStatus === "REQUESTED"
+                      ? "Admin review pending"
+                      : "Request admin review"}
+                  </Button>
+                )}
+
+                {role === "ADMIN" &&
+                  (order.paymentStatus === "PAID" ||
+                    order.paymentStatus === "PARTIALLY_REFUNDED") &&
+                  refundableAmount > 0 &&
+                  !order.settlement?.acceptedAt && (
+                    <Button
+                      variant="outline"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => setIsRefundOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      {actionLoading === "REFUND" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        order.paymentStatus === "PARTIALLY_REFUNDED"
+                          ? "Refund Remaining Balance"
+                          : "Issue Full Refund"
+                      )}
+                    </Button>
+                  )}
+
+                {role === "USER" &&
+                  (order.status === "PENDING" || order.status === "AWAITING") &&
+                  (order.paymentStatus === "UNPAID" ||
+                    order.paymentStatus === "FAILED") && (
                     <Button
                       variant="ghost"
                       className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
@@ -355,13 +537,15 @@ function OrderDetailsView({
                     </Button>
                   )}
 
-                {order.status === "COMPLETED" && (
-                  <Link href={`/orders/${order.id}/review`}>
-                    <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                      Leave a Review
-                    </Button>
-                  </Link>
-                )}
+                {role === "USER" &&
+                  order.status === "COMPLETED" &&
+                  settlementReleased && (
+                    <Link href={`/orders/${order.id}/review`}>
+                      <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
+                        Leave a Review
+                      </Button>
+                    </Link>
+                  )}
 
                 {/* Message button */}
                 <Button
@@ -379,10 +563,49 @@ function OrderDetailsView({
           </div>
         </div>
 
+        {order.status === "COMPLETED" && (
+          <div
+            className={cn(
+              "rounded-xl px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+              settlementReleased
+                ? "bg-green-50 text-green-950"
+                : "bg-amber-50 text-amber-950",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              {settlementReleased ? (
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+              ) : (
+                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+              )}
+              <div>
+                <p className="text-sm font-bold">
+                  {settlementReleased
+                    ? "Payment released for provider payout"
+                    : settlementAcceptedButHeld
+                      ? "Payment temporarily held for review"
+                      : "Payment is held until the customer accepts the work"}
+                </p>
+                <p className="mt-1 max-w-2xl text-sm opacity-80">
+                  {settlementReleased
+                    ? role === "USER"
+                      ? `Your GHS ${refundableAmount.toFixed(2)} payment has been released. The provider can now request payout.`
+                      : `GHS ${Number(order.settlement?.providerAmount ?? 0).toFixed(2)} is ${order.settlement?.status.toLowerCase()} for the provider.`
+                    : settlementAcceptedButHeld
+                      ? "The customer already accepted this work, but a payment review is temporarily preventing withdrawal."
+                      : role === "SERVICE_PROVIDER"
+                        ? "The customer can accept the delivery or raise a dispute. If they are unresponsive, request an admin review."
+                        : "Review the delivery carefully. Acceptance is final and makes the provider’s earnings available for withdrawal."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Split View: Summary & Add-ons */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left: Order Summary */}
-          <div className="bg-gray-50 rounded-xl p-8 space-y-6">
+          <div className="space-y-6 rounded-xl bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-baseline gap-2">
               <h3 className="text-lg font-bold text-gray-900">Order summary</h3>
               <span className="text-sm text-gray-400">
@@ -496,7 +719,7 @@ function OrderDetailsView({
                 ))}
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
+              <div className="rounded-xl border-2 border-dashed border-gray-200 p-5 text-center text-sm text-gray-500 sm:p-8">
                 No add-ons selected
               </div>
             )}
@@ -517,6 +740,89 @@ function OrderDetailsView({
           providerAvatar={otherParty.avatar || ""}
         />
       )}
+
+      <Dialog open={isAcceptOpen} onOpenChange={setIsAcceptOpen}>
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-800">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <DialogTitle>Accept the completed work?</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              This confirms that the service was delivered and releases your
+              GHS {refundableAmount.toFixed(2)} held payment. The provider can
+              then request payout. Normal in-app disputes cannot be opened
+              after acceptance.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsAcceptOpen(false)}
+              disabled={actionLoading !== null}
+            >
+              Review again
+            </Button>
+            <Button
+              className="bg-green-700 text-white hover:bg-green-800"
+              onClick={handleAcceptWork}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "ACCEPT_WORK" && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Accept and release
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
+        <DialogContent className="bg-white sm:max-w-md dark:bg-gray-900">
+          <DialogHeader>
+            <DialogTitle>
+              {order.paymentStatus === "PARTIALLY_REFUNDED"
+                ? "Refund the remaining balance?"
+                : "Issue a full refund?"}
+            </DialogTitle>
+            <DialogDescription>
+              Paystack will refund GHS {refundableAmount.toFixed(2)} for order #
+              {order.orderNumber}. The provider’s held earnings will be
+              recalculated, and this cannot be undone in Pavodah.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRefundOpen(false)}
+              disabled={actionLoading !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-700 text-white hover:bg-red-800"
+              onClick={handleRefund}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "REFUND" && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Confirm refund
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <RaiseDisputeModal
+        orderId={order.id}
+        orderNumber={order.orderNumber}
+        isOpen={isDisputeOpen}
+        onClose={() => setIsDisputeOpen(false)}
+        onSuccess={() => {
+          setIsDisputeOpen(false);
+          toast.info("Payment remains held while the dispute is reviewed.");
+        }}
+      />
     </div>
   );
 }

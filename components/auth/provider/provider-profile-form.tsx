@@ -11,6 +11,7 @@ import { PhoneVerification, PhoneVerificationStep } from '@/components/ui/phone-
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '@/lib/languages';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'Please enter your first name'),
@@ -20,13 +21,6 @@ const profileSchema = z.object({
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
-
-const languages = [
-  { value: 'en-GB', label: 'English-GB' },
-  { value: 'en-US', label: 'English-US' },
-  { value: 'tw', label: 'Twi' },
-  { value: 'ga', label: 'Ga' },
-];
 
 export function ProviderProfileForm() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -61,7 +55,7 @@ export function ProviderProfileForm() {
     defaultValues: {
       firstName: '',
       lastName: '',
-      language: 'en-GB',
+      language: DEFAULT_LANGUAGE.value,
     },
   });
 
@@ -186,7 +180,7 @@ export function ProviderProfileForm() {
 
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
@@ -350,7 +344,7 @@ export function ProviderProfileForm() {
                   <span className="text-white text-xs">🌐</span>
                 </div>
                 <span className="text-sm">
-                  {languages.find(lang => lang.value === selectedLanguage)?.label || 'Select language'}
+                  {SUPPORTED_LANGUAGES.find(lang => lang.value === selectedLanguage)?.label || 'Select language'}
                 </span>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -358,7 +352,7 @@ export function ProviderProfileForm() {
             
             {showLanguageDropdown && (
               <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                {languages.map((language) => (
+                {SUPPORTED_LANGUAGES.map((language) => (
                   <button
                     key={language.value}
                     type="button"

@@ -119,8 +119,8 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           {/* Left side - summary + progress */}
           <div className="space-y-6">
             {/* Order meta */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-wrap text-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span className="font-semibold text-gray-900 dark:text-white">
                   Order ID: #{order.orderId}
                 </span>
@@ -132,14 +132,14 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   {getStatusLabel(order.status)}
                 </span>
               </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-gray-500 dark:text-gray-400 sm:shrink-0">
                 {order.date}
               </span>
             </div>
 
             {/* Order summary card */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-700 sm:px-6">
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Order summary
@@ -149,7 +149,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   </p>
                 </div>
               </div>
-              <div className="px-6 py-4 text-sm">
+              <div className="px-4 py-4 text-sm sm:px-6">
                 <div className="flex justify-between py-1.5">
                   <span className="text-gray-500 dark:text-gray-400">
                     Subtotal (Basic plan)
@@ -195,7 +195,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   }}
                 />
               </div>
-              <div className="flex justify-between mt-2">
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                 {progressStages.map((stage, index) => (
                   <span
                     key={stage}
@@ -214,7 +214,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
 
           {/* Right side - actions / note */}
           <div className="space-y-4">
-            <div className="flex flex-wrap justify-end gap-3">
+            <div className="flex flex-wrap gap-3 sm:justify-end">
               {isDeclined ? (
                 <>
                   <button

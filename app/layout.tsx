@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -26,6 +26,12 @@ const dancingScript = Dancing_Script({
 export const metadata: Metadata = {
   title: "Service Marketplace",
   description: "Find and hire trusted service providers with ease",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 interface SupportChatProps {
   isOpenChat: boolean;

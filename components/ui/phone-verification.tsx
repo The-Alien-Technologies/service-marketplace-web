@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { ClipboardEvent, useEffect, useRef, useState } from 'react';
+import { Check, LoaderCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CountrySelector, countries, Country } from '@/components/ui/country-selector';
 import { apiService } from '@/lib/api';
@@ -17,266 +18,289 @@ interface PhoneVerificationProps {
   error?: string;
 }
 
-export function PhoneVerification({ 
-  value, 
-  onChange, 
-  onVerificationChange, 
-  disabled = false, 
+const OTP_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 60;
+
+export function PhoneVerification({
+  value,
+  onChange,
+  onVerificationChange,
+  disabled = false,
   required = false,
-  error 
+  error,
 }: PhoneVerificationProps) {
-  const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to Ghana
+  const initialCountry =
+    countries.find((country) => value.startsWith(country.dialCode)) ?? countries[0];
+  const [selectedCountry, setSelectedCountry] = useState<Country>(initialCountry);
+  const [localNumber, setLocalNumber] = useState(() =>
+    value.startsWith(initialCountry.dialCode)
+      ? value.slice(initialCountry.dialCode.length)
+      : value.replace(/\D/g, ''),
+  );
+  const [verificationPhoneNumber, setVerificationPhoneNumber] = useState('');
   const [verificationStep, setVerificationStep] = useState<PhoneVerificationStep>('input');
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+  const [verificationCode, setVerificationCode] = useState<string[]>(
+    Array(OTP_LENGTH).fill(''),
+  );
+  const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [nextResendTime, setNextResendTime] = useState<Date | null>(null);
   const [resendTimer, setResendTimer] = useState(0);
+  const [verificationError, setVerificationError] = useState('');
 
-  // Refs for timers
-  const verificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const resendTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const verificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const codeInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  // Timer effect for resend countdown
   useEffect(() => {
-    if (nextResendTime) {
-      const updateTimer = () => {
-        const now = new Date();
-        const timeLeft = Math.max(0, Math.ceil((nextResendTime.getTime() - now.getTime()) / 1000));
-        setResendTimer(timeLeft);
-        
-        if (timeLeft > 0) {
-          resendTimerRef.current = setTimeout(updateTimer, 1000);
-        } else {
-          setNextResendTime(null);
-        }
-      };
-      updateTimer();
-    }
-    
-    return () => {
-      if (resendTimerRef.current) {
-        clearTimeout(resendTimerRef.current);
-      }
-    };
-  }, [nextResendTime]);
+    onVerificationChange(verificationStep);
+  }, [verificationStep, onVerificationChange]);
 
-  // Cleanup timers on unmount
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const timer = window.setTimeout(() => setResendTimer((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendTimer]);
+
   useEffect(() => {
     return () => {
       if (verificationTimeoutRef.current) {
         clearTimeout(verificationTimeoutRef.current);
       }
-      if (resendTimerRef.current) {
-        clearTimeout(resendTimerRef.current);
-      }
     };
   }, []);
 
-  // Notify parent of verification step changes
-  useEffect(() => {
-    onVerificationChange(verificationStep);
-  }, [verificationStep, onVerificationChange]);
+  const getRequestedPhoneNumber = () => {
+    const digits = localNumber.replace(/\D/g, '');
+    const dialCodeDigits = selectedCountry.dialCode.replace(/\D/g, '');
+    if (digits.startsWith(dialCodeDigits)) return `+${digits}`;
+    return `${selectedCountry.dialCode}${digits.replace(/^0+/, '')}`;
+  };
+
+  const showError = (caught: unknown, fallback: string) => {
+    const message = caught instanceof Error ? caught.message : fallback;
+    setVerificationError(message);
+    toast.error(message);
+  };
+
+  const handleCountryChange = (country: Country) => {
+    setSelectedCountry(country);
+    setVerificationError('');
+    onChange(localNumber);
+  };
+
+  const handlePhoneChange = (rawValue: string) => {
+    const digits = rawValue.replace(/\D/g, '').slice(0, 15);
+    setLocalNumber(digits);
+    setVerificationError('');
+    onChange(digits);
+  };
 
   const handleSendVerification = async () => {
-    if (!value) {
-      toast.error('Please enter a phone number');
+    if (!localNumber) {
+      setVerificationError('Enter your phone number first.');
       return;
     }
 
-    setIsVerifying(true);
+    setIsSending(true);
+    setVerificationError('');
     try {
-      const fullPhoneNumber = selectedCountry.dialCode + value;
-      await apiService.sendPhoneVerification(fullPhoneNumber);
-      
+      const result = await apiService.sendPhoneVerification(getRequestedPhoneNumber());
+      setVerificationPhoneNumber(result.phoneNumber);
+      onChange(result.phoneNumber);
       setVerificationStep('verify');
-      
-      // Set initial resend timer (30 seconds)
-      const nextResend = new Date();
-      nextResend.setSeconds(nextResend.getSeconds() + 30);
-      setNextResendTime(nextResend);
-      
+      setResendTimer(RESEND_COOLDOWN_SECONDS);
       toast.success('Verification code sent to your phone');
-    } catch (error) {
-      console.error('Failed to send verification:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code';
-      toast.error(errorMessage);
+      window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
+    } catch (caught) {
+      showError(caught, 'We could not send the verification code. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const verifyCode = async (code: string) => {
+    if (code.length !== OTP_LENGTH || isVerifying) return;
+
+    setIsVerifying(true);
+    setVerificationError('');
+    try {
+      const result = await apiService.verifyPhone(verificationPhoneNumber, code);
+      onChange(result.phoneNumber);
+      setVerificationPhoneNumber(result.phoneNumber);
+      setVerificationStep('verified');
+      setResendTimer(0);
+      toast.success('Phone number verified successfully');
+    } catch (caught) {
+      setVerificationCode(Array(OTP_LENGTH).fill(''));
+      showError(caught, 'That code is invalid or has expired. Request a new one and try again.');
+      window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  const handleCodeChange = (index: number, newValue: string) => {
-    if (newValue.length > 1) return;
-    
-    const newCode = [...verificationCode];
-    newCode[index] = newValue;
-    setVerificationCode(newCode);
-
-    // Clear existing timeout
+  const scheduleVerification = (code: string[]) => {
     if (verificationTimeoutRef.current) {
       clearTimeout(verificationTimeoutRef.current);
     }
-
-    // Auto-focus next input
-    if (newValue && index < 5) {
-      const nextInput = document.querySelector(`input[name="phone-code-${index + 1}"]`) as HTMLInputElement;
-      nextInput?.focus();
-    }
-
-    // Auto-verify when all fields are filled with delay
-    if (newCode.every(digit => digit !== '')) {
-      verificationTimeoutRef.current = setTimeout(() => {
-        handleVerifyCode(newCode.join(''));
-      }, 800);
+    if (code.every(Boolean)) {
+      verificationTimeoutRef.current = setTimeout(() => verifyCode(code.join('')), 350);
     }
   };
 
-  const handleVerifyCode = async (code: string) => {
-    if (code.length !== 6) return;
+  const handleCodeChange = (index: number, rawValue: string) => {
+    const digit = rawValue.replace(/\D/g, '').slice(-1);
+    const nextCode = [...verificationCode];
+    nextCode[index] = digit;
+    setVerificationCode(nextCode);
+    setVerificationError('');
 
-    setIsVerifying(true);
-    try {
-      const fullPhoneNumber = selectedCountry.dialCode + value;
-      await apiService.verifyPhone(fullPhoneNumber, code);
-      
-      setVerificationStep('verified');
-      setNextResendTime(null);
-      toast.success('Phone number verified successfully!');
-    } catch (error) {
-      console.error('Verification failed:', error);
-      setVerificationCode(['', '', '', '', '', '']);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Invalid verification code';
-      toast.error(errorMessage);
-      
-      // Focus first input for retry
-      const firstInput = document.querySelector(`input[name="phone-code-0"]`) as HTMLInputElement;
-      firstInput?.focus();
-    } finally {
-      setIsVerifying(false);
+    if (digit && index < OTP_LENGTH - 1) {
+      codeInputRefs.current[index + 1]?.focus();
+    }
+    scheduleVerification(nextCode);
+  };
+
+  const handleCodePaste = (event: ClipboardEvent<HTMLElement>) => {
+    const digits = event.clipboardData
+      .getData('text')
+      .replace(/\D/g, '')
+      .slice(0, OTP_LENGTH);
+    if (!digits) return;
+
+    event.preventDefault();
+    const nextCode = Array(OTP_LENGTH)
+      .fill('')
+      .map((_, index) => digits[index] ?? '');
+    setVerificationCode(nextCode);
+    setVerificationError('');
+    codeInputRefs.current[Math.min(digits.length, OTP_LENGTH) - 1]?.focus();
+    scheduleVerification(nextCode);
+  };
+
+  const handleCodeKeyDown = (index: number, key: string) => {
+    if (key === 'Backspace' && !verificationCode[index] && index > 0) {
+      codeInputRefs.current[index - 1]?.focus();
     }
   };
 
   const handleResendCode = async () => {
-    if (nextResendTime && new Date() < nextResendTime) {
-      return;
-    }
+    if (resendTimer > 0 || isResending) return;
 
     setIsResending(true);
+    setVerificationError('');
     try {
-      const fullPhoneNumber = selectedCountry.dialCode + value;
-      await apiService.resendPhoneVerification(fullPhoneNumber);
-      
-      setVerificationCode(['', '', '', '', '', '']);
-      
-      // Set new resend timer (60 seconds)
-      const nextResend = new Date();
-      nextResend.setSeconds(nextResend.getSeconds() + 60);
-      setNextResendTime(nextResend);
-      
-      toast.success('Verification code sent to your phone');
-      
-      // Focus first input
-      const firstInput = document.querySelector(`input[name="phone-code-0"]`) as HTMLInputElement;
-      firstInput?.focus();
-    } catch (error) {
-      console.error('Failed to resend:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to resend verification code';
-      toast.error(errorMessage);
+      const result = await apiService.resendPhoneVerification(verificationPhoneNumber);
+      setVerificationPhoneNumber(result.phoneNumber);
+      onChange(result.phoneNumber);
+      setVerificationCode(Array(OTP_LENGTH).fill(''));
+      setResendTimer(RESEND_COOLDOWN_SECONDS);
+      toast.success('A new verification code was sent');
+      window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
+    } catch (caught) {
+      showError(caught, 'We could not resend the code. Please try again.');
     } finally {
       setIsResending(false);
     }
   };
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Phone number
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="ml-1 text-red-500">*</span>}
         {verificationStep !== 'verified' && (
-          <span className="text-xs text-orange-600 ml-2">(Verification required)</span>
+          <span className="ml-2 text-xs font-normal text-orange-700 dark:text-orange-400">
+            Verification required
+          </span>
         )}
       </label>
-      
+
       {verificationStep === 'input' && (
-        <>
-          <div className="flex">
+        <div className="space-y-2">
+          <div className="flex min-w-0">
             <CountrySelector
               selectedCountry={selectedCountry}
-              onCountryChange={setSelectedCountry}
-              disabled={disabled}
+              onCountryChange={handleCountryChange}
+              disabled={disabled || isSending}
             />
-            
             <Input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder="123 4567 890"
-              className="rounded-l-none rounded-r-none flex-1 h-12"
-              disabled={disabled}
+              value={localNumber}
+              onChange={(event) => handlePhoneChange(event.target.value)}
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              aria-invalid={Boolean(error || verificationError)}
+              aria-describedby="phone-verification-hint phone-verification-error"
+              placeholder="24 123 4567"
+              className="h-12 min-w-0 flex-1 rounded-none"
+              disabled={disabled || isSending}
             />
-            
             <button
               type="button"
               onClick={handleSendVerification}
-              disabled={isVerifying || !value || disabled}
-              className="h-12 px-4 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-sm"
+              disabled={isSending || !localNumber || disabled}
+              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-r-lg border border-l-0 border-green-700 bg-green-700 px-4 text-sm font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-green-200 disabled:bg-green-200 disabled:text-green-900 dark:disabled:border-green-950 dark:disabled:bg-green-950 dark:disabled:text-green-400"
             >
-              {isVerifying ? 'Sending...' : 'Verify'}
+              {isSending && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isSending ? 'Sending' : 'Send code'}
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            We&apos;ll send you a verification code
+          <p id="phone-verification-hint" className="text-xs text-gray-600 dark:text-gray-400">
+            We&apos;ll text a six-digit code to this number.
           </p>
-        </>
+        </div>
       )}
 
       {verificationStep === 'verify' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              We&apos;ve sent a verification code to <strong>{selectedCountry.dialCode} {value}</strong>
-            </p>
-          </div>
-          
-          {/* OTP Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="space-y-4 rounded-xl bg-blue-50 p-4 dark:bg-blue-950/30">
+          <p className="break-words text-sm text-blue-900 dark:text-blue-200">
+            Enter the code sent to <strong>{verificationPhoneNumber}</strong>.
+          </p>
+
+          <fieldset disabled={disabled || isVerifying}>
+            <legend className="mb-2 text-sm font-medium text-gray-800 dark:text-gray-200">
               Verification code
-            </label>
-            <div className="flex justify-center space-x-2">
+            </legend>
+            <div className="flex justify-center gap-2" onPaste={handleCodePaste}>
               {verificationCode.map((digit, index) => (
                 <input
                   key={index}
-                  name={`phone-code-${index}`}
+                  ref={(element) => {
+                    codeInputRefs.current[index] = element;
+                  }}
+                  aria-label={`Verification code digit ${index + 1}`}
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
+                  autoComplete={index === 0 ? 'one-time-code' : 'off'}
                   maxLength={1}
                   value={digit}
-                  onChange={(e) => handleCodeChange(index, e.target.value)}
-                  className="w-12 h-12 text-center text-xl font-semibold border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-green-500 focus:outline-none bg-white dark:bg-gray-800"
-                  placeholder="0"
-                  disabled={disabled}
+                  onChange={(event) => handleCodeChange(index, event.target.value)}
+                  onKeyDown={(event) => handleCodeKeyDown(index, event.key)}
+                  className="h-11 w-10 rounded-lg border-2 border-gray-300 bg-white text-center text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-green-600 focus:ring-2 focus:ring-green-600/20 disabled:cursor-wait disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-white sm:h-12 sm:w-12 sm:text-xl"
                 />
               ))}
             </div>
-          </div>
-          
-          {/* Resend */}
-          <div className="text-center">
-            {nextResendTime && resendTimer > 0 ? (
-              <p className="text-sm text-gray-500">
-                Resend code in {Math.floor(resendTimer / 60)}:{(resendTimer % 60).toString().padStart(2, '0')}
+          </fieldset>
+
+          <div className="flex min-h-6 items-center justify-center">
+            {isVerifying ? (
+              <p className="inline-flex items-center gap-2 text-sm text-blue-800 dark:text-blue-300">
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Checking code
+              </p>
+            ) : resendTimer > 0 ? (
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                Resend available in 0:{resendTimer.toString().padStart(2, '0')}
               </p>
             ) : (
               <button
                 type="button"
                 onClick={handleResendCode}
                 disabled={isResending || disabled}
-                className="text-sm text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                className="text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-green-400"
               >
-                {isResending ? 'Resending...' : 'Resend code'}
+                {isResending ? 'Sending a new code…' : 'Send a new code'}
               </button>
             )}
           </div>
@@ -284,23 +308,30 @@ export function PhoneVerification({
       )}
 
       {verificationStep === 'verified' && (
-        <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm">✓</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+        <div className="flex items-start gap-3 rounded-xl bg-green-50 p-4 dark:bg-green-950/30">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-700 text-white">
+            <Check className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-green-900 dark:text-green-200">
               Phone number verified
             </p>
-            <p className="text-xs text-green-600 dark:text-green-300">
-              {selectedCountry.dialCode} {value}
+            <p className="break-words text-xs text-green-800 dark:text-green-300">
+              {verificationPhoneNumber}
             </p>
           </div>
         </div>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 mt-1">{error}</p>
+      {(verificationError || error) && (
+        <p
+          id="phone-verification-error"
+          role="alert"
+          aria-live="polite"
+          className="text-sm text-red-700 dark:text-red-400"
+        >
+          {verificationError || error}
+        </p>
       )}
     </div>
   );

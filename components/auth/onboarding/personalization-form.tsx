@@ -11,7 +11,7 @@ export function PersonalizationForm() {
   };
 
   return (
-    <div className="p-8 text-center">
+    <div className="p-5 text-center sm:p-8">
       {/* Illustration */}
       <div className="mb-8 flex justify-center">
         <img 

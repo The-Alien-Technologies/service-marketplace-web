@@ -7,7 +7,7 @@
   /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   /* Base Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -28,7 +28,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
   /* Custom Brand Colors */
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
@@ -41,7 +41,7 @@
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
   --color-brand-950: var(--brand-950);
-  
+
   /* Marketplace Colors */
   --color-marketplace-50: var(--marketplace-50);
   --color-marketplace-100: var(--marketplace-100);
@@ -50,7 +50,7 @@
   --color-marketplace-400: var(--marketplace-400);
   --color-marketplace-500: var(--marketplace-500);
   --color-marketplace-600: var(--marketplace-600);
-  
+
   /* Status Colors */
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -58,14 +58,15 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
-  
+  --color-refund: var(--refund);
+
   /* Chart Colors */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  
+
   /* Sidebar Colors */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -75,7 +76,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  
+
   /* Border Radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -85,7 +86,7 @@
 
 :root {
   --radius: 0.625rem;
-  
+
   /* Service Marketplace Brand Colors */
   --brand-50: #f0fdf4;
   --brand-100: #dcfce7;
@@ -98,16 +99,16 @@
   --brand-800: #166534;
   --brand-900: #14532d;
   --brand-950: #052e16;
-  
+
   /* Custom Service Marketplace Palette from Images */
-  --marketplace-50: #CFFCD8;
-  --marketplace-100: #6AEC8E;
-  --marketplace-200: #55C173;
+  --marketplace-50: #cffcd8;
+  --marketplace-100: #6aec8e;
+  --marketplace-200: #55c173;
   --marketplace-300: #419750;
-  --marketplace-400: #2E6F40;
-  --marketplace-500: #1C4A29;
-  --marketplace-600: #0C2713;
-  
+  --marketplace-400: #2e6f40;
+  --marketplace-500: #1c4a29;
+  --marketplace-600: #0c2713;
+
   /* Theme Colors */
   --background: #ffffff;
   --foreground: #0f172a;
@@ -128,26 +129,29 @@
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #22c55e;
-  
+
   /* Success Colors */
   --success: #22c55e;
   --success-foreground: #ffffff;
-  
+
   /* Warning Colors */
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  
+
   /* Info Colors */
   --info: #3b82f6;
   --info-foreground: #ffffff;
-  
+
+  /* Refund Colors */
+  --refund: #7e22ce;
+
   /* Chart Colors with Green Theme */
   --chart-1: #22c55e;
   --chart-2: #16a34a;
   --chart-3: #15803d;
   --chart-4: #86efac;
   --chart-5: #4ade80;
-  
+
   /* Sidebar Colors */
   --sidebar: #ffffff;
   --sidebar-foreground: #0f172a;
@@ -180,26 +184,29 @@
   --border: #334155;
   --input: #334155;
   --ring: #4ade80;
-  
+
   /* Success Colors */
   --success: #4ade80;
   --success-foreground: #0f172a;
-  
+
   /* Warning Colors */
   --warning: #fbbf24;
   --warning-foreground: #0f172a;
-  
+
   /* Info Colors */
   --info: #60a5fa;
   --info-foreground: #0f172a;
-  
+
+  /* Refund Colors */
+  --refund: #d8b4fe;
+
   /* Chart Colors with Green Theme for Dark Mode */
   --chart-1: #4ade80;
   --chart-2: #22c55e;
   --chart-3: #16a34a;
   --chart-4: #86efac;
   --chart-5: #bbf7d0;
-  
+
   /* Sidebar Colors for Dark Mode */
   --sidebar: #1e293b;
   --sidebar-foreground: #f8fafc;
@@ -215,8 +222,41 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    overflow-x: clip;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground;
+    min-width: 20rem;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+  :where(.flex, .grid) > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 1rem !important;
+    }
+  }
+
+  @media (pointer: coarse) {
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea {
+      min-height: 2.75rem;
+    }
   }
 }
 
@@ -225,61 +265,65 @@
   .text-brand {
     color: var(--brand-500);
   }
-  
+
   .bg-brand {
     background-color: var(--brand-500);
   }
-  
+
   .border-brand {
     border-color: var(--brand-500);
   }
-  
+
   .text-marketplace {
     color: var(--marketplace-300);
   }
-  
+
   .bg-marketplace {
     background-color: var(--marketplace-300);
   }
-  
+
   .border-marketplace {
     border-color: var(--marketplace-300);
   }
-  
+
   /* Status utility classes */
   .text-success {
     color: var(--success);
   }
-  
+
   .bg-success {
     background-color: var(--success);
   }
-  
+
   .text-warning {
     color: var(--warning);
   }
-  
+
   .bg-warning {
     background-color: var(--warning);
   }
-  
+
   .text-info {
     color: var(--info);
   }
-  
+
   .bg-info {
     background-color: var(--info);
   }
-  
+
   /* Gradient utilities */
   .bg-gradient-brand {
     background: linear-gradient(135deg, var(--brand-400), var(--brand-600));
   }
-  
+
   .bg-gradient-marketplace {
-    background: linear-gradient(135deg, var(--marketplace-100), var(--marketplace-400));
+    background: linear-gradient(
+      135deg,
+      var(--marketplace-100),
+      var(--marketplace-400)
+    );
   }
-  
+
   /* Container utilities */
   .container {
     width: 100%;
@@ -288,31 +332,31 @@
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  
+
   @media (min-width: 640px) {
     .container {
       max-width: 640px;
     }
   }
-  
+
   @media (min-width: 768px) {
     .container {
       max-width: 768px;
     }
   }
-  
+
   @media (min-width: 1024px) {
     .container {
       max-width: 1024px;
     }
   }
-  
+
   @media (min-width: 1280px) {
     .container {
       max-width: 1280px;
     }
   }
-  
+
   @media (min-width: 1536px) {
     .container {
       max-width: 1536px;
