@@ -108,17 +108,21 @@ export default function Home() {
       <HeroSection />
 
       {/* Bestsellers Section */}
-      {!isLoadingServices && bestsellers.length > 0 && (
-        <ServiceCarousel
-          services={bestsellers}
-          title="Bestsellers"
-          showAllLink={{
-            text: "See all best sellers",
-            onClick: () => router.push("/services"),
-          }}
-          onServiceClick={(service) => router.push(`/services/${service.id}`)}
-        />
-      )}
+      <div id="browse-services" className="scroll-mt-20">
+        {!isLoadingServices && bestsellers.length > 0 && (
+          <ServiceCarousel
+            services={bestsellers}
+            title="Bestsellers"
+            showAllLink={{
+              text: "See all best sellers",
+              onClick: () => router.push("/services"),
+            }}
+            onServiceClick={(service) =>
+              router.push(`/services/${service.id}`)
+            }
+          />
+        )}
+      </div>
 
       {/* Moments Captured Section */}
       <MomentsSection />
@@ -141,11 +145,13 @@ export default function Home() {
 
       {/* Popular Service Categories Carousel */}
       {!isLoading && categoryCardData.length > 0 && (
-        <CategoryCarousel
-          categories={categoryCardData}
-          title="Popular Service"
-          onCategoryClick={handleCategoryClick}
-        />
+        <div id="browse-categories" className="scroll-mt-20">
+          <CategoryCarousel
+            categories={categoryCardData}
+            title="Popular Service"
+            onCategoryClick={handleCategoryClick}
+          />
+        </div>
       )}
 
       {/* Get Inspired Section */}

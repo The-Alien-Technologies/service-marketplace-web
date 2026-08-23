@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -57,6 +58,7 @@ export default function MyQuoteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [quote, setQuote] = useState<QuoteRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -86,6 +88,9 @@ export default function MyQuoteDetailPage({
       toast.success(
         status === "ACCEPTED" ? "Offer accepted!" : "Offer declined.",
       );
+      if (status === "ACCEPTED" && updated.order?.id) {
+        router.push(`/checkout?orderId=${updated.order.id}`);
+      }
     } catch {
       toast.error("Failed to respond to offer.");
     } finally {
@@ -95,7 +100,6 @@ export default function MyQuoteDetailPage({
 
   const handleMessageProvider = async () => {
     if (!quote) return;
-    const providerName = `${quote.provider.firstName} ${quote.provider.lastName}`;
     try {
       const conv = await startCustomConversation(quote.provider.id);
       if (conv) setActiveConversation(conv);

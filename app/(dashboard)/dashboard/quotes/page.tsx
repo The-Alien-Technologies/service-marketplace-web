@@ -46,11 +46,13 @@ const columns = [
     header: "Name",
     cell: (info) => {
       const client = info.getValue();
-      const name = `${client.firstName} ${client.lastName}`;
+      const firstName = client?.firstName ?? "";
+      const lastName = client?.lastName ?? "";
+      const name = `${firstName} ${lastName}`.trim() || "Unknown";
       return (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-            {client.avatar ? (
+            {client?.avatar ? (
               <Image
                 src={client.avatar}
                 alt={name}
@@ -59,7 +61,7 @@ const columns = [
               />
             ) : (
               <span className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium uppercase text-sm">
-                {client.firstName?.charAt(0)}
+                {firstName.charAt(0) || "?"}
               </span>
             )}
           </div>
@@ -239,7 +241,8 @@ export default function QuoteRequestsPage() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[760px] w-full text-sm text-left">
           <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -332,9 +335,10 @@ export default function QuoteRequestsPage() {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+        <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
           <Button
             variant="outline"
             size="sm"

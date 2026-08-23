@@ -74,7 +74,7 @@ export function ResetPasswordForm() {
         </div>
 
       {/* Right Side - Form Content (522px / 62.4%) */}
-      <div className="w-full md:w-[522px] md:flex-shrink-0 p-8 flex flex-col justify-center">
+      <div className="flex w-full flex-col justify-center p-5 sm:p-8 md:w-[522px] md:flex-shrink-0">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-6">

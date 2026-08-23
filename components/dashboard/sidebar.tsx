@@ -18,9 +18,11 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  Headphones,
   FileText,
-  User as UserIcon,
   X,
+  WalletCards,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -80,9 +82,19 @@ const adminSidebarItems: SidebarGroup[] = [
         href: "/dashboard/orders",
       },
       {
+        icon: WalletCards,
+        label: "Provider payouts",
+        href: "/dashboard/payouts",
+      },
+      {
         icon: Scale,
         label: "Disputes",
         href: "/dashboard/disputes",
+      },
+      {
+        icon: Headphones,
+        label: "Support Chat",
+        href: "/dashboard/support-chat",
       },
       {
         icon: Settings,
@@ -113,6 +125,11 @@ const providerSidebarItems: SidebarGroup[] = [
         href: "/dashboard/orders",
       },
       {
+        icon: WalletCards,
+        label: "Earnings & payouts",
+        href: "/dashboard/earnings",
+      },
+      {
         icon: MessageSquare,
         label: "Messages",
         href: "/dashboard/messages",
@@ -125,6 +142,11 @@ const providerSidebarItems: SidebarGroup[] = [
         icon: Star,
         label: "Reviews",
         href: "/dashboard/reviews",
+      },
+      {
+        icon: Scale,
+        label: "Disputes",
+        href: "/dashboard/disputes",
       },
     ],
   },
@@ -154,6 +176,11 @@ const userSidebarItems: SidebarGroup[] = [
 ];
 
 const accountItems = [
+  {
+    icon: Bell,
+    label: "Notifications",
+    href: "/dashboard/notifications",
+  },
   {
     icon: Settings,
     label: "Profile & settings",
@@ -210,9 +237,9 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
-        !isMobile && isCollapsed ? "w-20" : "w-64",
-        className
+        "flex h-dvh w-full flex-col border-r border-gray-200 bg-white transition-all duration-300",
+        !isMobile && (isCollapsed ? "w-20" : "w-64"),
+        className,
       )}
     >
       <div
@@ -223,13 +250,20 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
       >
         {!isCollapsed && <Logo withLink={true} />}
         {isMobile ? (
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 cursor-pointer">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dashboard navigation"
+            className="-mr-3 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+          >
             <X className="w-5 h-5" />
           </button>
         ) : (
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-gray-500 hover:text-gray-700 cursor-pointer"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
           >
             {isCollapsed ? (
               <Logo withLink={false} showText={false} />
@@ -259,30 +293,6 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                       pathname.startsWith(`${item.href}/`) ||
                       item.subItems?.some((sub) => pathname === sub.href);
 
-                // Main Item Content
-                const ItemContent = (
-                  <>
-                    <item.icon
-                      className={cn(
-                        "w-5 h-5 shrink-0",
-                        isActive ? "text-green-600" : "text-gray-500",
-                      )}
-                    />
-                    {!isCollapsed && (
-                      <span className="flex-1 text-left">{item.label}</span>
-                    )}
-                    {!isCollapsed && hasSubItems && (
-                      <span className="text-gray-400">
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </span>
-                    )}
-                  </>
-                );
-
                 if (hasSubItems && !isCollapsed) {
                   return (
                     <div key={item.label}>
@@ -291,7 +301,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                         className={cn(
                           "w-full flex items-center rounded-lg text-sm font-medium transition-colors px-4 py-3 space-x-3",
                           isActive
-                            ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-l-none -ml-4 pl-7" // Compensate padding
+                            ? "bg-green-100 text-green-800"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                         )}
                       >
@@ -357,7 +367,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                         ? "justify-center px-2 py-3"
                         : "space-x-3 px-4 py-3",
                       isActive
-                        ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-none"
+                        ? "bg-green-100 text-green-800"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                     )}
                     title={isCollapsed ? item.label : undefined}
@@ -398,7 +408,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                       ? "justify-center px-2 py-3"
                       : "space-x-3 px-4 py-3",
                     isActive
-                      ? "bg-green-50 text-green-600 border-l-4 border-green-700 rounded-none"
+                      ? "bg-green-100 text-green-800"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                   )}
                   title={isCollapsed ? item.label : undefined}

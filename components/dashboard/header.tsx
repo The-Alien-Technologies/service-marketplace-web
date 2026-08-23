@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, Globe, Menu } from "lucide-react";
+import { ChevronDown, Globe, Menu } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +8,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import {
+  DEFAULT_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+} from "@/lib/languages";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -15,34 +20,38 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   return (
-    <header className="bg-white h-16 flex items-center justify-between px-4 lg:px-8 border-b border-gray-200 shrink-0">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 sm:px-5 lg:px-8">
       <div className="flex items-center lg:hidden">
-        <button onClick={onMenuClick} className="p-2 -ml-2 text-gray-500 hover:text-gray-700 cursor-pointer">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Open dashboard navigation"
+          className="-ml-2 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+        >
           <Menu className="w-6 h-6" />
         </button>
       </div>
 
-      <div className="flex items-center space-x-4 ml-auto">
-        <button className="relative p-2 text-gray-500 hover:text-gray-700 cursor-pointer">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
+      <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        <NotificationBell className="text-gray-500 hover:text-gray-700" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 font-normal"
+              className="flex items-center gap-1 px-2 font-normal text-gray-600 hover:text-gray-900 sm:px-3"
             >
               <Globe className="w-5 h-5 mr-1" />
-              <span>EN</span>
+              <span>{DEFAULT_LANGUAGE.shortLabel}</span>
               <ChevronDown className="w-4 h-4 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>English</DropdownMenuItem>
-            <DropdownMenuItem>Spanish</DropdownMenuItem>
-            <DropdownMenuItem>French</DropdownMenuItem>
+            {SUPPORTED_LANGUAGES.map((language) => (
+              <DropdownMenuItem key={language.value}>
+                {language.label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

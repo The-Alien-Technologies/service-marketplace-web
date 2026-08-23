@@ -31,4 +31,11 @@ export interface QuoteRequest {
   status: QuoteStatus;
   providerNote: string | null;
   declineReason: string | null;
+  order?: {
+    id: string;
+    orderNumber: string;
+    paymentStatus: string;
+    total: number | string;
+    currency: string;
+  } | null;
 }

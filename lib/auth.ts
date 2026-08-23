@@ -1,6 +1,25 @@
-import { betterAuth } from "better-auth"
+import { betterAuth } from "better-auth";
+import { Pool } from "pg";
+
+const configuredSecret = process.env.BETTER_AUTH_SECRET;
+
+const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+
+if (
+  process.env.NODE_ENV === "production" &&
+  !configuredSecret &&
+  !isProductionBuild
+) {
+  throw new Error("BETTER_AUTH_SECRET is required in production");
+}
 
 export const auth = betterAuth({
+  secret:
+    configuredSecret ||
+    "pavodah-local-development-only-secret-change-before-production",
+  database: new Pool({
+    connectionString: process.env.BETTER_AUTH_DATABASE_URL,
+  }),
   socialProviders: {
     google: {
       profile: "select_account",
@@ -14,6 +33,6 @@ export const auth = betterAuth({
     "http://localhost:3001",
     "http://localhost:3000", // Backend URL
   ],
-})
+});
 
-export type Session = typeof auth.$Infer.Session
+export type Session = typeof auth.$Infer.Session;

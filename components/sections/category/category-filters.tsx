@@ -189,7 +189,10 @@ export function CategoryFilters({
           <span className="text-gray-700 font-medium">Sort by:</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-white">
+              <button
+                type="button"
+                className="flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+              >
                 <span className="font-medium text-gray-900">
                   {SORT_OPTIONS.find((opt) => opt.value === sortBy)?.label ||
                     "Best match"}
@@ -224,9 +227,9 @@ export function CategoryFilters({
       <HorizontalSeparator />
 
       {/* Filters Row */}
-      <div className="flex items-center gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap w-full">
+      <div className="grid w-full grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
         {/* Filters Label */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:shrink-0">
           <div className="flex items-center gap-2 text-gray-700 font-medium">
             <Filter className="w-5 h-5" />
             <span>Filters:</span>
@@ -252,8 +255,11 @@ export function CategoryFilters({
           selectedRange={priceRange}
           onApply={handlePriceRangeApply}
           trigger={
-            <button className="flex items-center gap-3 px-5 py-2.5 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-white min-w-[180px] justify-between">
-              <span className="text-gray-700 text-sm">
+            <button
+              type="button"
+              className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:w-auto sm:min-w-[180px] sm:px-5"
+            >
+              <span className="min-w-0 truncate text-sm text-gray-700">
                 {getPriceRangeDisplay()}
               </span>
               <ChevronDown className="w-4 h-4 text-gray-600" />
@@ -266,8 +272,11 @@ export function CategoryFilters({
           selectedRatings={ratingIds}
           onApply={handleRatingApply}
           trigger={
-            <button className="flex items-center gap-3 px-5 py-2.5 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-white min-w-[160px] justify-between">
-              <span className="text-gray-700 text-sm">
+            <button
+              type="button"
+              className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:w-auto sm:min-w-[160px] sm:px-5"
+            >
+              <span className="min-w-0 truncate text-sm text-gray-700">
                 {getRatingDisplay()}
               </span>
               <ChevronDown className="w-4 h-4 text-gray-600" />
@@ -295,10 +304,11 @@ export function CategoryFilters({
           priceRange.max !== 50000 ||
           ratingIds.length > 0) && (
           <button
+            type="button"
             onClick={clearAllFilters}
-            className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors ml-auto"
+            className="min-h-11 justify-self-start px-1 text-sm font-medium text-red-600 transition-colors hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 sm:ml-auto"
           >
-            clear all
+            Clear all
           </button>
         )}
       </div>

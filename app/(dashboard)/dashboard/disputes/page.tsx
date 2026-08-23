@@ -39,6 +39,7 @@ import {
   DISPUTE_STATUS_LABELS,
   DISPUTE_PRIORITY_LABELS,
 } from "@/types/dispute";
+import { useAuthStore } from "@/store/auth-store";
 
 // --- Column Helper ---
 
@@ -90,25 +91,29 @@ const columns = [
     cell: (info) => (
       <div className="flex -space-x-2">
         {[info.row.original.client, info.row.original.provider].map(
-          (party, i) => (
-            <div
-              key={i}
-              className={`w-8 h-8 rounded-full overflow-hidden border-2 border-white relative ${i === 0 ? "z-20" : "z-10"}`}
-            >
-              {party.avatar ? (
-                <Image
-                  src={party.avatar}
-                  alt={party.firstName}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                  {party.firstName[0]}
-                </div>
-              )}
-            </div>
-          ),
+          (party, i) => {
+            const firstName = party?.firstName ?? "";
+            const initial = firstName.charAt(0) || "?";
+            return (
+              <div
+                key={i}
+                className={`w-8 h-8 rounded-full overflow-hidden border-2 border-white relative ${i === 0 ? "z-20" : "z-10"}`}
+              >
+                {party?.avatar ? (
+                  <Image
+                    src={party.avatar}
+                    alt={firstName || "User"}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                    {initial}
+                  </div>
+                )}
+              </div>
+            );
+          },
         )}
       </div>
     ),
@@ -181,6 +186,7 @@ const columns = [
 // --- Main Component ---
 
 export default function DisputesPage() {
+  const user = useAuthStore((state) => state.user);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [disputes, setDisputes] = useState<Dispute[]>([]);
@@ -189,14 +195,17 @@ export default function DisputesPage() {
   const fetchDisputes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiService.getAdminDisputes();
+      const data =
+        user?.role === "ADMIN"
+          ? await apiService.getAdminDisputes()
+          : await apiService.getMyDisputes();
       setDisputes(data ?? []);
     } catch {
       setDisputes([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     fetchDisputes();
@@ -220,13 +229,15 @@ export default function DisputesPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
         <p className="text-gray-500 mt-1">
-          Review and resolve conflicts between customers and service providers.
+          {user?.role === "ADMIN"
+            ? "Review and resolve conflicts between customers and service providers."
+            : "Track disputes for orders you’re involved in."}
         </p>
       </div>
 
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="relative w-full md:max-w-md md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             placeholder="Search by order ID, dispute ID, issue type..."
@@ -235,7 +246,7 @@ export default function DisputesPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center md:gap-3">
           <Button
             variant="outline"
             className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
@@ -255,7 +266,8 @@ export default function DisputesPage() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[820px] w-full text-sm text-left">
           <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -331,9 +343,10 @@ export default function DisputesPage() {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+        <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
           <Button
             variant="outline"
             size="sm"

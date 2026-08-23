@@ -14,6 +14,7 @@ export interface Conversation {
   user: ChatUser;
   provider: ChatUser;
   messages: Message[]; // Usually just the latest message when fetching list
+  unreadCount: number;
 }
 
 export interface Message {

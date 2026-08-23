@@ -9,7 +9,8 @@ import {
   USER_AUTH_STEPS,
   PROVIDER_AUTH_STEPS,
 } from "@/types/auth";
-import { apiService } from "@/lib/api";
+import { useNotificationStore } from "@/store/notification-store";
+import { clearStoredAuthSession } from "@/lib/client-session";
 
 interface AuthStore extends AuthState {
   // Hydration state
@@ -124,7 +125,8 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       signOut: async () => {
-        await apiService.signOut();
+        clearStoredAuthSession();
+        useNotificationStore.getState().reset();
         set({
           user: null,
           isAuthenticated: false,

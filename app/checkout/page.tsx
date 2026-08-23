@@ -1,253 +1,397 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  LockKeyhole,
+} from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { CheckoutHeader } from "@/components/sections/checkout/checkout-header";
-import { ChevronDown, Lock, Loader2 } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useOrderStore, type PendingOrder } from "@/store/order-store";
+import { Button } from "@/components/ui/button";
 import { apiService } from "@/lib/api";
-import { toast } from "react-toastify";
+import { canInitializePayment } from "@/lib/payment-state";
+import { useOrderStore } from "@/store/order-store";
+import type { Order } from "@/types/order";
 
-export default function CheckoutPage() {
+function formatMoney(value: number | string, currency = "GHS") {
+  return `${currency} ${new Intl.NumberFormat("en-GH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value))}`;
+}
+
+function CheckoutContent() {
   const router = useRouter();
-  const { pendingOrder, clearPendingOrder } = useOrderStore();
-  const [orderData, setOrderData] = useState<PendingOrder | null>(null);
+  const searchParams = useSearchParams();
+  const requestedOrderId = searchParams.get("orderId");
+  const { pendingOrder, clearPendingOrder, setCreatedOrderId } =
+    useOrderStore();
+  const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [couponCode, setCouponCode] = useState("");
-  const [isCouponApplied, setIsCouponApplied] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [loadVersion, setLoadVersion] = useState(0);
+
+  const existingOrderId = requestedOrderId ?? pendingOrder?.createdOrderId;
 
   useEffect(() => {
-    // Load order from Zustand store
-    if (!pendingOrder) {
-      // No order found, redirect back
-      router.push("/");
-      return;
+    let cancelled = false;
+
+    async function loadCheckout() {
+      setIsLoading(true);
+      setLoadError(null);
+
+      if (!existingOrderId) {
+        if (!pendingOrder) {
+          router.replace("/");
+          return;
+        }
+        setOrder(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const existingOrder = await apiService.getOrder(existingOrderId);
+        if (!cancelled) setOrder(existingOrder);
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "We could not load this order.",
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     }
 
-    setOrderData(pendingOrder);
-    setIsLoading(false);
-  }, [pendingOrder, router]);
+    void loadCheckout();
+    return () => {
+      cancelled = true;
+    };
+  }, [existingOrderId, loadVersion, pendingOrder, router]);
+
+  const summary = useMemo(() => {
+    if (order) {
+      return {
+        serviceId: order.serviceId,
+        serviceTitle: order.service.title,
+        providerName:
+          order.service.provider?.displayName ||
+          [order.service.provider?.firstName, order.service.provider?.lastName]
+            .filter(Boolean)
+            .join(" ") ||
+          "Service provider",
+        planName: order.planTitle || "Custom service",
+        planPrice: Number(order.planPrice ?? order.total),
+        addOns: order.addOns ?? [],
+        addOnsTotal: Number(order.addOnsTotal ?? 0),
+        total: Number(order.total),
+        currency: order.currency || "GHS",
+        orderNumber: order.orderNumber,
+      };
+    }
+
+    if (!pendingOrder) return null;
+    return {
+      serviceId: pendingOrder.serviceId,
+      serviceTitle: pendingOrder.service.title,
+      providerName: "Service provider",
+      planName: pendingOrder.plan.name,
+      planPrice: pendingOrder.plan.price,
+      addOns: pendingOrder.addOns.map((addon) => ({
+        id: addon.id,
+        addonId: addon.id,
+        title: addon.name,
+        description: addon.description,
+        price: addon.price,
+      })),
+      addOnsTotal: pendingOrder.addOnsTotal,
+      total: pendingOrder.subtotal,
+      currency: "GHS",
+      orderNumber: null,
+    };
+  }, [order, pendingOrder]);
+
+  const handleContinueToPaystack = async () => {
+    setPaymentError(null);
+    setIsPaying(true);
+
+    try {
+      let payableOrder = order;
+
+      if (!payableOrder) {
+        if (!pendingOrder)
+          throw new Error("Your checkout details are missing.");
+        payableOrder = await apiService.createOrder({
+          serviceId: pendingOrder.serviceId,
+          planId: pendingOrder.plan.id,
+          addOnIds: pendingOrder.addOns.map((addon) => addon.id),
+          checkoutKey: pendingOrder.checkoutKey,
+        });
+        setOrder(payableOrder);
+        setCreatedOrderId(payableOrder.id);
+      }
+
+      if (!canInitializePayment(payableOrder.paymentStatus)) {
+        router.push(`/dashboard/orders/${payableOrder.id}`);
+        return;
+      }
+
+      const payment = await apiService.initializePayment(payableOrder.id);
+      if (!payment.authorizationUrl) {
+        throw new Error("Paystack did not return a checkout link.");
+      }
+
+      window.location.assign(payment.authorizationUrl);
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Payment could not be started. Please try again.",
+      );
+      setIsPaying(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (!requestedOrderId) clearPendingOrder();
+    router.back();
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Header />
+        <main
+          className="mx-auto flex min-h-[60vh] max-w-4xl items-center justify-center px-4"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-200">
+            <Loader2 className="h-5 w-5 animate-spin text-brand-700" />
+            <span>Preparing your secure checkout…</span>
+          </div>
+        </main>
       </div>
     );
   }
 
-  if (!orderData) {
-    return null;
+  if (loadError || !summary) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Header />
+        <main className="mx-auto flex min-h-[60vh] max-w-xl items-center px-4 py-16">
+          <section className="w-full rounded-2xl bg-white p-5 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] sm:p-8 dark:bg-gray-900">
+            <AlertCircle className="mb-5 h-10 w-10 text-red-600" />
+            <h1 className="text-2xl font-bold text-gray-950 dark:text-white">
+              We couldn&apos;t prepare checkout
+            </h1>
+            <p className="mt-3 text-gray-600 dark:text-gray-300">
+              {loadError || "The order details are no longer available."}
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button onClick={() => setLoadVersion((value) => value + 1)}>
+                Try again
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/")}>
+                Browse services
+              </Button>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
   }
 
-  const providerName = "Service Provider"; // TODO: Get from orderData
-  const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
-  const couponDiscount = isCouponApplied ? 50 : 0; // TODO: Implement real coupon logic
-  const total = orderData.subtotal - couponDiscount;
-
-  const handleApplyCoupon = () => {
-    if (couponCode.trim()) {
-      setIsCouponApplied(true);
-      // TODO: Validate coupon with backend
-    }
-  };
-
-  const handleContinueToPaystack = async () => {
-    if (!orderData) return;
-
-    try {
-      setIsLoading(true);
-
-      const createdOrder = await apiService.createOrder({
-        serviceId: orderData.serviceId,
-        planId: orderData.plan.id,
-        planTitle: orderData.plan.name,
-        planPrice: orderData.plan.price,
-        planInclusions: "Standard Plan Inclusions", // TODO: Get from orderData
-        addOns: orderData.addOns.map((addon) => ({
-          id: addon.id,
-          title: addon.name,
-          description: addon.description,
-          price: addon.price,
-        })),
-        subtotal: orderData.subtotal,
-        addOnsTotal: orderData.addOnsTotal,
-        couponDiscount: isCouponApplied ? couponDiscount : 0,
-        total: total,
-      });
-
-      toast.success("Order created successfully!");
-      clearPendingOrder();
-
-      // Redirect to Paystack or Order Success page
-      // For now, redirect to the order details page in dashboard
-      router.push(`/dashboard/orders/${createdOrder.id}`);
-    } catch (error) {
-      console.error("Failed to create order:", error);
-      toast.error("Failed to create order. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancelOrder = () => {
-    clearPendingOrder();
-    router.back();
-  };
+  const isNotPayable = order
+    ? !canInitializePayment(order.paymentStatus)
+    : false;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
       <CheckoutHeader
-        providerName={providerName}
-        serviceId={orderData.serviceId}
+        providerName={summary.providerName}
+        serviceId={summary.serviceId}
       />
 
-      {/* Page Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Left Section - Payment Information */}
-          <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Complete Your Payment
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-14">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:items-start lg:gap-10">
+          <section className="min-w-0 pt-2">
+            <p className="text-sm font-semibold text-brand-800 dark:text-brand-400">
+              Secure hosted checkout
+            </p>
+            <h1 className="mt-3 max-w-xl text-3xl font-bold tracking-[-0.025em] text-gray-950 sm:text-4xl dark:text-white">
+              Complete your payment with Paystack
             </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">
+              Your order total is confirmed by Pavodah before you leave this
+              page. Paystack will handle your card or Mobile Money details on
+              its secure checkout.
+            </p>
 
-            {/* Powered by Paystack */}
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Powered by:
-              </p>
-              <div className="flex items-center">
-                <Image
-                  src="/assets/icons/paystack.svg"
-                  alt="Paystack"
-                  width={400}
-                  height={106}
-                />
+            <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9 sm:gap-4">
+              <Image
+                src="/assets/icons/paystack.svg"
+                alt="Paystack"
+                width={154}
+                height={41}
+                className="h-auto w-[154px]"
+                priority
+              />
+              <span className="h-8 w-px bg-gray-300 dark:bg-gray-700" />
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <LockKeyhole className="h-4 w-4 text-brand-700 dark:text-brand-400" />
+                Encrypted checkout
               </div>
             </div>
 
-            {/* Info Message */}
-            <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="w-5 h-5 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-white text-xs font-bold">i</span>
+            <div className="mt-10 max-w-xl space-y-4 text-sm text-gray-700 dark:text-gray-200">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
+                <p>
+                  The provider can only begin work after payment is verified.
+                </p>
               </div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                You will be redirected to Paystack's secure checkout to complete
-                your payment.
-              </p>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
+                <p>
+                  If checkout is interrupted, you can safely return and retry.
+                </p>
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Right Section - Order Summary Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 space-y-6">
-            {/* Coupon Section */}
-            <div className="space-y-3">
-              <button className="flex items-center gap-2 text-brand-900 dark:text-brand-500 hover:text-brand-700 dark:hover:text-brand-400 transition-colors text-sm font-medium">
-                <span>Have a coupon?</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="Enter coupon code"
-                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-900 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm"
-                />
-                <button
-                  onClick={handleApplyCoupon}
-                  className="px-6 py-2.5 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors text-sm"
+          <section
+            aria-labelledby="order-summary-heading"
+            className="rounded-2xl bg-white p-4 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.38)] sm:p-7 dark:bg-gray-900"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2
+                  id="order-summary-heading"
+                  className="text-xl font-bold text-gray-950 dark:text-white"
                 >
-                  Apply
-                </button>
-              </div>
-            </div>
-
-            {/* Order Summary */}
-            <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                   Order summary
                 </h2>
-                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-                  Order ID: #{orderId}
+                <p className="mt-1 truncate text-sm text-gray-600 dark:text-gray-300">
+                  {summary.serviceTitle}
+                </p>
+              </div>
+              {summary.orderNumber && (
+                <span className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  #{summary.orderNumber}
                 </span>
-              </div>
-
-              <div className="space-y-3">
-                {/* Subtotal */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Subtotal({orderData.plan.name})
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    GHS {orderData.plan.price.toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Add-ons */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Add-ons
-                  </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    GHS {orderData.addOnsTotal.toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Coupon Discount */}
-                {isCouponApplied && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Coupon discount
-                    </span>
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                      -GHS {couponDiscount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Total */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-base font-bold text-gray-900 dark:text-white">
-                    Total
-                  </span>
-                  <span className="text-base font-bold text-gray-900 dark:text-white">
-                    GHS {total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-4">
-              <button
-                onClick={handleContinueToPaystack}
-                className="w-full px-6 py-3.5 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
-              >
-                Continue to Paystack
-              </button>
-              <button
-                onClick={handleCancelOrder}
-                className="w-full px-6 py-3.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel order
-              </button>
-            </div>
+            <dl className="mt-7 space-y-4 text-sm">
+              <div className="flex items-start justify-between gap-4">
+                <dt className="min-w-0 text-gray-600 dark:text-gray-300">
+                  <span className="block truncate">{summary.planName}</span>
+                </dt>
+                <dd className="shrink-0 font-medium text-gray-950 dark:text-white">
+                  {formatMoney(summary.planPrice, summary.currency)}
+                </dd>
+              </div>
 
-            {/* Security Message */}
-            <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Secured by Paystack
+              {summary.addOns.map((addon) => (
+                <div
+                  key={addon.id}
+                  className="flex items-start justify-between gap-4"
+                >
+                  <dt className="min-w-0 text-gray-600 dark:text-gray-300">
+                    <span className="block truncate">{addon.title}</span>
+                  </dt>
+                  <dd className="shrink-0 font-medium text-gray-950 dark:text-white">
+                    {formatMoney(addon.price, summary.currency)}
+                  </dd>
+                </div>
+              ))}
+
+              {summary.addOns.length === 0 && (
+                <div className="flex justify-between gap-4 text-gray-500 dark:text-gray-400">
+                  <dt>Add-ons</dt>
+                  <dd>None</dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="mt-7 flex items-end justify-between gap-4 border-t border-gray-200 pt-5 dark:border-gray-700">
+              <span className="font-semibold text-gray-950 dark:text-white">
+                Total due
+              </span>
+              <span className="text-2xl font-bold tracking-[-0.02em] text-gray-950 dark:text-white">
+                {formatMoney(summary.total, summary.currency)}
               </span>
             </div>
-          </div>
+
+            {paymentError && (
+              <div
+                role="alert"
+                className="mt-5 flex items-start gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  {paymentError} Your order is saved, so it is safe to retry.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-6 space-y-3">
+              <Button
+                size="lg"
+                className="h-12 w-full bg-brand-800 text-white hover:bg-brand-900"
+                onClick={handleContinueToPaystack}
+                disabled={isPaying}
+              >
+                {isPaying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Opening secure checkout…
+                  </>
+                ) : isNotPayable ? (
+                  "View order status"
+                ) : (
+                  `Pay ${formatMoney(summary.total, summary.currency)}`
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-11 w-full text-gray-700 dark:text-gray-200"
+                onClick={handleCancel}
+                disabled={isPaying}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Return to service
+              </Button>
+            </div>
+
+            <p className="mt-5 text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
+              Payment details are entered on Paystack and are never stored by
+              Pavodah.
+            </p>
+          </section>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950" />}
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

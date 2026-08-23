@@ -61,8 +61,8 @@ export default function OrdersPage() {
         </h1>
 
         {/* Status Filter Tabs */}
-        <div className="mb-8">
-          <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-1 py-1">
+        <div className="mb-8 max-w-full overflow-x-auto pb-1">
+          <div className="inline-flex w-max items-center rounded-full bg-gray-100 dark:bg-gray-800 px-1 py-1">
             {(
               [
                 "awaiting",
@@ -133,8 +133,8 @@ export default function OrdersPage() {
                 {/* Left Side - Order Details */}
                 <div className="space-y-4">
                   {/* Order Info with Date */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                       <span className="font-bold text-gray-900 dark:text-white">
                         Order ID: #{order.orderId}
                       </span>
@@ -160,7 +160,7 @@ export default function OrdersPage() {
                         </span>
                       </div>
                     </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 sm:shrink-0">
                       {order.date}
                     </span>
                   </div>
@@ -193,7 +193,7 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Stage labels */}
-                    <div className="flex justify-between mt-2">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                       {progressStages.map((stage, stageIndex) => (
                         <span
                           key={stageIndex}
@@ -211,7 +211,7 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Right Side - Action Buttons */}
-                <div className="flex items-center justify-end gap-3 lg:justify-center">
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end lg:justify-center">
                   {order.status === "completed" ? (
                     <>
                       <button className="px-4 py-2 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition-colors">

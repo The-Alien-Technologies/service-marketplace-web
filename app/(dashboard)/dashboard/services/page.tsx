@@ -236,8 +236,8 @@ export default function ServicesPage() {
               : "Manage your services, track performance, and update offerings."}
           </p>
         </div>
-        <Link href="/dashboard/services/new">
-          <Button className="bg-[#15803d] hover:bg-[#14532d] text-white gap-2">
+        <Link href="/dashboard/services/new" className="w-full sm:w-auto">
+          <Button className="w-full gap-2 bg-[#15803d] text-white hover:bg-[#14532d] sm:w-auto">
             <Plus className="w-4 h-4" />
             Add new service
           </Button>
@@ -245,12 +245,12 @@ export default function ServicesPage() {
       </div>
 
       {/* Search & Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input placeholder="Search services..." className="pl-10 bg-white" />
         </div>
-        <Button variant="outline" className="gap-2 text-gray-600">
+        <Button variant="outline" className="w-full gap-2 text-gray-600 sm:w-auto">
           <Filter className="w-4 h-4" />
           Filters
         </Button>
@@ -313,8 +313,8 @@ export default function ServicesPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-              <span className="text-sm text-gray-500">
+            <div className="flex flex-col gap-3 border-t border-gray-200 px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <span className="text-center text-sm text-gray-500 sm:text-left">
                 Showing{" "}
                 {data.length > 0
                   ? pagination.pageIndex * pagination.pageSize + 1

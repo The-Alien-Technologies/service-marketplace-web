@@ -72,7 +72,7 @@ export function OnboardingInterestsForm() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-2">
