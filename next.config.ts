@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "pavodah-dev.s3.us-east-1.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pavodah.s3.us-east-1.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "i.pinimg.com",
         pathname: "/**",
       },
