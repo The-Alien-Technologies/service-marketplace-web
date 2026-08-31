@@ -16,14 +16,7 @@ import {
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const STATUS_LABEL_MAP: Record<QuoteStatus, string> = {
-  NEW: "Submitted",
-  PENDING: "Offer Received",
-  ACCEPTED: "Accepted",
-  DECLINED: "Declined",
-  EXPIRED: "Expired",
-};
+import { useFormatter, useTranslations } from "next-intl";
 
 const STATUS_STYLES: Record<QuoteStatus, { badge: string; dot: string }> = {
   NEW: {
@@ -48,16 +41,9 @@ const STATUS_STYLES: Record<QuoteStatus, { badge: string; dot: string }> = {
   },
 };
 
-const tabs: { label: string; value: QuoteStatus | null }[] = [
-  { label: "All", value: null },
-  { label: "Submitted", value: "NEW" },
-  { label: "Offer Received", value: "PENDING" },
-  { label: "Accepted", value: "ACCEPTED" },
-  { label: "Declined", value: "DECLINED" },
-  { label: "Expired", value: "EXPIRED" },
-];
-
 export default function MyQuotesPage() {
+  const t = useTranslations("Quotes");
+  const format = useFormatter();
   const [activeTab, setActiveTab] = useState<QuoteStatus | null>(null);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +51,26 @@ export default function MyQuotesPage() {
     {},
   );
   const [search, setSearch] = useState("");
+  const tabs: { label: string; value: QuoteStatus | null }[] = [
+    { label: t("all"), value: null },
+    { label: t("submitted"), value: "NEW" },
+    { label: t("offerReceived"), value: "PENDING" },
+    { label: t("accepted"), value: "ACCEPTED" },
+    { label: t("declined"), value: "DECLINED" },
+    { label: t("expired"), value: "EXPIRED" },
+  ];
+  const getStatusLabel = (status: QuoteStatus) =>
+    t(
+      status === "NEW"
+        ? "submitted"
+        : status === "PENDING"
+          ? "offerReceived"
+          : status === "ACCEPTED"
+            ? "accepted"
+            : status === "DECLINED"
+              ? "declined"
+              : "expired",
+    );
 
   const fetchQuotes = useCallback(async () => {
     setIsLoading(true);
@@ -72,11 +78,11 @@ export default function MyQuotesPage() {
       const data = await apiService.getClientQuotes();
       setQuotes(data);
     } catch {
-      toast.error("Failed to load your quote requests");
+      toast.error(t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchQuotes();
@@ -92,11 +98,11 @@ export default function MyQuotesPage() {
       setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
       toast.success(
         status === "ACCEPTED"
-          ? "Offer accepted! You can now proceed to checkout."
-          : "Offer declined.",
+          ? t("acceptedCheckout")
+          : t("offerDeclined"),
       );
     } catch {
-      toast.error("Failed to respond to offer. Please try again.");
+      toast.error(t("respondFailed"));
     } finally {
       setActionLoading((prev) => {
         const next = { ...prev };
@@ -120,10 +126,8 @@ export default function MyQuotesPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Quotes</h1>
-        <p className="text-gray-500 mt-1">
-          Track your quote requests and provider offers.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("clientTitle")}</h1>
+        <p className="text-gray-500 mt-1">{t("clientSubtitle")}</p>
       </div>
 
       {/* Tabs */}
@@ -148,7 +152,7 @@ export default function MyQuotesPage() {
       <div className="max-w-md relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search by project or provider..."
+          placeholder={t("searchClient")}
           className="pl-10 bg-white"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -162,13 +166,13 @@ export default function MyQuotesPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-12 text-center text-gray-500">
-          No quote requests found.
+          {t("noRequests")}
         </div>
       ) : (
         <div className="space-y-4">
           {filtered.map((quote) => {
             const styles = STATUS_STYLES[quote.status];
-            const label = STATUS_LABEL_MAP[quote.status];
+            const label = getStatusLabel(quote.status);
             const hasOffer = quote.status === "PENDING";
             const providerName = `${quote.provider.firstName} ${quote.provider.lastName}`;
 
@@ -207,11 +211,7 @@ export default function MyQuotesPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-gray-400">
-                      {new Date(quote.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {format.dateTime(new Date(quote.createdAt), "long")}
                     </span>
                     <span
                       className={cn(
@@ -233,12 +233,12 @@ export default function MyQuotesPage() {
                     {quote.projectTitle}
                   </span>
                   <span className="text-gray-300">|</span>
-                  <span>Delivery: {quote.deliveryTime}</span>
+                  <span>{t("delivery", { time: quote.deliveryTime })}</span>
                   <span className="text-gray-300">|</span>
                   <span>
-                    Budget:{" "}
+                    {t("budget")}:{" "}
                     <strong className="text-gray-900">
-                      {quote.currency} {Number(quote.budget).toLocaleString()}
+                      {quote.currency} {format.number(Number(quote.budget))}
                     </strong>
                   </span>
                 </div>
@@ -247,7 +247,7 @@ export default function MyQuotesPage() {
                 {hasOffer && quote.providerNote && (
                   <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
                     <p className="text-xs font-semibold text-amber-700 mb-1">
-                      Provider&apos;s offer note:
+                      {t("providerOfferNote")}
                     </p>
                     <p className="text-sm text-amber-800">
                       {quote.providerNote}
@@ -261,7 +261,7 @@ export default function MyQuotesPage() {
                     href={`/dashboard/my-quotes/${quote.id}`}
                     className="flex items-center gap-1 text-sm font-medium text-green-700 hover:text-green-800 transition-colors"
                   >
-                    View details <ChevronRight className="w-4 h-4" />
+                    {t("viewDetails")} <ChevronRight className="w-4 h-4" />
                   </Link>
 
                   {/* Accept/Decline only when provider has sent an offer */}
@@ -279,7 +279,7 @@ export default function MyQuotesPage() {
                         ) : (
                           <XCircle className="w-3.5 h-3.5" />
                         )}
-                        Decline
+                        {t("decline")}
                       </Button>
                       <Button
                         size="sm"
@@ -292,7 +292,7 @@ export default function MyQuotesPage() {
                         ) : (
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         )}
-                        Accept Offer
+                        {t("acceptOffer")}
                       </Button>
                     </div>
                   )}

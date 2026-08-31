@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import {useTranslations} from "next-intl";
 
 export function MomentsSection() {
+  const t = useTranslations("Home");
   return (
     <section className="relative py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 overflow-hidden">
       {/* Background Pattern/Image */}
@@ -22,13 +24,11 @@ export function MomentsSection() {
           {/* Left Content */}
           <div className="space-y-4 lg:space-y-5">
             <h2 className="text-4xl font-bold md:text-5xl lg:text-[48px] text-gray-900 dark:text-white leading-tight">
-              Your Moments, Captured Perfectly.
+              {t("momentsTitle")}
             </h2>
 
             <p className="text-[14px] font-[500] text-gray-600 dark:text-gray-300 max-w-xl leading-relaxed">
-              Capture your best moments with skilled photographers. Perfect for
-              portraits, product shoots, events, and more, all at competitive
-              rates and near your location.
+              {t("momentsBody")}
             </p>
 
             <div className="lg:mt-[35px]">
@@ -36,7 +36,7 @@ export function MomentsSection() {
                 size="lg"
                 className="bg-brand-900 hover:bg-brand-700 text-white px-8 py-6 text-base md:text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                Book Now
+                {t("browseServices")}
               </Button>
             </div>
           </div>
@@ -46,7 +46,7 @@ export function MomentsSection() {
             <div className="relative w-full h-full">
               <Image
                 src="/assets/site-images/home_people.png"
-                alt="Photography moments - polaroid style photos"
+                alt={t("momentsAlt")}
                 fill
                 className="object-contain drop-shadow-2xl"
                 priority

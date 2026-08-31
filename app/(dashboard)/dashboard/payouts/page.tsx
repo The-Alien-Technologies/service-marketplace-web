@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 
 type Tab = "requests" | "release" | "refunds" | "chargebacks";
 type Pagination = { page: number; limit: number; total: number; pages: number };
@@ -97,6 +98,7 @@ const refundMeta: Record<
 };
 
 export default function AdminPayoutsPage() {
+  const t = useTranslations("AdminOps");
   const [activeTab, setActiveTab] = useState<Tab>("requests");
   const [payouts, setPayouts] = useState<ProviderPayout[]>([]);
   const [releaseReviews, setReleaseReviews] = useState<ReleaseReview[]>([]);
@@ -409,14 +411,14 @@ export default function AdminPayoutsPage() {
   const tabs: Array<{ id: Tab; label: string; count: number }> = [
     {
       id: "requests",
-      label: "Payout requests",
+      label: t("payoutRequests"),
       count: payoutPagination.total,
     },
-    { id: "release", label: "Release reviews", count: releasePagination.total },
-    { id: "refunds", label: "Refunds", count: refundPagination.total },
+    { id: "release", label: t("releaseReviews"), count: releasePagination.total },
+    { id: "refunds", label: t("refunds"), count: refundPagination.total },
     {
       id: "chargebacks",
-      label: "Paystack disputes",
+      label: t("paystackDisputes"),
       count: chargebackPagination.total,
     },
   ];
@@ -426,11 +428,10 @@ export default function AdminPayoutsPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
-            Provider payout operations
+            {t("payoutsTitle")}
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-600">
-            Approve verified transfers, review silent-customer releases, and
-            reconcile external Paystack disputes from one queue.
+            {t("payoutsSubtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -442,7 +443,7 @@ export default function AdminPayoutsPage() {
             <RefreshCw
               className={cn("h-4 w-4", isRefreshing && "animate-spin")}
             />
-            Reconcile transfers
+            {t("reconcileTransfers")}
           </Button>
           <Button
             variant="outline"
@@ -452,14 +453,14 @@ export default function AdminPayoutsPage() {
             <RefreshCw
               className={cn("h-4 w-4", isRefreshing && "animate-spin")}
             />
-            Reconcile refunds
+            {t("reconcileRefunds")}
           </Button>
           <Button
             variant="outline"
             onClick={() => loadData(true)}
             disabled={isRefreshing}
           >
-            Refresh queues
+            {t("refreshQueues")}
           </Button>
         </div>
       </header>
@@ -486,7 +487,7 @@ export default function AdminPayoutsPage() {
 
       <nav
         className="flex gap-1 overflow-x-auto border-b border-gray-200"
-        aria-label="Payout operations"
+        aria-label={t("payoutsTitle")}
       >
         {tabs.map((tab) => (
           <button
@@ -530,13 +531,13 @@ export default function AdminPayoutsPage() {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
-              aria-label="Search payout requests"
+              aria-label={t("searchPayouts")}
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
                 setPayoutPage(1);
               }}
-              placeholder="Search provider, reference, or destination"
+              placeholder={t("searchPayouts")}
               className="h-11 pl-9"
             />
           </div>

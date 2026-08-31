@@ -45,6 +45,7 @@ import { ChatBox } from "@/components/sections/service-detail/chat-box";
 import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
 import { AdminPaymentTransaction } from "@/types/payment";
 import { isSessionExpiredError } from "@/lib/client-session";
+import { useFormatter, useTranslations } from "next-intl";
 
 // --- Types ---
 
@@ -323,6 +324,8 @@ const cashoutRequestColumns = [
 // --- Admin Orders Component ---
 
 function AdminOrders() {
+  const t = useTranslations("Orders");
+  const common = useTranslations("Common");
   const tabs = ["Orders", "Transactions"];
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -355,7 +358,7 @@ function AdminOrders() {
           setPageCount(result.pagination.pages);
         } catch (error) {
           console.error("Failed to fetch orders:", error);
-          toast.error("Failed to fetch orders");
+          toast.error(t("loadFailed"));
         } finally {
           setIsLoading(false);
         }
@@ -385,7 +388,7 @@ function AdminOrders() {
         setPageCount(result.pagination.pages);
       } catch (error) {
         console.error("Failed to fetch payments:", error);
-        toast.error("Failed to fetch payments");
+        toast.error(t("loadFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -442,10 +445,10 @@ function AdminOrders() {
       <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Orders & Transactions
+            {t("adminTitle")}
           </h1>
           <p className="text-gray-500 mt-1">
-            Monitor orders, track payments, and manage service transactions.
+            {t("adminSubtitle")}
           </p>
         </div>
 
@@ -466,7 +469,7 @@ function AdminOrders() {
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50",
               )}
             >
-              {tab}
+              {tab === "Orders" ? t("title") : t("transactions")}
             </button>
           ))}
         </div>
@@ -489,14 +492,14 @@ function AdminOrders() {
             className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
           >
             <Filter className="w-4 h-4" />
-            Filters
+            {t("filters")}
           </Button>
           <Button
             variant="outline"
             className="text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2"
           >
             <Download className="w-4 h-4" />
-            Export data
+            {t("exportData")}
           </Button>
         </div>
       </div>
@@ -571,8 +574,8 @@ function AdminOrders() {
                     colSpan={currentColumns.length}
                     className="px-6 py-8 text-center text-gray-500"
                   >
-                    {!isLoading && "No data available."}
-                    {isLoading && "Loading..."}
+                    {!isLoading && t("noData")}
+                    {isLoading && common("loading")}
                   </td>
                 </tr>
               )}
@@ -590,12 +593,14 @@ function AdminOrders() {
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="w-4 h-4" />
-            Previous
+            {common("previous")}
           </Button>
           <div className="flex items-center gap-1">
             <span className="text-sm text-gray-600">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount() || 1}
+              {common("pageOf", {
+                page: table.getState().pagination.pageIndex + 1,
+                total: table.getPageCount() || 1,
+              })}
             </span>
           </div>
           <Button
@@ -605,7 +610,7 @@ function AdminOrders() {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            {common("next")}
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -637,6 +642,8 @@ const getStatusFromTab = (tab: string): string | undefined => {
 };
 
 function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
+  const t = useTranslations("Orders");
+  const format = useFormatter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab");
   const defaultTab = ORDER_TABS.includes(initialTab || "")
@@ -684,7 +691,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
       } catch (error) {
         if (isSessionExpiredError(error)) return;
         console.error("Failed to fetch orders:", error);
-        toast.error("Failed to load orders");
+        toast.error(t("loadFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -716,7 +723,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
   ) => {
     if (
       newStatus === "DECLINED" &&
-      !window.confirm("Cancel this unpaid order?")
+      !window.confirm(t("cancelUnpaidConfirm"))
     ) {
       return;
     }
@@ -724,15 +731,15 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     try {
       await apiService.updateOrderStatus(orderId, newStatus);
       const messages: Record<string, string> = {
-        IN_PROGRESS: "Order accepted",
-        COMPLETED: "Order marked as completed",
-        DECLINED: "Order declined",
+        IN_PROGRESS: t("orderAccepted"),
+        COMPLETED: t("markedComplete"),
+        DECLINED: t("orderDeclined"),
       };
       toast.success(messages[newStatus]);
       // Remove from current list since status changed
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update order");
+      toast.error(error?.message || t("updateFailed"));
     } finally {
       setActionLoading((prev) => ({ ...prev, [orderId]: null }));
     }
@@ -742,9 +749,9 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("myOrders")}</h1>
         <p className="text-gray-500 mt-1">
-          Stay on top of your orders to deliver great results.
+          {role === "SERVICE_PROVIDER" ? t("providerSubtitle") : t("clientSubtitle")}
         </p>
       </div>
 
@@ -761,7 +768,13 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
             )}
           >
-            {tab}
+            {tab === "Awaiting"
+              ? t("awaiting")
+              : tab === "In-progress"
+                ? t("inProgress")
+                : tab === "Completed"
+                  ? t("completed")
+                  : t("declined")}
           </button>
         ))}
       </div>
@@ -796,7 +809,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           alt={
                             otherParty.displayName ||
                             otherParty.firstName ||
-                            "User"
+                            t("statusUnknown")
                           }
                           fill
                           className="object-cover"
@@ -809,11 +822,11 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                       {otherParty
                         ? otherParty.displayName ||
                           `${otherParty.firstName} ${otherParty.lastName}`
-                        : "Unknown User"}
+                        : t("statusUnknown")}
                     </span>
                   </div>
                   <span className="shrink-0 text-xs text-gray-500 sm:text-sm">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    {format.dateTime(new Date(order.createdAt), "long")}
                   </span>
                 </div>
 
@@ -822,7 +835,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                   {/* Left: Details */}
                   <div className="flex flex-wrap items-center gap-3 text-sm">
                     <span className="font-bold text-gray-900">
-                      Order ID: #{order.orderNumber}
+                      {t("orderId", { id: order.orderNumber })}
                     </span>
                     <span className="text-gray-300">|</span>
                     <span className="text-gray-500">{order.service.title}</span>
@@ -833,7 +846,15 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                       <span
                         className={`font-bold px-2 py-0.5 rounded-full text-xs ${statusStyles.badge}`}
                       >
-                        {order.status.replace("_", " ")}
+                        {order.status === "IN_PROGRESS"
+                          ? t("inProgress")
+                          : order.status === "COMPLETED"
+                            ? t("completed")
+                            : order.status === "REFUNDED"
+                              ? t("refunded")
+                              : order.status === "DECLINED"
+                                ? t("declined")
+                                : t("awaiting")}
                       </span>
                     </div>
                   </div>
@@ -853,7 +874,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           {actionLoading[order.id] === "IN_PROGRESS" ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            "Accept Order"
+                            t("acceptOrder")
                           )}
                         </Button>
                       )}
@@ -870,7 +891,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           {actionLoading[order.id] === "COMPLETED" ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            "Mark as completed"
+                            t("completeOrder")
                           )}
                         </Button>
                       )}
@@ -883,7 +904,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                       ) && (
                         <Link href={`/orders/${order.id}/review`}>
                           <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                            Leave a review
+                            {t("leaveReview")}
                           </Button>
                         </Link>
                       )}
@@ -896,7 +917,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           !order.settlement.acceptedAt)) && (
                         <Link href={`/dashboard/orders/${order.id}`}>
                           <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium rounded-lg">
-                            Review delivery
+                            {t("reviewDelivery")}
                           </Button>
                         </Link>
                       )}
@@ -917,7 +938,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           }
                         >
                           <AlertTriangle className="w-4 h-4" />
-                          Raise Dispute
+                          {t("raiseDispute")}
                         </Button>
                       )}
 
@@ -938,7 +959,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           {actionLoading[order.id] === "DECLINED" ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            "Cancel Order"
+                            t("cancelOrder")
                           )}
                         </Button>
                       )}
@@ -959,8 +980,8 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                     >
                       <Mail className="w-4 h-4" />
                       {role === "SERVICE_PROVIDER"
-                        ? "Message Client"
-                        : "Message Provider"}
+                        ? t("messageClient")
+                        : t("messageProvider")}
                     </Button>
                   </div>
                 </div>
@@ -971,7 +992,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                     href={`/dashboard/orders/${order.id}`}
                     className="flex items-center text-green-600 text-sm font-medium hover:underline gap-1"
                   >
-                    Order details <ArrowRight className="w-4 h-4" />
+                    {t("orderDetails")} <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               </div>
@@ -979,7 +1000,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
           })
         ) : (
           <div className="p-12 text-center text-gray-500">
-            No orders found in this category.
+            {t("noOrdersCategory")}
           </div>
         )}
       </div>

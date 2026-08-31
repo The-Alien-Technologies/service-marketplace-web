@@ -13,6 +13,7 @@ import { ContactModal } from "./contact-modal";
 import { ChatBox } from "./chat-box";
 import { QuoteRequestModal } from "./quote-request-modal";
 import { CheckoutModal } from "./checkout-modal";
+import { useTranslations } from "next-intl";
 
 interface PricingFeature {
   text: string;
@@ -52,6 +53,8 @@ export function PricingPlans({
   service,
   serviceId,
 }: PricingPlansProps) {
+  const t = useTranslations("Marketplace");
+  const common = useTranslations("Common");
   const [selectedPlan, setSelectedPlan] = useState<string>(plans[0]?.id || "");
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
     new Set([plans[0]?.id || ""]),
@@ -116,11 +119,11 @@ export function PricingPlans({
               <CreditCard className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Choose your plan
+              {t("choosePlan")}
             </h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 ml-[52px]">
-            Flexible pricing that grows with you.
+            {t("flexiblePricing")}
           </p>
         </div>
 
@@ -161,7 +164,7 @@ export function PricingPlans({
                   <div className="flex items-center gap-2">
                     {plan.isPopular && (
                       <span className="text-xs font-semibold text-brand-900 dark:text-brand-400 bg-brand-100 dark:bg-brand-900/20 px-2 py-1 rounded">
-                        Popular
+                        {t("popular")}
                       </span>
                     )}
                     <div
@@ -215,14 +218,14 @@ export function PricingPlans({
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Mail className="w-4 h-4" />
-            Contact me
+            {t("contactMe")}
             <ChevronDown className="w-4 h-4" />
           </button>
           <button
             onClick={handleConfirm}
             className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
           >
-            Confirm
+            {common("confirm")}
           </button>
         </div>
       </div>

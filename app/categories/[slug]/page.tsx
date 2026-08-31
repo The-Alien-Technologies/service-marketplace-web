@@ -20,12 +20,16 @@ const ITEMS_PER_PAGE = 12;
 import { Category } from "@/types/auth"; // Assuming Category type is exported from auth types based on api.ts
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { useFormatter, useTranslations } from "next-intl";
 
 export default function CategoryPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const t = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const [currentPage, setCurrentPage] = useState(1);
   const { slug } = use(params);
 
@@ -53,7 +57,7 @@ export default function CategoryPage({
         setCategory(categoryData);
       } catch (error) {
         console.error("Failed to fetch category data:", error);
-        toast.error("Failed to load category details");
+        toast.error(t("categoryLoadFailed"));
       } finally {
         setIsCategoryLoading(false);
       }
@@ -62,7 +66,7 @@ export default function CategoryPage({
     if (slug) {
       fetchCategory();
     }
-  }, [slug]);
+  }, [slug, t]);
 
   // Fetch services - runs when filters/page change
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function CategoryPage({
         setTotalServices(servicesData.total);
       } catch (error) {
         console.error("Failed to fetch services:", error);
-        toast.error("Failed to load services");
+        toast.error(t("servicesLoadFailed"));
       } finally {
         setIsServicesLoading(false);
       }
@@ -91,7 +95,7 @@ export default function CategoryPage({
     if (slug) {
       fetchServices();
     }
-  }, [slug, currentPage, filters]);
+  }, [slug, currentPage, filters, t]);
 
   // Fetch latest services - only once
   useEffect(() => {
@@ -168,7 +172,7 @@ export default function CategoryPage({
                 providerName:
                   service.provider?.displayName ||
                   `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-                  "Provider",
+                  common("provider"),
                 providerAvatar:
                   service.provider?.avatar || "/assets/temp/user/u1.jpg",
                 isPro: false, // TODO: Add to API
@@ -176,8 +180,8 @@ export default function CategoryPage({
                   service.coverImage || "/assets/temp/products/p1.jpg",
                 description: service.title,
                 price: service.plans?.[0]?.price
-                  ? `From GHS ${service.plans[0].price}`
-                  : "Price on request",
+                  ? t("from", { price: format.number(service.plans[0].price, "currency") })
+                  : t("priceOnRequest"),
                 rating: 0, // TODO: Add to API
                 isOnline: true, // TODO: Add to API
               }))}
@@ -185,7 +189,7 @@ export default function CategoryPage({
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 text-lg">
-                No services found in this category.
+                {t("noServicesCategory")}
               </p>
             </div>
           )}
@@ -212,20 +216,20 @@ export default function CategoryPage({
               providerName:
                 service.provider?.displayName ||
                 `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-                "Provider",
+                common("provider"),
               providerAvatar: service.provider?.avatar ?? "",
               isPro: false,
               serviceImage: service.coverImage ?? "",
               description: service.title,
               price: service.plans?.[0]?.price
-                ? `From GHS ${service.plans[0].price}`
-                : "Price on request",
+                ? t("from", { price: format.number(service.plans[0].price, "currency") })
+                : t("priceOnRequest"),
               rating: 0,
               isOnline: true,
             }))}
-            title="You may also like"
+            title={t("youMayLike")}
             showAllLink={{
-              text: "Show all",
+              text: t("showAll"),
               onClick: () => console.log("Show all services"),
             }}
             onServiceClick={(service) =>

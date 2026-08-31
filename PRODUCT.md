@@ -30,7 +30,7 @@ The product is used across public service discovery, authenticated client and pr
 
 - The web client is Next.js with TypeScript, Tailwind CSS, Zustand, and shadcn/Radix primitives.
 - The API is NestJS with PostgreSQL and Prisma, JWT authorization, Socket.IO, Paystack payments, multi-provider email, and configurable SMS providers.
-- English is the only currently supported product language.
+- The web product supports English, French, and Swahili. Fixed interface copy is localized while marketplace and user-authored content remains in its original language.
 - Transactional notification history is durable and cursor-paginated with no scheduled retention deletion for now.
 - In-app notifications cover clients, providers, and administrators. Email follows the saved email preference. SMS is limited to payment, dispute, security, and payout-critical events and follows the saved SMS preference.
 - Marketing communication remains separate from transactional notifications.

@@ -11,18 +11,25 @@ import { PhoneVerification, PhoneVerificationStep } from '@/components/ui/phone-
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
-import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '@/lib/languages';
+import { getSupportedLanguage, SUPPORTED_LANGUAGES } from '@/lib/languages';
+import {useLocale, useTranslations} from 'next-intl';
+import {useRouter} from 'next/navigation';
+import {persistLocaleCookie} from '@/components/i18n/locale-preference-sync';
 
-const profileSchema = z.object({
-  firstName: z.string().min(1, 'Please enter your first name'),
-  lastName: z.string().min(1, 'Please enter your last name'),
-  phoneNumber: z.string().min(1, 'Please enter your phone number'),
-  language: z.string().min(1, 'Please select a language'),
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
+type ProfileFormData = {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  language: string;
+};
 
 export function OnboardingProfileForm() {
+  const locale = useLocale();
+  const t = useTranslations('Auth');
+  const onboarding = useTranslations('Onboarding');
+  const common = useTranslations('Common');
+  const language = useTranslations('Language');
+  const router = useRouter();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [phoneVerificationStep, setPhoneVerificationStep] = useState<PhoneVerificationStep>('input');
@@ -51,11 +58,16 @@ export function OnboardingProfileForm() {
     setValue,
     watch,
   } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(z.object({
+      firstName: z.string().min(1, onboarding('firstNameRequired')),
+      lastName: z.string().min(1, onboarding('lastNameRequired')),
+      phoneNumber: z.string().min(1, onboarding('phoneRequired')),
+      language: z.string().min(1, t('languageRequired')),
+    })),
     defaultValues: {
       firstName: '',
       lastName: '',
-      language: DEFAULT_LANGUAGE.value,
+      language: getSupportedLanguage(locale).value,
     },
   });
 
@@ -79,29 +91,29 @@ export function OnboardingProfileForm() {
   const onSubmit = async (data: ProfileFormData) => {
     // Check if phone is verified
     if (phoneVerificationStep !== 'verified') {
-      toast.error('Please verify your phone number before continuing');
+      toast.error(onboarding('verifyPhoneRequired'));
       return;
     }
 
     // Check if avatar is selected (mandatory)
     if (!selectedAvatar) {
-      toast.error('Please upload a profile picture before continuing');
+      toast.error(onboarding('pictureRequired'));
       return;
     }
 
     // Check if all required fields are filled
     if (!data.firstName.trim()) {
-      toast.error('Please enter your first name');
+      toast.error(onboarding('firstNameRequired'));
       return;
     }
 
     if (!data.lastName.trim()) {
-      toast.error('Please enter your last name');
+      toast.error(onboarding('lastNameRequired'));
       return;
     }
 
     if (!data.phoneNumber.trim()) {
-      toast.error('Please enter your phone number');
+      toast.error(onboarding('phoneRequired'));
       return;
     }
 
@@ -117,11 +129,11 @@ export function OnboardingProfileForm() {
       // Update profile with avatar if selected
       const result = await apiService.updateProfile(profileData, selectedAvatar || undefined);
       
-      toast.success('Profile updated successfully!');
+      toast.success(onboarding('profileSaved'));
       nextUserStep();
     } catch (error) {
       console.error('Failed to save profile:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
+      const errorMessage = error instanceof Error ? error.message : onboarding('profileSaveFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -178,14 +190,14 @@ export function OnboardingProfileForm() {
     // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      toast.error('Please select a valid image file (JPEG, PNG, or WebP)');
+      toast.error(onboarding('validImage'));
       return;
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      toast.error('Image size must be less than 5MB');
+      toast.error(onboarding('imageTooLarge'));
       return;
     }
 
@@ -205,14 +217,14 @@ export function OnboardingProfileForm() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-6">
-          Let's finish setting up your account
+          {onboarding('finishSetup')}
         </h1>
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Basic Profile Details
+            {onboarding('basicProfile')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            A few details to personalize your experience and build trust.
+            {onboarding('basicProfileBody')}
           </p>
         </div>
       </div>
@@ -235,7 +247,7 @@ export function OnboardingProfileForm() {
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt="Avatar preview"
+                  alt={onboarding('avatarPreview')}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -246,6 +258,7 @@ export function OnboardingProfileForm() {
               <button
                 type="button"
                 onClick={removeAvatar}
+                aria-label={onboarding('removePicture')}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-10"
               >
                 ×
@@ -259,7 +272,7 @@ export function OnboardingProfileForm() {
               onClick={handleAvatarClick}
               className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
             >
-              {avatarPreview ? 'Change picture' : 'Upload picture'}
+              {avatarPreview ? onboarding('changePicture') : onboarding('uploadPicture')}
             </button>
             {avatarPreview ? (
               <p className="text-xs text-gray-500">
@@ -267,7 +280,7 @@ export function OnboardingProfileForm() {
               </p>
             ) : (
               <p className="text-xs text-gray-500">
-                Click or drag & drop an image
+                {onboarding('pictureHint')}
               </p>
             )}
           </div>
@@ -287,7 +300,7 @@ export function OnboardingProfileForm() {
           {/* First Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              First name
+              {t('firstName')}
             </label>
             <div className="relative">
               <Input
@@ -305,7 +318,7 @@ export function OnboardingProfileForm() {
           {/* Last Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Last name
+              {t('lastName')}
             </label>
             <div className="relative">
               <Input
@@ -333,7 +346,7 @@ export function OnboardingProfileForm() {
         {/* Language */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Language
+            {language('label')}
           </label>
           <div className="relative">
             <button
@@ -346,7 +359,7 @@ export function OnboardingProfileForm() {
                   <span className="text-white text-xs">🌐</span>
                 </div>
                 <span className="text-sm">
-                  {SUPPORTED_LANGUAGES.find(lang => lang.value === selectedLanguage)?.label || 'Select language'}
+                  {SUPPORTED_LANGUAGES.find(lang => lang.value === selectedLanguage)?.label || t('selectLanguage')}
                 </span>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -360,6 +373,8 @@ export function OnboardingProfileForm() {
                     type="button"
                     onClick={() => {
                       setValue('language', language.value);
+                      persistLocaleCookie(language.value);
+                      router.refresh();
                       setShowLanguageDropdown(false);
                     }}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
@@ -383,7 +398,7 @@ export function OnboardingProfileForm() {
             onClick={handlePrevious}
             className="text-gray-600 hover:text-gray-700 font-medium"
           >
-            ← Previous
+            ← {common('previous')}
           </Button>
           
             <Button
@@ -391,11 +406,11 @@ export function OnboardingProfileForm() {
               disabled={isLoading || !isFormValid()}
               className="bg-green-600 hover:bg-green-700 text-white font-medium px-8 py-3 h-12 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Saving...' : 
-               phoneVerificationStep !== 'verified' ? 'Verify Phone First' :
-               !selectedAvatar ? 'Upload Profile Picture' :
-               !firstName?.trim() || !lastName?.trim() ? 'Complete Required Fields' :
-               'Next →'}
+              {isLoading ? common('saving') :
+               phoneVerificationStep !== 'verified' ? onboarding('verifyPhoneFirst') :
+               !selectedAvatar ? onboarding('uploadProfilePicture') :
+               !firstName?.trim() || !lastName?.trim() ? onboarding('completeRequiredFields') :
+               `${onboarding('next')} →`}
             </Button>
         </div>
       </form>

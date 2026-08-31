@@ -2,7 +2,6 @@
 
 import {
   ChevronDown,
-  Globe,
   Bell,
   Mail,
   ShoppingBag,
@@ -22,7 +21,8 @@ import { Logo } from "./logo";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/store/categories-store";
 import { useEffect, useState } from "react";
-import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from "@/lib/languages";
+import {LanguageSwitcher} from "@/components/i18n/language-switcher";
+import {useTranslations} from "next-intl";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   HelpSupportDropdownItems,
@@ -30,6 +30,8 @@ import {
 } from "./help-support-menu";
 
 export function Header() {
+  const t = useTranslations("Navigation");
+  const common = useTranslations("Common");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const {
@@ -69,14 +71,14 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-green-600 font-medium text-sm cursor-pointer">
-                  <span>Categories</span>
+                  <span>{t("categories")}</span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
                 {categoriesLoading && (
                   <DropdownMenuItem disabled>
-                    <span className="text-gray-400">Loading...</span>
+                    <span className="text-gray-400">{common("loading")}</span>
                   </DropdownMenuItem>
                 )}
                 {!categoriesLoading &&
@@ -91,7 +93,7 @@ export function Header() {
                   ))}
                 {!categoriesLoading && topLevelCategories.length === 0 && (
                   <DropdownMenuItem disabled>
-                    <span className="text-gray-400">No categories</span>
+                    <span className="text-gray-400">{t("noCategories")}</span>
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -101,7 +103,7 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-green-600 font-medium text-sm cursor-pointer">
-                  <span>Help & Support</span>
+                  <span>{t("helpSupport")}</span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -114,24 +116,7 @@ export function Header() {
             <div className="h-6 w-px bg-gray-300"></div>
 
             {/* Language Selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-green-600 cursor-pointer">
-                  <Globe className="w-5 h-5" />
-                  <span className="text-sm font-medium">
-                    {DEFAULT_LANGUAGE.shortLabel}
-                  </span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32">
-                {SUPPORTED_LANGUAGES.map((language) => (
-                  <DropdownMenuItem key={language.value}>
-                    <span>{language.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <LanguageSwitcher />
 
             {isAuthenticated && (
               <>
@@ -140,7 +125,7 @@ export function Header() {
                   type="button"
                   onClick={() => router.push("/dashboard/messages")}
                   className="rounded-md text-gray-700 hover:text-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
-                  aria-label="Messages"
+                  aria-label={t("messages")}
                 >
                   <Mail className="w-5 h-5" />
                 </button>
@@ -148,7 +133,7 @@ export function Header() {
                   type="button"
                   onClick={() => router.push("/dashboard/orders")}
                   className="rounded-md text-gray-700 hover:text-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
-                  aria-label="Orders"
+                  aria-label={t("orders")}
                 >
                   <ShoppingBag className="w-5 h-5" />
                 </button>
@@ -188,10 +173,10 @@ export function Header() {
                       <DropdownMenuItem
                         onClick={() => router.push("/dashboard")}
                       >
-                        <span>Dashboard</span>
+                        <span>{t("dashboard")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={signOut}>
-                        <span>Sign Out</span>
+                        <span>{t("signOut")}</span>
                       </DropdownMenuItem>
                     </>
                   ) : (
@@ -199,17 +184,17 @@ export function Header() {
                       <DropdownMenuItem
                         onClick={() => router.push("/dashboard/orders")}
                       >
-                        <span>My Orders</span>
+                        <span>{t("myOrders")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
                           router.push("/dashboard/profile?tab=general")
                         }
                       >
-                        <span>Settings</span>
+                        <span>{t("settings")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={signOut}>
-                        <span>Sign Out</span>
+                        <span>{t("signOut")}</span>
                       </DropdownMenuItem>
                     </>
                   )}
@@ -223,14 +208,14 @@ export function Header() {
                   size="sm"
                   className="text-gray-700 hover:text-gray-900"
                 >
-                  Sign in
+                      {t("signIn")}
                 </Button>
                 <Button
                   onClick={startUserFlow}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Sign up
+                      {t("signUp")}
                 </Button>
               </div>
             )}
@@ -241,7 +226,7 @@ export function Header() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              aria-label="Open navigation"
+              aria-label={t("openMenu")}
               className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 hover:text-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <Menu className="w-6 h-6" />
@@ -256,14 +241,14 @@ export function Header() {
           className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Site navigation"
+          aria-label={t("siteNavigation")}
         >
           <div className="flex justify-between items-center mb-8">
             <Logo />
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(false)}
-              aria-label="Close navigation"
+              aria-label={t("closeMenu")}
               className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
             >
               <X className="w-5 h-5" />
@@ -311,7 +296,7 @@ export function Header() {
                       }}
                       className="text-left font-medium text-lg text-gray-800 cursor-pointer"
                     >
-                      Dashboard
+                      {t("dashboard")}
                     </button>
                   ) : (
                     <>
@@ -322,7 +307,7 @@ export function Header() {
                         }}
                         className="text-left font-medium text-lg text-gray-800 cursor-pointer"
                       >
-                        My Orders
+                        {t("myOrders")}
                       </button>
                       <button
                         onClick={() => {
@@ -331,7 +316,7 @@ export function Header() {
                         }}
                         className="text-left font-medium text-lg text-gray-800 cursor-pointer"
                       >
-                        Settings
+                        {t("settings")}
                       </button>
                     </>
                   )}
@@ -347,7 +332,7 @@ export function Header() {
                     className="flex items-center space-x-3 text-gray-800 cursor-pointer"
                   >
                     <Bell className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">Notifications</span>
+                    <span className="font-medium text-lg">{t("notifications")}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -357,7 +342,7 @@ export function Header() {
                     className="flex items-center space-x-3 text-gray-800 cursor-pointer"
                   >
                     <Mail className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">Messages</span>
+                    <span className="font-medium text-lg">{t("messages")}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -367,7 +352,7 @@ export function Header() {
                     className="flex items-center space-x-3 text-gray-800 cursor-pointer"
                   >
                     <ShoppingBag className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">Orders</span>
+                    <span className="font-medium text-lg">{t("orders")}</span>
                   </button>
                 </div>
 
@@ -375,12 +360,12 @@ export function Header() {
                 <div className="flex flex-col space-y-4 pb-4 border-b border-gray-100">
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      Categories
+                      {t("categories")}
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       {categoriesLoading ? (
-                        <span className="text-gray-400">Loading...</span>
+                        <span className="text-gray-400">{common("loading")}</span>
                       ) : (
                         topLevelCategories.slice(0, 10).map((category) => (
                           <button
@@ -400,7 +385,7 @@ export function Header() {
 
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      Help & Support
+                      {t("helpSupport")}
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
                     <HelpSupportMobileLinks
@@ -408,12 +393,7 @@ export function Header() {
                     />
                   </details>
 
-                  <div className="flex justify-between items-center font-medium text-lg text-gray-800 pt-2 cursor-pointer">
-                    Language
-                    <span className="text-gray-500 text-base">
-                      {DEFAULT_LANGUAGE.shortLabel}
-                    </span>
-                  </div>
+                  <LanguageSwitcher align="start" className="text-lg text-gray-800" />
                 </div>
 
                 <button
@@ -423,7 +403,7 @@ export function Header() {
                   }}
                   className="text-left font-medium text-lg text-red-600 pt-2 pb-8 cursor-pointer"
                 >
-                  Sign Out
+                  {t("signOut")}
                 </button>
               </div>
             ) : (
@@ -432,12 +412,12 @@ export function Header() {
                 <div className="flex flex-col space-y-4 pb-4 border-b border-gray-100">
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      Categories
+                      {t("categories")}
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       {categoriesLoading ? (
-                        <span className="text-gray-400">Loading...</span>
+                        <span className="text-gray-400">{common("loading")}</span>
                       ) : (
                         topLevelCategories.slice(0, 10).map((category) => (
                           <button
@@ -457,7 +437,7 @@ export function Header() {
 
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium text-lg text-gray-800 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                      Help & Support
+                      {t("helpSupport")}
                       <ChevronDown className="w-5 h-5 transition duration-300 group-open:-rotate-180" />
                     </summary>
                     <HelpSupportMobileLinks
@@ -494,7 +474,7 @@ export function Header() {
                       }}
                       className="text-center font-medium text-green-600 border-t border-gray-100 pt-6 mt-2 cursor-pointer"
                     >
-                      Become a seller
+                      {t("becomeProvider")}
                     </button>
                   )}
                 </div>

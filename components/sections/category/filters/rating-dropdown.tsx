@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useTranslations } from "next-intl";
 
 interface RatingOption {
   id: string;
@@ -22,18 +23,18 @@ interface RatingDropdownProps {
   trigger: React.ReactNode;
 }
 
-const ratingOptions: RatingOption[] = [
-  { id: "top-rated", label: "Top rated(4.5+)", value: 4.5 },
-  { id: "reliable", label: "Reliable(4.0+)", value: 4.0 },
-  { id: "good-service", label: "Good service(3.5+)", value: 3.5 },
-  { id: "all", label: "All", value: 0 },
-];
-
 export function RatingDropdown({
   selectedRatings,
   onApply,
   trigger,
 }: RatingDropdownProps) {
+  const t = useTranslations("Marketplace");
+  const ratingOptions: RatingOption[] = [
+    { id: "top-rated", label: t("topRated"), value: 4.5 },
+    { id: "reliable", label: t("reliable"), value: 4.0 },
+    { id: "good-service", label: t("goodService"), value: 3.5 },
+    { id: "all", label: t("allRatings"), value: 0 },
+  ];
   const [open, setOpen] = useState(false);
   const [tempSelected, setTempSelected] = useState<string[]>(selectedRatings);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -143,14 +144,14 @@ export function RatingDropdown({
         onClick={clearAll}
         className="min-h-11 px-1 text-sm font-medium text-red-600 transition-colors hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 sm:min-h-0 sm:py-1.5"
       >
-        Clear all
+        {t("clearFilters")}
       </button>
       <button
         type="button"
         onClick={handleApply}
         className="min-h-11 rounded-lg bg-brand-900 px-6 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-900 focus-visible:ring-offset-2 sm:min-h-0 sm:px-5 sm:py-1.5"
       >
-        Apply
+        {t("apply")}
       </button>
     </div>
   );
@@ -169,9 +170,9 @@ export function RatingDropdown({
           >
             <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-300" />
             <SheetHeader className="border-b border-gray-200 px-5 pb-4 pt-3 pr-14 text-left">
-              <SheetTitle className="text-lg text-gray-900">Rating</SheetTitle>
+              <SheetTitle className="text-lg text-gray-900">{t("rating")}</SheetTitle>
               <SheetDescription>
-                Choose the ratings you want to see.
+                {t("ratingHint")}
               </SheetDescription>
             </SheetHeader>
             <div className="px-5 pt-3">

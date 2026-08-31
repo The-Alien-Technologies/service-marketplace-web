@@ -9,27 +9,30 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
-import { getNextOnboardingStep, needsOnboarding, getOnboardingStepMessage, getOnboardingStatus } from '@/lib/field-based-onboarding';
+import { getOnboardingStatus } from '@/lib/field-based-onboarding';
 import { mapBackendStepToFrontendStep } from '@/types/auth';
 import { authClient } from '@/lib/auth-client';
+import { useRouter } from 'next/navigation';
+import { getProviderEntryRoute } from '@/lib/provider-access';
+import {useTranslations} from 'next-intl';
 
-const signInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type SignInFormData = z.infer<typeof signInSchema>;
+type SignInFormData = {email: string; password: string};
 
 export function SignInForm() {
+  const t = useTranslations('Auth');
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setUser, setAuthStep, hideAuth, setUserAuthStep, setProviderAuthStep } = useAuthStore();
+  const signInSchema = z.object({
+    email: z.string().email(t('invalidEmail')),
+    password: z.string().min(6, t('passwordLength')),
+  });
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setError,
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
   });
@@ -37,7 +40,7 @@ export function SignInForm() {
   const onSubmit = async (data: SignInFormData) => {
     setIsLoading(true);
     try {
-      const result = await apiService.signIn(data);
+      await apiService.signIn(data);
       
       // Get user profile after successful login
       const profileResult = await apiService.getProfile();
@@ -49,7 +52,7 @@ export function SignInForm() {
       
       if (!onboardingStatus) {
         // Fallback if we can't get status - assume onboarding needed
-        toast.success('Welcome back! Please complete your profile setup.');
+        toast.success(t('finishProfile'));
         if (profileResult.user.role === 'SERVICE_PROVIDER') {
           setProviderAuthStep('provider-profile');
         } else {
@@ -69,14 +72,14 @@ export function SignInForm() {
           
           // Special handling for email verification
           if (nextStep === 'email_verification') {
-            toast.info('Please verify your email address to continue.');
+            toast.info(t('verifyToContinue'));
             if (profileResult.user.role === 'SERVICE_PROVIDER') {
               setProviderAuthStep('verify-email');
             } else {
               setUserAuthStep('verify-email');
             }
           } else {
-            toast.success(`Welcome back! Your profile is ${completionPercentage}% complete. Let's continue setting up your account.`);
+            toast.success(t('profileProgress', {percentage: completionPercentage}));
             // Use flow-specific methods based on user role
             if (profileResult.user.role === 'SERVICE_PROVIDER') {
               setProviderAuthStep(frontendStep as any);
@@ -86,7 +89,7 @@ export function SignInForm() {
           }
         } else {
           // No specific next step, start with appropriate default based on role
-          toast.success('Welcome back! Let\'s finish setting up your account.');
+          toast.success(t('finishProfile'));
           if (profileResult.user.role === 'SERVICE_PROVIDER') {
             setProviderAuthStep('provider-profile');
           } else {
@@ -95,13 +98,16 @@ export function SignInForm() {
         }
       } else {
         // Onboarding is complete
-        toast.success('Welcome back! You have successfully signed in.');
+        toast.success(t('welcomeSignedIn'));
         hideAuth();
+        if (profileResult.user.role === 'SERVICE_PROVIDER') {
+          router.push(getProviderEntryRoute(profileResult.user));
+        }
       }
       } catch (onboardingError) {
         console.error('Error checking onboarding status:', onboardingError);
         // Fallback to appropriate flow based on role
-        toast.success('Welcome back! Let\'s continue setting up your account.');
+        toast.success(t('finishProfile'));
         if (profileResult.user.role === 'SERVICE_PROVIDER') {
           setProviderAuthStep('provider-profile');
         } else {
@@ -109,7 +115,7 @@ export function SignInForm() {
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
+      const errorMessage = error instanceof Error ? error.message : t('authFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -132,7 +138,7 @@ export function SignInForm() {
       
     } catch (error) {
       console.error('Google sign in error:', error);
-      toast.error(`Google sign in failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(error instanceof Error ? error.message : t('authFailed'));
       setIsLoading(false);
     }
   };
@@ -144,15 +150,15 @@ export function SignInForm() {
         <div className="w-16 h-16 mx-auto mb-4">
           <img 
             src="/assets/logo/logo.svg" 
-            alt="Pavodah Logo" 
+            alt="Pavodah"
             className="w-full h-full"
           />
         </div>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Welcome to Pavodah
+          {t('welcomePavodah')}
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Sign in
+          {t('signInSubtitle')}
         </p>
       </div>
 
@@ -170,7 +176,7 @@ export function SignInForm() {
             alt="Google" 
             className="w-5 h-5 mr-3" 
           />
-          Sign in with Google
+          {t('signInGoogle')}
         </Button>
       </div>
 
@@ -180,7 +186,7 @@ export function SignInForm() {
           <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">OR</span>
+          <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">{t('or')}</span>
         </div>
       </div>
 
@@ -189,7 +195,7 @@ export function SignInForm() {
         {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Email
+            {t('emailAddress')}
           </label>
           <div className="relative">
             <Input
@@ -212,7 +218,7 @@ export function SignInForm() {
         {/* Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Password
+            {t('password')}
           </label>
           <div className="relative">
             <Input
@@ -232,7 +238,7 @@ export function SignInForm() {
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <span className="text-sm text-green-600 hover:text-green-700">
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? t('hidePassword') : t('showPassword')}
               </span>
             </button>
           </div>
@@ -248,7 +254,7 @@ export function SignInForm() {
             onClick={() => setAuthStep('forgot-password')}
             className="text-sm text-green-600 hover:text-green-700 font-medium"
           >
-            Forgot password?
+            {t('forgotPassword')}
           </button>
         </div>
 
@@ -259,20 +265,20 @@ export function SignInForm() {
           disabled={isLoading}
           className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium"
         >
-          {isLoading ? 'Signing in...' : 'Sign in'}
+          {isLoading ? t('signingIn') : t('signIn')}
         </Button>
       </form>
 
       {/* Sign Up Link */}
       <div className="text-center mt-6">
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          New on Pavodah?{' '}
+          {t('newToPavodah')}{' '}
         </span>
         <button
           onClick={() => setAuthStep('signup')}
           className="text-sm text-green-600 hover:text-green-700 font-medium"
         >
-          Sign up
+          {t('createAccount')}
         </button>
       </div>
     </div>

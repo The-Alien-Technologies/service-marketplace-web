@@ -23,12 +23,16 @@ import {
 } from "@/types/order";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 
 export default function ServiceDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { id: serviceId } = use(params);
 
   const [service, setService] = useState<Service | null>(null);
@@ -57,7 +61,7 @@ export default function ServiceDetailPage({
         setReviewData({ summary: reviews.summary, reviews: reviews.data });
       } catch (error) {
         console.error("Failed to fetch service:", error);
-        toast.error("Failed to load service details");
+        toast.error(t("serviceLoadFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -66,7 +70,7 @@ export default function ServiceDetailPage({
     if (serviceId) {
       fetchData();
     }
-  }, [serviceId]);
+  }, [serviceId, t]);
 
   if (isLoading) {
     return (
@@ -81,10 +85,10 @@ export default function ServiceDetailPage({
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900">
-            Service not found
+            {t("serviceNotFound")}
           </h2>
           <p className="text-gray-500 mt-2">
-            The service you are looking for does not exist.
+            {t("serviceNotFoundBody")}
           </p>
         </div>
       </div>
@@ -94,12 +98,12 @@ export default function ServiceDetailPage({
   // Transform backend data to frontend format
   const serviceData = {
     title: service.title,
-    category: service.category?.name || "Uncategorized",
+    category: service.category?.name || t("uncategorized"),
     categorySlug: service.category?.id || "",
     providerName:
       service.provider?.displayName ||
       `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-      "Provider",
+      common("provider"),
     heroImage: service.coverImage || "/assets/temp/products/p1.jpg",
     overviewDescription: service.overview,
     catalogueItems:
@@ -125,7 +129,7 @@ export default function ServiceDetailPage({
       reviewerName:
         r.client?.displayName ||
         `${r.client?.firstName ?? ""} ${r.client?.lastName ?? ""}`.trim() ||
-        "Anonymous",
+        t("anonymous"),
       reviewerAvatar:
         r.client?.avatar ||
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
@@ -142,9 +146,9 @@ export default function ServiceDetailPage({
       name:
         service.provider?.displayName ||
         `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-        "Provider",
+        common("provider"),
       avatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
-      title: "Service Provider", // TODO: Add title to provider profile
+      title: t("serviceProviderTitle"), // TODO: Add title to provider profile
       location: "Accra, Ghana", // TODO: Add location to provider profile
       rating: 0, // TODO: Implement rating
       isPro: false, // TODO: Implement pro status
@@ -154,7 +158,7 @@ export default function ServiceDetailPage({
         id: plan.id || "",
         name: plan.title,
         icon: "layers" as const, // Default icon
-        price: `GHS ${plan.price}`,
+        price: format.number(plan.price, "currency"),
         features: plan.inclusions.split("\n").map((text) => ({ text })),
         isPopular: plan.isPopular || false,
       })) || [],
@@ -233,7 +237,7 @@ export default function ServiceDetailPage({
 
       <CategoryCarousel
         categories={mockPopularCategories}
-        title="Popular Service"
+        title={t("popularService")}
         onCategoryClick={(category) => {
           // Navigate to category page
           globalThis.location.href = `/categories/${category.id}`;
