@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function Modal({
   className = '',
   showCloseButton = true 
 }: ModalProps) {
+  const t = useTranslations('Common');
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     if (isOpen) {
@@ -71,7 +73,7 @@ export function Modal({
         {showCloseButton && (
           <button
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('close')}
             className="absolute right-2 top-2 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 sm:right-4 sm:top-4"
           >
             <X className="w-5 h-5 text-gray-500" />

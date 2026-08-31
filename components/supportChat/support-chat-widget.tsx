@@ -33,43 +33,34 @@ import {
 } from "@/types/support";
 
 import { useSupportChatStore } from "@/store/support-chat-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<
   SupportConversationStatus,
   {
-    label: string;
-    subLabel: string;
     dotColor: string;
     badgeBg: string;
     badgeText: string;
   }
 > = {
   BOT: {
-    label: "KWADWO",
-    subLabel: "Pavodah Virtual Assistant",
     dotColor: "bg-blue-400",
     badgeBg: "bg-blue-50",
     badgeText: "text-blue-700",
   },
   AWAITING_FOR_ADMIN: {
-    label: "Waiting for agent…",
-    subLabel: "You are in the queue",
     dotColor: "bg-amber-400 animate-pulse",
     badgeBg: "bg-amber-50",
     badgeText: "text-amber-700",
   },
   ACTIVE_WITH_ADMIN: {
-    label: "Support Agent",
-    subLabel: "Live support connected",
     dotColor: "bg-green-400",
     badgeBg: "bg-green-50",
     badgeText: "text-green-700",
   },
   CLOSED: {
-    label: "Conversation Closed",
-    subLabel: "This session has ended",
     dotColor: "bg-gray-300",
     badgeBg: "bg-gray-100",
     badgeText: "text-gray-500",
@@ -86,9 +77,11 @@ function MessageBubble({
   message: SupportMessage;
   isOwn: boolean;
 }) {
+  const t = useTranslations("SupportChat");
+  const format = useFormatter();
   const isBot = message.senderType === "BOT";
   const isAdmin = message.senderType === "ADMIN";
-  const time = new Date(message.createdAt).toLocaleTimeString([], {
+  const time = format.dateTime(new Date(message.createdAt), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -113,8 +106,8 @@ function MessageBubble({
   if (isAdmin) {
     const name = message.sender
       ? `${message.sender.firstName ?? ""} ${message.sender.lastName ?? ""}`.trim() ||
-        "Support Agent"
-      : "Support Agent";
+        t("supportAgent")
+      : t("supportAgent");
     return (
       <div className="flex items-start gap-2 self-start max-w-[85%]">
         <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-1">
@@ -122,7 +115,7 @@ function MessageBubble({
         </div>
         <div>
           <p className="text-[10px] text-gray-400 mb-1 ml-1">
-            {name} · Agent
+            {name} · {t("agent")}
           </p>
           <div className="prose prose-sm max-w-none rounded-xl rounded-tl-none border border-green-100 bg-green-50 px-3 py-2 text-sm text-green-950 dark:bg-green-900/20 dark:text-white">
             <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -164,6 +157,7 @@ function TypingDots() {
 // ─── Status info bar ──────────────────────────────────────────────────────────
 
 function StatusBar({ status }: { status: SupportConversationStatus }) {
+  const t = useTranslations("SupportChat");
   const cfg = STATUS_CONFIG[status];
 
   if (status === "BOT" || status === "ACTIVE_WITH_ADMIN") return null;
@@ -175,19 +169,13 @@ function StatusBar({ status }: { status: SupportConversationStatus }) {
       {status === "AWAITING_FOR_ADMIN" && (
         <>
           <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-          <span>
-            Your request is queued. A human agent will join shortly. Please
-            hold on.
-          </span>
+          <span>{t("queuedBody")}</span>
         </>
       )}
       {status === "CLOSED" && (
         <>
           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            This conversation is closed. Start a new chat if you need further
-            help.
-          </span>
+          <span>{t("closedBody")}</span>
         </>
       )}
     </div>
@@ -195,13 +183,6 @@ function StatusBar({ status }: { status: SupportConversationStatus }) {
 }
 
 // ─── Quick-start prompts ──────────────────────────────────────────────────────
-
-const QUICK_PROMPTS = [
-  "How can I place an order?",
-  "How do I contact a provider?",
-  "How do disputes work?",
-  "Tell me about Pavodah",
-];
 
 // ─── History row ──────────────────────────────────────────────────────────────
 
@@ -212,10 +193,12 @@ function HistoryRow({
   conv: SupportConversation;
   onOpen: (conv: SupportConversation) => void;
 }) {
+  const t = useTranslations("SupportChat");
+  const format = useFormatter();
   const cfg = STATUS_CONFIG[conv.status];
   const isOpen = conv.status !== "CLOSED";
   const lastMsg = conv.messages?.[0];
-  const date = new Date(conv.createdAt).toLocaleDateString([], {
+  const date = format.dateTime(new Date(conv.createdAt), {
     month: "short",
     day: "numeric",
   });
@@ -227,12 +210,12 @@ function HistoryRow({
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${cfg.badgeBg} ${cfg.badgeText}`}
         >
           {conv.status === "AWAITING_FOR_ADMIN"
-            ? "Waiting"
+            ? t("waiting")
             : conv.status === "ACTIVE_WITH_ADMIN"
-            ? "Active"
+            ? t("active")
             : conv.status === "CLOSED"
-            ? "Closed"
-            : "Bot"}
+            ? t("closed")
+            : t("bot")}
         </span>
         <span className="text-[10px] text-gray-400">{date}</span>
       </div>
@@ -245,7 +228,7 @@ function HistoryRow({
 
       {conv.admin && (
         <p className="text-[10px] text-gray-400 mb-1">
-          Agent: {conv.admin.firstName} {conv.admin.lastName}
+          {t("agentName", { name: `${conv.admin.firstName} ${conv.admin.lastName}` })}
         </p>
       )}
 
@@ -253,7 +236,7 @@ function HistoryRow({
         onClick={() => onOpen(conv)}
         className="text-xs font-medium text-green-600 hover:text-green-700 hover:underline"
       >
-        {isOpen ? "Continue →" : "View transcript →"}
+        {isOpen ? t("continueAction") : t("viewTranscript")}
       </button>
     </div>
   );
@@ -262,6 +245,9 @@ function HistoryRow({
 // ─── Main widget ──────────────────────────────────────────────────────────────
 
 export function SupportChatWidget() {
+  const t = useTranslations("SupportChat");
+  const common = useTranslations("Common");
+  const messaging = useTranslations("Messaging");
   const { user, isAuthenticated, hasHydrated } = useAuthStore();
   const pathname = usePathname();
   const isSupportHiddenRoute =
@@ -368,9 +354,9 @@ export function SupportChatWidget() {
         setConversation(conv);
         setMessages(conv.messages ?? []);
       })
-      .catch((e: Error) => setError(e.message ?? "Could not connect."))
+      .catch((e: Error) => setError(e.message ?? t("connectionFailed")))
       .finally(() => setIsLoading(false));
-  }, [isOpen, isAuthenticated, conversation, isLoading]);
+  }, [isOpen, isAuthenticated, conversation, isLoading, t]);
 
   // Load history when switching to history view
   useEffect(() => {
@@ -482,7 +468,7 @@ export function SupportChatWidget() {
       });
     } catch (e: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setError((e as Error).message ?? "Failed to send message.");
+      setError((e as Error).message ?? t("sendFailed"));
     } finally {
       setIsSending(false);
       setIsBotTyping(false);
@@ -550,6 +536,26 @@ export function SupportChatWidget() {
 
   const status: SupportConversationStatus = conversation?.status ?? "BOT";
   const cfg = STATUS_CONFIG[status];
+  const statusLabel = status === "BOT"
+    ? "KWADWO"
+    : status === "AWAITING_FOR_ADMIN"
+      ? t("waitingAgent")
+      : status === "ACTIVE_WITH_ADMIN"
+        ? t("supportAgent")
+        : t("conversationClosed");
+  const statusSubLabel = status === "BOT"
+    ? t("virtualAssistant")
+    : status === "AWAITING_FOR_ADMIN"
+      ? t("inQueue")
+      : status === "ACTIVE_WITH_ADMIN"
+        ? t("liveConnected")
+        : t("sessionEnded");
+  const quickPrompts = [
+    t("promptOrder"),
+    t("promptProvider"),
+    t("promptDispute"),
+    t("promptAbout"),
+  ];
   const isClosed = status === "CLOSED";
   const isWaiting = status === "AWAITING_FOR_ADMIN";
   const isBot = status === "BOT";
@@ -568,7 +574,7 @@ export function SupportChatWidget() {
             openChat();
             setView("chat");
           }}
-          aria-label="Open support chat"
+          aria-label={t("openChat")}
           className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-xl transition-transform hover:scale-105 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2 motion-reduce:transform-none"
         >
           <MessageCircle className="w-6 h-6" />
@@ -602,12 +608,12 @@ export function SupportChatWidget() {
               </div>
               <div className="min-w-0">
                 <h3 className="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white">
-                  {view === "history" ? "Chat History" : cfg.label}
+                  {view === "history" ? t("chatHistory") : statusLabel}
                 </h3>
                 <p className="truncate text-xs text-gray-500">
                   {view === "history"
-                    ? "Your past conversations"
-                    : cfg.subLabel}
+                    ? t("pastConversations")
+                    : statusSubLabel}
                 </p>
               </div>
             </div>
@@ -617,14 +623,14 @@ export function SupportChatWidget() {
                 onClick={() =>
                   setView((v) => (v === "chat" ? "history" : "chat"))
                 }
-                title="Toggle history"
+                title={t("toggleHistory")}
                 className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <History className="w-4 h-4 text-gray-500" />
               </button>
               <button
                 onClick={closeChat}
-                aria-label="Close support chat"
+                aria-label={t("closeChat")}
                 className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <X className="w-4 h-4 text-gray-500" />
@@ -636,7 +642,7 @@ export function SupportChatWidget() {
           {showAdminBanner && (
             <div className="mx-3 mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-xs text-green-700 shrink-0">
               <UserCheck className="w-3.5 h-3.5 shrink-0" />
-              A support agent has joined the conversation!
+              {t("agentJoined")}
             </div>
           )}
 
@@ -660,15 +666,15 @@ export function SupportChatWidget() {
                       onClick={startNewChat}
                       className="text-xs text-green-600 hover:underline mt-1"
                     >
-                      Try again
+                      {common("retry")}
                     </button>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="space-y-2 mt-2">
                     <p className="text-xs text-gray-400 text-center mb-3">
-                      Ask KWADWO anything about Pavodah
+                      {t("askAnything")}
                     </p>
-                    {QUICK_PROMPTS.map((q) => (
+                    {quickPrompts.map((q) => (
                       <button
                         key={q}
                         onClick={() => {
@@ -705,13 +711,13 @@ export function SupportChatWidget() {
                     className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-full transition-colors"
                   >
                     <Headphones className="w-3.5 h-3.5" />
-                    Talk to a human
+                    {t("talkHuman")}
                   </button>
                 )}
                 {isWaiting && (
                   <span className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    Waiting for an agent…
+                    {t("waitingForAgent")}
                   </span>
                 )}
                 {isClosed && (
@@ -719,7 +725,7 @@ export function SupportChatWidget() {
                     onClick={startNewChat}
                     className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-full transition-colors"
                   >
-                    Start new chat
+                    {t("startNewChat")}
                   </button>
                 )}
                 {!isClosed && conversation && (
@@ -727,7 +733,7 @@ export function SupportChatWidget() {
                     onClick={closeConversation}
                     className="ml-auto min-h-11 px-2 py-1 text-xs text-gray-500 transition-colors hover:text-gray-700"
                   >
-                    End chat
+                    {t("endChat")}
                   </button>
                 )}
               </div>
@@ -749,8 +755,8 @@ export function SupportChatWidget() {
                       }}
                       placeholder={
                         isWaiting
-                          ? "Waiting for agent…"
-                          : "Type your message…"
+                          ? t("waitingForAgent")
+                          : messaging("typeMessage")
                       }
                       disabled={isSending || isWaiting || isLoading || !conversation}
                       className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-white sm:text-sm"
@@ -764,7 +770,7 @@ export function SupportChatWidget() {
                         isLoading ||
                         !conversation
                       }
-                      aria-label="Send message"
+                      aria-label={messaging("sendMessage")}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isSending ? (
@@ -793,10 +799,10 @@ export function SupportChatWidget() {
                     strokeWidth={1.5}
                   />
                   <p className="text-sm font-medium text-gray-500">
-                    No chat history yet
+                    {t("noHistory")}
                   </p>
                   <p className="text-xs text-gray-400">
-                    Start a conversation to get help
+                    {t("startForHelp")}
                   </p>
                 </div>
               ) : (

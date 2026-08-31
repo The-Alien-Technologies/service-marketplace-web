@@ -21,30 +21,27 @@ import {
   SupportConversationStatus,
   SupportMessage,
 } from "@/types/support";
+import { useFormatter, useTranslations } from "next-intl";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<
   SupportConversationStatus,
-  { label: string; badgeBg: string; badgeText: string }
+  { badgeBg: string; badgeText: string }
 > = {
   BOT: {
-    label: "Bot",
     badgeBg: "bg-blue-50",
     badgeText: "text-blue-700",
   },
   AWAITING_FOR_ADMIN: {
-    label: "Waiting",
     badgeBg: "bg-amber-50",
     badgeText: "text-amber-700",
   },
   ACTIVE_WITH_ADMIN: {
-    label: "Active",
     badgeBg: "bg-green-50",
     badgeText: "text-green-700",
   },
   CLOSED: {
-    label: "Closed",
     badgeBg: "bg-gray-100",
     badgeText: "text-gray-500",
   },
@@ -59,9 +56,11 @@ function TranscriptBubble({
   message: SupportMessage;
   isOwn: boolean;
 }) {
+  const t = useTranslations("SupportChat");
+  const format = useFormatter();
   const isBot = message.senderType === "BOT";
   const isAdmin = message.senderType === "ADMIN";
-  const time = new Date(message.createdAt).toLocaleTimeString([], {
+  const time = format.dateTime(new Date(message.createdAt), {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -86,8 +85,8 @@ function TranscriptBubble({
   if (isAdmin) {
     const name = message.sender
       ? `${message.sender.firstName ?? ""} ${message.sender.lastName ?? ""}`.trim() ||
-        "Support Agent"
-      : "Support Agent";
+        t("supportAgent")
+      : t("supportAgent");
     return (
       <div className="flex items-start gap-2 max-w-[80%]">
         <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-1">
@@ -95,7 +94,7 @@ function TranscriptBubble({
         </div>
         <div>
           <p className="text-[10px] text-gray-400 mb-1 ml-1">
-            {name} · Agent
+            {name} · {t("agent")}
           </p>
           <div className="prose prose-sm max-w-none rounded-xl rounded-tl-none border border-green-100 bg-green-50 px-3 py-2 text-sm text-green-950">
             <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -119,6 +118,9 @@ function TranscriptBubble({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SupportHistoryPage() {
+  const t = useTranslations("SupportChat");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const { user, isAuthenticated, hasHydrated } = useAuthStore();
 
@@ -128,6 +130,14 @@ export default function SupportHistoryPage() {
 
   const [selected, setSelected] = useState<SupportConversation | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const statusLabel = (status: SupportConversationStatus) =>
+    status === "AWAITING_FOR_ADMIN"
+      ? t("waiting")
+      : status === "ACTIVE_WITH_ADMIN"
+        ? t("active")
+        : status === "CLOSED"
+          ? t("closed")
+          : t("bot");
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -173,14 +183,15 @@ export default function SupportHistoryPage() {
       <div className="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <button
           onClick={() => router.back()}
+          aria-label={common("back")}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
         >
           <ArrowLeft className="w-4 h-4 text-gray-600" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Support History</h1>
+          <h1 className="text-lg font-bold text-gray-900">{t("historyTitle")}</h1>
           <p className="text-xs text-gray-500">
-            All your past and active support conversations
+            {t("historySubtitle")}
           </p>
         </div>
       </div>
@@ -203,10 +214,10 @@ export default function SupportHistoryPage() {
             <div className="flex flex-col items-center justify-center h-48 gap-2 px-4 text-center">
               <MessageCircle className="w-8 h-8 text-gray-300" strokeWidth={1.5} />
               <p className="text-sm font-medium text-gray-500">
-                No conversations yet
+                {t("noConversations")}
               </p>
               <p className="text-xs text-gray-400">
-                Use the support chat button to get help
+                {t("useChatButton")}
               </p>
             </div>
           ) : (
@@ -228,10 +239,10 @@ export default function SupportHistoryPage() {
                     <span
                       className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${meta.badgeBg} ${meta.badgeText}`}
                     >
-                      {meta.label}
+                      {statusLabel(conv.status)}
                     </span>
                     <span className="text-[10px] text-gray-400">
-                      {new Date(conv.createdAt).toLocaleDateString([], {
+                      {format.dateTime(new Date(conv.createdAt), {
                         month: "short",
                         day: "numeric",
                       })}
@@ -243,13 +254,13 @@ export default function SupportHistoryPage() {
                     </p>
                   ) : (
                     <p className="text-xs text-gray-400 italic mb-1">
-                      No messages
+                      {t("noMessages")}
                     </p>
                   )}
                   <div className="flex items-center justify-between">
                     {conv.admin && (
                       <span className="text-[10px] text-gray-400">
-                        Agent: {conv.admin.firstName} {conv.admin.lastName}
+                        {t("agentName", { name: `${conv.admin.firstName} ${conv.admin.lastName}` })}
                       </span>
                     )}
                     <span
@@ -257,7 +268,7 @@ export default function SupportHistoryPage() {
                         isOpenChat ? "text-green-600" : "text-gray-400"
                       }`}
                     >
-                      {isOpenChat ? "Continue" : "View"}{" "}
+                      {isOpenChat ? common("continue") : common("view")}{" "}
                       <ChevronRight className="inline w-2.5 h-2.5" />
                     </span>
                   </div>
@@ -282,7 +293,7 @@ export default function SupportHistoryPage() {
                 strokeWidth={1.5}
               />
               <p className="text-sm font-medium text-gray-400">
-                Select a conversation to view its transcript
+                {t("selectTranscript")}
               </p>
             </div>
           ) : (
@@ -294,20 +305,19 @@ export default function SupportHistoryPage() {
                     <button
                       type="button"
                       onClick={() => setSelected(null)}
-                      aria-label="Back to support conversations"
+                      aria-label={t("backToConversations")}
                       className="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden"
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </button>
                     <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900">
-                      Conversation on{" "}
-                      {new Date(selected.createdAt).toLocaleDateString([], {
+                      {t("conversationOn", { date: format.dateTime(new Date(selected.createdAt), {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
                         year: "numeric",
-                      })}
+                      }) })}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span
@@ -315,22 +325,20 @@ export default function SupportHistoryPage() {
                           STATUS_META[selected.status].badgeBg
                         } ${STATUS_META[selected.status].badgeText}`}
                       >
-                        {STATUS_META[selected.status].label}
+                        {statusLabel(selected.status)}
                       </span>
                       {selected.admin && (
                         <span className="text-xs text-gray-400">
-                          Handled by {selected.admin.firstName}{" "}
-                          {selected.admin.lastName}
+                          {t("handledBy", { name: `${selected.admin.firstName} ${selected.admin.lastName}` })}
                         </span>
                       )}
                       {selected.adminJoinedAt && (
                         <span className="text-xs text-gray-400 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          Agent joined{" "}
-                          {new Date(selected.adminJoinedAt).toLocaleTimeString(
-                            [],
-                            { hour: "2-digit", minute: "2-digit" }
-                          )}
+                          {t("agentJoinedAt", { time: format.dateTime(
+                            new Date(selected.adminJoinedAt),
+                            { hour: "2-digit", minute: "2-digit" },
+                          ) })}
                         </span>
                       )}
                     </div>
@@ -343,7 +351,7 @@ export default function SupportHistoryPage() {
                       onClick={() => window.scrollTo({ top: 0 })}
                       className="shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 sm:px-4"
                     >
-                      Continue chat
+                      {t("continueChat")}
                     </button>
                   )}
                 </div>
@@ -353,7 +361,7 @@ export default function SupportHistoryPage() {
               <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4 sm:px-5">
                 {(selected.messages ?? []).length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">
-                    No messages in this conversation
+                    {t("noMessagesConversation")}
                   </p>
                 ) : (
                   (selected.messages ?? []).map((msg) => (
@@ -371,8 +379,7 @@ export default function SupportHistoryPage() {
 
               {selected.status === "CLOSED" && (
                 <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 text-center shrink-0">
-                  This conversation was closed on{" "}
-                  {new Date(selected.updatedAt).toLocaleDateString()}
+                  {t("closedOn", { date: format.dateTime(new Date(selected.updatedAt), "long") })}
                 </div>
               )}
             </>

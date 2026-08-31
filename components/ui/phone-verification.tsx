@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { CountrySelector, countries, Country } from '@/components/ui/country-selector';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
 export type PhoneVerificationStep = 'input' | 'verify' | 'verified';
 
@@ -29,6 +30,7 @@ export function PhoneVerification({
   required = false,
   error,
 }: PhoneVerificationProps) {
+  const t = useTranslations('Auth');
   const initialCountry =
     countries.find((country) => value.startsWith(country.dialCode)) ?? countries[0];
   const [selectedCountry, setSelectedCountry] = useState<Country>(initialCountry);
@@ -97,7 +99,7 @@ export function PhoneVerification({
 
   const handleSendVerification = async () => {
     if (!localNumber) {
-      setVerificationError('Enter your phone number first.');
+      setVerificationError(t('enterPhoneFirst'));
       return;
     }
 
@@ -109,10 +111,10 @@ export function PhoneVerification({
       onChange(result.phoneNumber);
       setVerificationStep('verify');
       setResendTimer(RESEND_COOLDOWN_SECONDS);
-      toast.success('Verification code sent to your phone');
+      toast.success(t('phoneCodeSent'));
       window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
     } catch (caught) {
-      showError(caught, 'We could not send the verification code. Please try again.');
+      showError(caught, t('phoneCodeSendFailed'));
     } finally {
       setIsSending(false);
     }
@@ -129,10 +131,10 @@ export function PhoneVerification({
       setVerificationPhoneNumber(result.phoneNumber);
       setVerificationStep('verified');
       setResendTimer(0);
-      toast.success('Phone number verified successfully');
+      toast.success(t('phoneVerified'));
     } catch (caught) {
       setVerificationCode(Array(OTP_LENGTH).fill(''));
-      showError(caught, 'That code is invalid or has expired. Request a new one and try again.');
+      showError(caught, t('phoneCodeInvalid'));
       window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
     } finally {
       setIsVerifying(false);
@@ -195,10 +197,10 @@ export function PhoneVerification({
       onChange(result.phoneNumber);
       setVerificationCode(Array(OTP_LENGTH).fill(''));
       setResendTimer(RESEND_COOLDOWN_SECONDS);
-      toast.success('A new verification code was sent');
+      toast.success(t('phoneCodeResent'));
       window.setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
     } catch (caught) {
-      showError(caught, 'We could not resend the code. Please try again.');
+      showError(caught, t('phoneCodeResendFailed'));
     } finally {
       setIsResending(false);
     }
@@ -207,11 +209,11 @@ export function PhoneVerification({
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Phone number
+        {t('phoneNumber')}
         {required && <span className="ml-1 text-red-500">*</span>}
         {verificationStep !== 'verified' && (
           <span className="ml-2 text-xs font-normal text-orange-700 dark:text-orange-400">
-            Verification required
+            {t('verificationRequired')}
           </span>
         )}
       </label>
@@ -243,11 +245,11 @@ export function PhoneVerification({
               className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-r-lg border border-l-0 border-green-700 bg-green-700 px-4 text-sm font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-green-200 disabled:bg-green-200 disabled:text-green-900 dark:disabled:border-green-950 dark:disabled:bg-green-950 dark:disabled:text-green-400"
             >
               {isSending && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              {isSending ? 'Sending' : 'Send code'}
+              {isSending ? t('sending') : t('sendCode')}
             </button>
           </div>
           <p id="phone-verification-hint" className="text-xs text-gray-600 dark:text-gray-400">
-            We&apos;ll text a six-digit code to this number.
+            {t('smsHint')}
           </p>
         </div>
       )}
@@ -255,12 +257,15 @@ export function PhoneVerification({
       {verificationStep === 'verify' && (
         <div className="space-y-4 rounded-xl bg-blue-50 p-4 dark:bg-blue-950/30">
           <p className="break-words text-sm text-blue-900 dark:text-blue-200">
-            Enter the code sent to <strong>{verificationPhoneNumber}</strong>.
+            {t.rich('codeSentPhone', {
+              number: verificationPhoneNumber,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
 
           <fieldset disabled={disabled || isVerifying}>
             <legend className="mb-2 text-sm font-medium text-gray-800 dark:text-gray-200">
-              Verification code
+              {t('verificationCode')}
             </legend>
             <div className="flex justify-center gap-2" onPaste={handleCodePaste}>
               {verificationCode.map((digit, index) => (
@@ -269,7 +274,7 @@ export function PhoneVerification({
                   ref={(element) => {
                     codeInputRefs.current[index] = element;
                   }}
-                  aria-label={`Verification code digit ${index + 1}`}
+                  aria-label={t('verificationDigit', { position: index + 1 })}
                   type="text"
                   inputMode="numeric"
                   autoComplete={index === 0 ? 'one-time-code' : 'off'}
@@ -287,11 +292,11 @@ export function PhoneVerification({
             {isVerifying ? (
               <p className="inline-flex items-center gap-2 text-sm text-blue-800 dark:text-blue-300">
                 <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Checking code
+                {t('checkingCode')}
               </p>
             ) : resendTimer > 0 ? (
               <p className="text-sm text-blue-800 dark:text-blue-300">
-                Resend available in 0:{resendTimer.toString().padStart(2, '0')}
+                {t('resendAvailable', { time: `0:${resendTimer.toString().padStart(2, '0')}` })}
               </p>
             ) : (
               <button
@@ -300,7 +305,7 @@ export function PhoneVerification({
                 disabled={isResending || disabled}
                 className="text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-green-400"
               >
-                {isResending ? 'Sending a new code…' : 'Send a new code'}
+                {isResending ? t('sendingNewCode') : t('sendNewCode')}
               </button>
             )}
           </div>
@@ -314,7 +319,7 @@ export function PhoneVerification({
           </span>
           <div className="min-w-0">
             <p className="text-sm font-medium text-green-900 dark:text-green-200">
-              Phone number verified
+              {t('phoneVerified')}
             </p>
             <p className="break-words text-xs text-green-800 dark:text-green-300">
               {verificationPhoneNumber}

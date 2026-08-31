@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
 export function VerifyEmailForm() {
+  const t = useTranslations('Auth');
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -16,7 +18,7 @@ export function VerifyEmailForm() {
   const { setUserAuthStep, setProviderAuthStep, user, authFlow, nextUserStep, nextProviderStep } = useAuthStore();
 
   // Get email from user - should always be available after signup
-  const email = user?.email || 'your-email@example.com';
+  const email = user?.email || t('emailFallback');
   
   // Check if we came from provider signup by checking if user role is SERVICE_PROVIDER
   const isProviderFlow = user?.role === 'SERVICE_PROVIDER';
@@ -64,7 +66,7 @@ export function VerifyEmailForm() {
     
     try {
       await apiService.verifyEmail(email, verificationCode);
-      toast.success('Email verified successfully!');
+      toast.success(t('emailVerified'));
       
       // Redirect based on auth flow
       if (authFlow === 'provider') {
@@ -73,7 +75,7 @@ export function VerifyEmailForm() {
         nextUserStep();
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Verification failed';
+      const errorMessage = error instanceof Error ? error.message : t('verificationFailed');
       toast.error(errorMessage);
       setError(errorMessage);
       setCode(['', '', '', '', '', '']);
@@ -89,10 +91,10 @@ export function VerifyEmailForm() {
     
     try {
       await apiService.resendEmailVerification(email);
-      toast.success('Verification code sent to your email');
+      toast.success(t('verificationCodeSent'));
       setTimeLeft(119); // 1:59
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to resend verification code';
+      const errorMessage = error instanceof Error ? error.message : t('verificationResendFailed');
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -118,21 +120,22 @@ export function VerifyEmailForm() {
           />
         </div>
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-2">
-          Please Verify your Email Address
+          {t('verifyEmailTitle')}
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
-          We've sent a verification code to your email address{' '}
-          <span className="font-medium text-gray-900 dark:text-white">
-            {email || 'your email'}
-          </span>
-          . Enter the code in the next 20 minutes.
+          {t.rich('emailCodeSent', {
+            address: email,
+            strong: (chunks) => (
+              <span className="font-medium text-gray-900 dark:text-white">{chunks}</span>
+            ),
+          })}
         </p>
       </div>
 
       {/* Verification Code Input */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Verification code
+          {t('verificationCode')}
         </label>
         <div className="flex justify-center items-center space-x-3">
           {code.map((digit, index) => (
@@ -144,6 +147,7 @@ export function VerifyEmailForm() {
                 pattern="[0-9]*"
                 maxLength={1}
                 value={digit}
+                aria-label={t('verificationDigit', { position: index + 1 })}
                 onChange={(e) => handleInputChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 placeholder="0"
@@ -170,7 +174,7 @@ export function VerifyEmailForm() {
         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Make sure to check your inbox and spam folder
+        {t('checkInboxSpam')}
       </div>
 
       {/* Continue Button */}
@@ -179,16 +183,16 @@ export function VerifyEmailForm() {
         disabled={code.some(digit => digit === '') || isLoading}
         className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium mb-6"
       >
-        {isLoading ? 'Verifying...' : 'Continue'}
+        {isLoading ? t('verifying') : t('continue')}
       </Button>
 
       {/* Resend Code */}
       <div className="text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          Didn't receive an email?{' '}
+          {t('didNotReceiveEmail')}{' '}
           {timeLeft > 0 ? (
             <span className="font-medium">
-              Resend ({formatTime(timeLeft)})
+              {t('resendAt', { time: formatTime(timeLeft) })}
             </span>
           ) : (
             <button
@@ -196,13 +200,13 @@ export function VerifyEmailForm() {
               disabled={isResending}
               className="text-green-600 hover:text-green-700 font-medium"
             >
-              {isResending ? 'Sending...' : 'Resend'}
+              {isResending ? t('sending') : t('resend')}
             </button>
           )}
         </p>
         
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Having troubles? Contact us on{' '}
+          {t('havingTrouble')}{' '}
           <a 
             href="mailto:support@pavodah.com" 
             className="text-green-600 hover:text-green-700"

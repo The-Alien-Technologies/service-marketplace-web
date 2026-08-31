@@ -39,16 +39,29 @@ export interface UserInterest {
 export interface VerificationDocument {
   id: string;
   type: string;
+  documentType?: string;
   status: "UPLOADED" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
   url: string;
+  fileUrl?: string;
   fileName?: string;
   originalName?: string;
   fileSize?: number;
   mimeType?: string;
   rejectionReason?: string;
+  reviewNotes?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  uploadedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type UserStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "REJECTED"
+  | "SUSPENDED"
+  | "DELETED";
 
 export interface User {
   id: string;
@@ -60,7 +73,7 @@ export interface User {
   username?: string;
   avatar?: string;
   role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
-  status?: "ACTIVE" | "SUSPENDED" | "DELETED";
+  status?: UserStatus;
   phoneVerified?: boolean;
   phoneNumber?: string;
   bio?: string;
@@ -74,6 +87,11 @@ export interface User {
   hasCompletedOnboarding: boolean;
   profileCompleteness?: number;
   isServiceProviderVerified?: boolean;
+  serviceProviderVerifiedAt?: string;
+  providerApplicationSubmittedAt?: string;
+  providerApplicationReviewedAt?: string;
+  providerApplicationReviewedBy?: string;
+  providerApplicationRejectionReason?: string;
   createdAt?: string;
   lastLoginAt?: string;
   lastActiveAt?: string;
@@ -85,6 +103,38 @@ export interface User {
   _count?: {
     services?: number;
   };
+}
+
+export interface ProviderApplicationSummary {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  avatar?: string;
+  status: Extract<UserStatus, "PENDING" | "REJECTED" | "ACTIVE">;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  isServiceProviderVerified: boolean;
+  providerApplicationSubmittedAt: string;
+  providerApplicationReviewedAt?: string;
+  providerApplicationRejectionReason?: string;
+  _count: { verificationDocuments: number };
+}
+
+export interface ProviderApplicationDetail extends User {
+  status: Extract<UserStatus, "PENDING" | "REJECTED" | "ACTIVE">;
+  providerApplicationSubmittedAt: string;
+  addresses: Address[];
+  interests: UserInterest[];
+  verificationDocuments: VerificationDocument[];
+  reviewer?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    email: string;
+  } | null;
 }
 
 export interface AuthState {

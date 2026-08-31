@@ -7,6 +7,7 @@ import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { useChatStore } from "@/store/chat-store";
 import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ChatBoxProps {
   isOpen: boolean;
@@ -18,14 +19,6 @@ interface ChatBoxProps {
   responseTime?: string;
 }
 
-const quickMessages = [
-  "How long would this project take to complete?",
-  "Hi, are you available to take on a project right now?",
-  "Can you share some recent projects you've worked on?",
-  "What's the earliest you can start?",
-  "Are you available on Weekends",
-];
-
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
 
 export function ChatBox({
@@ -35,8 +28,19 @@ export function ChatBox({
   providerName,
   providerAvatar,
   isOnline = true,
-  responseTime = "30mins",
+  responseTime,
 }: ChatBoxProps) {
+  const t = useTranslations("Messaging");
+  const marketplace = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
+  const quickMessages = [
+    t("quickDuration"),
+    t("quickAvailable"),
+    t("quickProjects"),
+    t("quickStart"),
+    t("quickWeekends"),
+  ];
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -179,7 +183,7 @@ export function ChatBox({
               <div className="absolute bottom-0 right-0">
                 <Image
                   src="/assets/icons/online_indicator.svg"
-                  alt="Online"
+                  alt={marketplace("online")}
                   width={10}
                   height={10}
                 />
@@ -191,14 +195,14 @@ export function ChatBox({
               {providerName}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Avg. response time {responseTime}
+              {t("averageResponse", { time: responseTime ?? t("defaultResponseTime") })}
             </p>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close conversation"
+          aria-label={common("close")}
           className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -215,7 +219,7 @@ export function ChatBox({
           <>
             <div className="text-center mb-6 mt-auto">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Start your conversation with {providerName.split(" ")[0]}
+                {t("startWith", { name: providerName.split(" ")[0] })}
               </p>
             </div>
             <div className="space-y-3">
@@ -252,7 +256,7 @@ export function ChatBox({
                       <a href={msg.content} target="_blank" rel="noreferrer">
                         <Image
                           src={msg.content}
-                          alt="shared image"
+                          alt={t("sharedImage")}
                           width={200}
                           height={200}
                           className="rounded-lg object-cover max-h-48 w-auto"
@@ -268,7 +272,7 @@ export function ChatBox({
                         isMe ? "text-green-100" : "text-gray-400",
                       )}
                     >
-                      {new Date(msg.createdAt).toLocaleTimeString([], {
+                      {format.dateTime(new Date(msg.createdAt), {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -312,6 +316,7 @@ export function ChatBox({
           {/* Emoji Button */}
           <button
             onClick={() => setShowEmojiPicker((v) => !v)}
+            aria-label={t("chooseEmoji")}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
           >
             <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -320,6 +325,7 @@ export function ChatBox({
           {/* File/Attachment Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
+            aria-label={t("attachFile")}
             disabled={isUploading}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50"
           >
@@ -336,13 +342,14 @@ export function ChatBox({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type here..."
+            placeholder={t("typeMessage")}
             className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 sm:px-4 sm:text-sm"
           />
 
           {/* Send Button */}
           <button
             onClick={handleSend}
+            aria-label={t("sendMessage")}
             disabled={!activeConversation || !message.trim()}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-brand-900"
           >

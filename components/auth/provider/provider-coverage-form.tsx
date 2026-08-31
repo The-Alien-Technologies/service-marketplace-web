@@ -8,8 +8,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
 import { LocationResult } from "@/lib/geocoding";
 import { toast } from "react-toastify";
+import { useTranslations } from "next-intl";
 
 export function ProviderCoverageForm() {
+  const t = useTranslations("Onboarding");
+  const common = useTranslations("Common");
   const [isSaving, setIsSaving] = useState(false);
   const [selectedLocation, setSelectedLocation] =
     useState<LocationResult | null>(null);
@@ -24,7 +27,7 @@ export function ProviderCoverageForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedLocation) {
-      setValidationError("Select a service area before continuing.");
+      setValidationError(t("coverageRequired"));
       return;
     }
 
@@ -34,14 +37,14 @@ export function ProviderCoverageForm() {
         ...selectedLocation,
         isPrimary: true,
       });
-      toast.success("Service area saved successfully!");
+      toast.success(t("coverageSaved"));
       nextProviderStep();
     } catch (error) {
       console.error("Failed to save service area:", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to save service area",
+          : t("coverageSaveFailed"),
       );
     } finally {
       setIsSaving(false);
@@ -62,23 +65,23 @@ export function ProviderCoverageForm() {
 
       <div className="mb-8">
         <h1 className="mb-6 text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white">
-          Let&apos;s finish setting up your account
+          {t("finishSetup")}
         </h1>
         <div>
           <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">
-            Coverage Area
+            {t("coverageTitle")}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Choose the area where you provide services.
+            {t("coverageBody")}
           </p>
         </div>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-6">
         <LocationPicker
-          label="Where do you provide services?"
-          placeholder="Enter a city, area, or address"
-          selectedHeading="Service area selected"
+          label={t("coverageQuestion")}
+          placeholder={t("locationPlaceholder")}
+          selectedHeading={t("coverageSelected")}
           selectedLocation={selectedLocation}
           onSelect={handleLocationChange}
           disabled={isSaving}
@@ -87,10 +90,7 @@ export function ProviderCoverageForm() {
 
         <div className="flex items-start gap-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
           <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            This helps clients find you when they&apos;re looking for services in
-            your area. You can update it anytime in Settings.
-          </span>
+          <span>{t("coverageHint")}</span>
         </div>
 
         <div className="flex items-center justify-between gap-4 pt-8">
@@ -101,7 +101,7 @@ export function ProviderCoverageForm() {
             disabled={isSaving}
             className="text-gray-600 hover:text-gray-700"
           >
-            Previous
+            {common("previous")}
           </Button>
 
           <Button
@@ -112,12 +112,12 @@ export function ProviderCoverageForm() {
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                {common("saving")}
               </>
             ) : selectedLocation ? (
-              "Continue"
+              common("continue")
             ) : (
-              "Select a location"
+              t("selectLocation")
             )}
           </Button>
         </div>

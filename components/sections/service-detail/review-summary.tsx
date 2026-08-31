@@ -1,6 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ReviewSummaryProps {
   averageRating: number;
@@ -17,17 +18,13 @@ export function ReviewSummary({
   totalReviews,
   ratingBreakdown,
 }: ReviewSummaryProps) {
-  const formatReviewCount = (count: number) => {
-    if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}k`;
-    }
-    return count.toString();
-  };
+  const t = useTranslations("Reviews");
+  const format = useFormatter();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-        Reviews
+        {t("title")}
       </h2>
 
       {/* Overall Rating Summary */}
@@ -60,7 +57,7 @@ export function ReviewSummary({
           {/* Rating text in center */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-xl font-bold text-gray-900 dark:text-white">
-              {averageRating.toFixed(1)}
+              {format.number(averageRating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
             </span>
           </div>
         </div>
@@ -85,7 +82,7 @@ export function ReviewSummary({
           </div>
           {/* Review count */}
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            from {formatReviewCount(totalReviews)} reviews
+            {t("fromReviews", { count: totalReviews })}
           </p>
         </div>
       </div>
@@ -97,7 +94,7 @@ export function ReviewSummary({
             {/* Rating label */}
             <div className="flex items-center gap-1 w-12">
               <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {item.rating.toFixed(1)}
+                {format.number(item.rating, { minimumFractionDigits: 1 })}
               </span>
               <Star className="w-4 h-4 text-orange-500 fill-orange-500" />
             </div>
@@ -112,7 +109,7 @@ export function ReviewSummary({
 
             {/* Count */}
             <span className="text-sm font-medium text-gray-900 dark:text-white w-12 text-right">
-              {item.count}
+              {format.number(item.count)}
             </span>
           </div>
         ))}

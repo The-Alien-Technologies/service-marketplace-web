@@ -24,6 +24,7 @@ import {
   SupportConversationStatus,
   SupportMessage,
 } from "@/types/support";
+import { useFormatter, useTranslations } from "next-intl";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -77,14 +78,14 @@ const BADGE: Record<
 };
 
 function StatusBadge({ status }: { status: SupportConversationStatus }) {
+  const t = useTranslations("SupportAdmin");
   const b = BADGE[status] ?? BADGE.CLOSED
-  console.log("status value " + status);
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${b.bg} ${b.text}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${b.dot}`} />
-      {b.label}
+      {t(status === "BOT" ? "bot" : status === "AWAITING_FOR_ADMIN" ? "waiting" : status === "ACTIVE_WITH_ADMIN" ? "active" : "closed")}
     </span>
   );
 }
@@ -104,6 +105,8 @@ function ConvCard({
   onJoin?: () => void;
   isJoining?: boolean;
 }) {
+  const t = useTranslations("SupportAdmin");
+  const common = useTranslations("Common");
   const lastMsg = conv.messages?.[0];
   const isWaiting = conv.status === "AWAITING_FOR_ADMIN";
 
@@ -136,8 +139,8 @@ function ConvCard({
             </p>
             <p className="text-[10px] text-gray-400">
               {conv.initiatorType === "SERVICE_PROVIDER"
-                ? "Service Provider"
-                : "User"}
+                ? t("serviceProvider")
+                : common("user")}
             </p>
           </div>
         </div>
@@ -167,7 +170,7 @@ function ConvCard({
           {isJoining ? (
             <Loader2 className="w-3 h-3 animate-spin inline" />
           ) : (
-            "Join Conversation"
+            t("join")
           )}
         </button>
       )}
@@ -238,6 +241,9 @@ type Tab = "waiting" | "active" | "closed";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminSupportChatPage() {
+  const t = useTranslations("SupportAdmin");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const { user, isAuthenticated, hasHydrated } = useAuthStore();
 
@@ -597,9 +603,9 @@ export default function AdminSupportChatPage() {
   if (!hasHydrated || user?.role !== "ADMIN") return null;
 
   const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: "waiting", label: "Waiting", count: waiting.length },
-    { id: "active", label: "Active", count: active.length },
-    { id: "closed", label: "Closed", count: closed.length },
+    { id: "waiting", label: t("waiting"), count: waiting.length },
+    { id: "active", label: t("active"), count: active.length },
+    { id: "closed", label: t("closed"), count: closed.length },
   ];
 
   const TAB_COLOR: Record<Tab, string> = {
@@ -619,9 +625,9 @@ export default function AdminSupportChatPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Support Chat</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
-          Manage live customer support conversations
+          {t("subtitle")}
         </p>
       </div>
 
@@ -630,21 +636,21 @@ export default function AdminSupportChatPage() {
         {[
           {
             id: 1,
-            label: "Waiting",
+            label: t("waiting"),
             count: waiting.length,
             icon: Clock,
             color: "text-amber-600 bg-amber-50",
           },
           {
             id: 2,
-            label: "Active",
+            label: t("active"),
             count: active.length,
             icon: UserCheck,
             color: "text-green-600 bg-green-50",
           },
           {
             id: 3,
-            label: "Closed",
+            label: t("closed"),
             count: closed.length,
             icon: Users,
             color: "text-gray-600 bg-gray-50",
@@ -713,7 +719,9 @@ export default function AdminSupportChatPage() {
                   strokeWidth={1.5}
                 />
                 <p className="text-xs text-gray-400">
-                  No {tab} conversations
+                  {t("noConversations", {
+                    status: tab === "waiting" ? t("waiting") : tab === "active" ? t("active") : t("closed"),
+                  })}
                 </p>
               </div>
             ) : (
@@ -753,7 +761,7 @@ export default function AdminSupportChatPage() {
                 strokeWidth={1.5}
               />
               <p className="text-sm font-medium text-gray-400">
-                Select a conversation to start helping
+                {t("selectConversation")}
               </p>
             </div>
           ) : (
@@ -764,7 +772,7 @@ export default function AdminSupportChatPage() {
                   <button
                     type="button"
                     onClick={() => setSelected(null)}
-                    aria-label="Back to conversations"
+                    aria-label={t("back")}
                     className="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden"
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -791,8 +799,8 @@ export default function AdminSupportChatPage() {
                       <StatusBadge status={selected.status} />
                       <span className="hidden text-[10px] text-gray-500 sm:inline">
                         {selected.initiatorType === "SERVICE_PROVIDER"
-                          ? "Service Provider"
-                          : "User"}
+                          ? t("serviceProvider")
+                          : common("user")}
                       </span>
                     </div>
                   </div>
@@ -805,7 +813,7 @@ export default function AdminSupportChatPage() {
                       className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-600 transition-colors hover:bg-red-100 hover:text-red-700"
                     >
                       <X className="w-3.5 h-3.5" />
-                      Close
+                      {t("close")}
                     </button>
                   )}
                 </div>
@@ -819,7 +827,7 @@ export default function AdminSupportChatPage() {
                   </div>
                 ) : messages.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">
-                    No messages yet
+                    {t("noMessages")}
                   </p>
                 ) : (
                   messages.map((msg, index) => (
@@ -847,14 +855,14 @@ export default function AdminSupportChatPage() {
                           sendMessage();
                         }
                       }}
-                      placeholder="Type a reply…"
+                      placeholder={t("replyPlaceholder")}
                       disabled={isSending}
                       className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 sm:text-sm"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!inputText.trim() || isSending}
-                      aria-label="Send message"
+                      aria-label={t("sendMessage")}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-green-600 text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {isSending ? (
@@ -872,7 +880,7 @@ export default function AdminSupportChatPage() {
                 <div className="shrink-0 border-t border-gray-100 bg-amber-50 px-3 py-3 sm:px-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-amber-700">
-                      This user is waiting for a human agent.
+                      {t("waitingForAgent")}
                     </p>
                     <button
                       onClick={() => joinConversation(selected.id)}
@@ -882,7 +890,7 @@ export default function AdminSupportChatPage() {
                       {joiningId === selected.id ? (
                         <Loader2 className="w-3 h-3 animate-spin inline" />
                       ) : (
-                        "Join Conversation"
+                        t("join")
                       )}
                     </button>
                   </div>
@@ -891,8 +899,9 @@ export default function AdminSupportChatPage() {
 
               {isClosed && (
                 <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-400 text-center shrink-0">
-                  Conversation closed ·{" "}
-                  {new Date(selected.updatedAt).toLocaleDateString()}
+                  {t("conversationClosed", {
+                    date: format.dateTime(new Date(selected.updatedAt), "long"),
+                  })}
                 </div>
               )}
             </>

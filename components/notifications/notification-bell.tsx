@@ -13,12 +13,15 @@ import { useNotificationStore } from "@/store/notification-store";
 import { AppNotification } from "@/types/notification";
 import { NotificationItem } from "./notification-item";
 import { cn } from "@/lib/utils";
+import {useTranslations} from "next-intl";
 
 interface NotificationBellProps {
   className?: string;
 }
 
 export function NotificationBell({ className }: NotificationBellProps) {
+  const t = useTranslations("Notifications");
+  const common = useTranslations("Common");
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [open, setOpen] = useState(false);
@@ -62,8 +65,8 @@ export function NotificationBell({ className }: NotificationBellProps) {
           )}
           aria-label={
             unreadCount > 0
-              ? `Notifications, ${unreadCount} unread`
-              : "Notifications"
+              ? t("unreadLabel", {count: unreadCount})
+              : t("title")
           }
         >
           <Bell className="h-5 w-5" aria-hidden="true" />
@@ -81,13 +84,13 @@ export function NotificationBell({ className }: NotificationBellProps) {
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div>
-            <p className="font-semibold text-gray-900">Notifications</p>
+            <p className="font-semibold text-gray-900">{t("title")}</p>
             <p className="text-xs text-gray-500">
               {!inAppNotificationsEnabled
-                ? "In-app notifications are off"
+                ? t("off")
                 : unreadCount > 0
-                  ? `${unreadCount} unread`
-                  : "You’re all caught up"}
+                  ? t("unreadCount", {count: unreadCount})
+                  : t("caughtUp")}
             </p>
           </div>
           {unreadCount > 0 && (
@@ -98,7 +101,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
               className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCheck className="h-4 w-4" aria-hidden="true" />
-              {isMarkingAll ? "Marking…" : "Mark all read"}
+              {isMarkingAll ? t("marking") : t("markAll")}
             </button>
           )}
         </div>
@@ -106,7 +109,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
         {!inAppNotificationsEnabled && (
           <div className="flex items-center justify-between gap-4 border-b border-amber-100 bg-amber-50 px-4 py-3">
             <p className="text-xs leading-5 text-amber-900">
-              Unread badges are paused in your preferences.
+              {t("badgesPaused")}
             </p>
             <button
               type="button"
@@ -116,14 +119,14 @@ export function NotificationBell({ className }: NotificationBellProps) {
               }}
               className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700"
             >
-              Review settings
+              {t("reviewSettings")}
             </button>
           </div>
         )}
 
         <div className="max-h-[26rem] divide-y divide-gray-100 overflow-y-auto">
           {isLoadingRecent && recentNotifications.length === 0 ? (
-            <div className="space-y-3 p-4" aria-label="Loading notifications">
+            <div className="space-y-3 p-4" aria-label={t("loading")}>
               {[0, 1, 2].map((item) => (
                 <div key={item} className="flex animate-pulse gap-3">
                   <div className="h-9 w-9 rounded-full bg-gray-200" />
@@ -137,7 +140,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
           ) : recentError && recentNotifications.length === 0 ? (
             <div className="px-6 py-8 text-center">
               <p className="text-sm font-medium text-gray-900">
-                Notifications couldn’t load
+                {t("loadFailed")}
               </p>
               <p className="mt-1 text-sm text-gray-500">{recentError}</p>
               <button
@@ -147,7 +150,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 }
                 className="mt-3 text-sm font-semibold text-green-700 hover:text-green-800"
               >
-                Try again
+                {common("retry")}
               </button>
             </div>
           ) : recentNotifications.length === 0 ? (
@@ -157,10 +160,10 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 aria-hidden="true"
               />
               <p className="mt-3 text-sm font-medium text-gray-900">
-                No notifications yet
+                {t("empty")}
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                Order, payment, message, and support updates will appear here.
+                {t("emptyBody")}
               </p>
             </div>
           ) : (
@@ -186,7 +189,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
             }}
             className="w-full rounded-md px-3 py-2 text-sm font-semibold text-green-700 transition-colors hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
           >
-            View all notifications
+            {t("viewAll")}
           </button>
         </div>
       </DropdownMenuContent>

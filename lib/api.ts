@@ -5,6 +5,9 @@ import {
   OnboardingStatus,
   Category,
   VerificationDocument,
+  ProviderApplicationDetail,
+  ProviderApplicationSummary,
+  UserStatus,
 } from "@/types/auth";
 import { BotChatResponse } from "@/types/bot";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
@@ -496,12 +499,64 @@ class ApiService {
 
   async updateUserStatus(
     userId: string,
-    status: "ACTIVE" | "SUSPENDED" | "DELETED",
+    status: Extract<UserStatus, "ACTIVE" | "SUSPENDED">,
   ): Promise<User> {
     const response = await this.request<User>(`/users/${userId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+    return response.data;
+  }
+
+  async getProviderApplications(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: Extract<UserStatus, "PENDING" | "REJECTED" | "ACTIVE">;
+  }): Promise<{
+    applications: ProviderApplicationSummary[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.set("page", String(options.page));
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.search) params.set("search", options.search);
+    if (options?.status) params.set("status", options.status);
+    const query = params.size ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      applications: ProviderApplicationSummary[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/users/provider-applications${query}`);
+    return response.data;
+  }
+
+  async getProviderApplication(
+    userId: string,
+  ): Promise<ProviderApplicationDetail> {
+    const response = await this.request<ProviderApplicationDetail>(
+      `/users/provider-applications/${userId}`,
+    );
+    return response.data;
+  }
+
+  async reviewProviderApplication(
+    userId: string,
+    decision: "APPROVE" | "REJECT",
+    reason?: string,
+  ): Promise<User> {
+    const response = await this.request<User>(
+      `/users/provider-applications/${userId}/decision`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ decision, reason }),
+      },
+    );
     return response.data;
   }
 
@@ -639,6 +694,11 @@ class ApiService {
 
   async getService(id: string): Promise<Service> {
     const response = await this.request<Service>(`/services/${id}`);
+    return response.data;
+  }
+
+  async getMyService(id: string): Promise<Service> {
+    const response = await this.request<Service>(`/services/my/${id}`);
     return response.data;
   }
 

@@ -17,15 +17,16 @@ import { apiService } from "@/lib/api";
 import { canInitializePayment } from "@/lib/payment-state";
 import { useOrderStore } from "@/store/order-store";
 import type { Order } from "@/types/order";
-
-function formatMoney(value: number | string, currency = "GHS") {
-  return `${currency} ${new Intl.NumberFormat("en-GH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(value))}`;
-}
+import {useFormatter, useTranslations} from "next-intl";
 
 function CheckoutContent() {
+  const t = useTranslations("Checkout");
+  const common = useTranslations("Common");
+  const home = useTranslations("Home");
+  const errors = useTranslations("Errors");
+  const format = useFormatter();
+  const formatMoney = (value: number | string, currency = "GHS") =>
+    format.number(Number(value), {style: "currency", currency});
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedOrderId = searchParams.get("orderId");
@@ -65,7 +66,7 @@ function CheckoutContent() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "We could not load this order.",
+              : errors("loadFailed"),
           );
         }
       } finally {
@@ -89,8 +90,8 @@ function CheckoutContent() {
           [order.service.provider?.firstName, order.service.provider?.lastName]
             .filter(Boolean)
             .join(" ") ||
-          "Service provider",
-        planName: order.planTitle || "Custom service",
+          t("serviceProvider"),
+        planName: order.planTitle || t("customService"),
         planPrice: Number(order.planPrice ?? order.total),
         addOns: order.addOns ?? [],
         addOnsTotal: Number(order.addOnsTotal ?? 0),
@@ -104,7 +105,7 @@ function CheckoutContent() {
     return {
       serviceId: pendingOrder.serviceId,
       serviceTitle: pendingOrder.service.title,
-      providerName: "Service provider",
+      providerName: t("serviceProvider"),
       planName: pendingOrder.plan.name,
       planPrice: pendingOrder.plan.price,
       addOns: pendingOrder.addOns.map((addon) => ({
@@ -130,7 +131,7 @@ function CheckoutContent() {
 
       if (!payableOrder) {
         if (!pendingOrder)
-          throw new Error("Your checkout details are missing.");
+          throw new Error(t("missingDetails"));
         payableOrder = await apiService.createOrder({
           serviceId: pendingOrder.serviceId,
           planId: pendingOrder.plan.id,
@@ -148,7 +149,7 @@ function CheckoutContent() {
 
       const payment = await apiService.initializePayment(payableOrder.id);
       if (!payment.authorizationUrl) {
-        throw new Error("Paystack did not return a checkout link.");
+        throw new Error(t("missingLink"));
       }
 
       window.location.assign(payment.authorizationUrl);
@@ -156,7 +157,7 @@ function CheckoutContent() {
       setPaymentError(
         error instanceof Error
           ? error.message
-          : "Payment could not be started. Please try again.",
+          : t("startFailed"),
       );
       setIsPaying(false);
     }
@@ -177,7 +178,7 @@ function CheckoutContent() {
         >
           <div className="flex items-center gap-3 text-gray-700 dark:text-gray-200">
             <Loader2 className="h-5 w-5 animate-spin text-brand-700" />
-            <span>Preparing your secure checkout…</span>
+            <span>{t("preparing")}</span>
           </div>
         </main>
       </div>
@@ -192,17 +193,17 @@ function CheckoutContent() {
           <section className="w-full rounded-2xl bg-white p-5 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] sm:p-8 dark:bg-gray-900">
             <AlertCircle className="mb-5 h-10 w-10 text-red-600" />
             <h1 className="text-2xl font-bold text-gray-950 dark:text-white">
-              We couldn&apos;t prepare checkout
+              {t("prepareFailed")}
             </h1>
             <p className="mt-3 text-gray-600 dark:text-gray-300">
-              {loadError || "The order details are no longer available."}
+              {loadError || t("detailsUnavailable")}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Button onClick={() => setLoadVersion((value) => value + 1)}>
-                Try again
+                {common("retry")}
               </Button>
               <Button variant="outline" onClick={() => router.push("/")}>
-                Browse services
+                {home("browseServices")}
               </Button>
             </div>
           </section>
@@ -227,15 +228,13 @@ function CheckoutContent() {
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] lg:items-start lg:gap-10">
           <section className="min-w-0 pt-2">
             <p className="text-sm font-semibold text-brand-800 dark:text-brand-400">
-              Secure hosted checkout
+              {t("hosted")}
             </p>
             <h1 className="mt-3 max-w-xl text-3xl font-bold tracking-[-0.025em] text-gray-950 sm:text-4xl dark:text-white">
-              Complete your payment with Paystack
+              {t("title")}
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-gray-600 dark:text-gray-300">
-              Your order total is confirmed by Pavodah before you leave this
-              page. Paystack will handle your card or Mobile Money details on
-              its secure checkout.
+              {t("intro")}
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3 sm:mt-9 sm:gap-4">
@@ -250,7 +249,7 @@ function CheckoutContent() {
               <span className="h-8 w-px bg-gray-300 dark:bg-gray-700" />
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <LockKeyhole className="h-4 w-4 text-brand-700 dark:text-brand-400" />
-                Encrypted checkout
+                {t("encrypted")}
               </div>
             </div>
 
@@ -258,13 +257,13 @@ function CheckoutContent() {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
                 <p>
-                  The provider can only begin work after payment is verified.
+                  {t("workAfterPayment")}
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
                 <p>
-                  If checkout is interrupted, you can safely return and retry.
+                  {t("safeRetry")}
                 </p>
               </div>
             </div>
@@ -280,7 +279,7 @@ function CheckoutContent() {
                   id="order-summary-heading"
                   className="text-xl font-bold text-gray-950 dark:text-white"
                 >
-                  Order summary
+                  {t("orderSummary")}
                 </h2>
                 <p className="mt-1 truncate text-sm text-gray-600 dark:text-gray-300">
                   {summary.serviceTitle}
@@ -319,15 +318,15 @@ function CheckoutContent() {
 
               {summary.addOns.length === 0 && (
                 <div className="flex justify-between gap-4 text-gray-500 dark:text-gray-400">
-                  <dt>Add-ons</dt>
-                  <dd>None</dd>
+                  <dt>{t("addOns")}</dt>
+                  <dd>{common("none")}</dd>
                 </div>
               )}
             </dl>
 
             <div className="mt-7 flex items-end justify-between gap-4 border-t border-gray-200 pt-5 dark:border-gray-700">
               <span className="font-semibold text-gray-950 dark:text-white">
-                Total due
+                {t("totalDue")}
               </span>
               <span className="text-2xl font-bold tracking-[-0.02em] text-gray-950 dark:text-white">
                 {formatMoney(summary.total, summary.currency)}
@@ -341,7 +340,7 @@ function CheckoutContent() {
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  {paymentError} Your order is saved, so it is safe to retry.
+                  {paymentError} {t("savedRetry")}
                 </p>
               </div>
             )}
@@ -356,12 +355,12 @@ function CheckoutContent() {
                 {isPaying ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Opening secure checkout…
+                    {t("opening")}
                   </>
                 ) : isNotPayable ? (
-                  "View order status"
+                  t("viewStatus")
                 ) : (
-                  `Pay ${formatMoney(summary.total, summary.currency)}`
+                  t("pay", {amount: formatMoney(summary.total, summary.currency)})
                 )}
               </Button>
               <Button
@@ -371,13 +370,12 @@ function CheckoutContent() {
                 disabled={isPaying}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Return to service
+                {t("returnService")}
               </Button>
             </div>
 
             <p className="mt-5 text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
-              Payment details are entered on Paystack and are never stored by
-              Pavodah.
+              {t("paymentPrivacy")}
             </p>
           </section>
         </div>

@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const money = (value: number | string = 0) =>
   new Intl.NumberFormat("en-GH", {
@@ -85,6 +86,8 @@ const payoutMeta: Record<
 };
 
 export default function EarningsPage() {
+  const t = useTranslations("Earnings");
+  const common = useTranslations("Common");
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [earnings, setEarnings] = useState<ProviderEarning[]>([]);
   const [payouts, setPayouts] = useState<ProviderPayout[]>([]);
@@ -125,14 +128,14 @@ export default function EarningsPage() {
         setPayoutPagination(payoutsData.pagination);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Could not load earnings",
+          error instanceof Error ? error.message : t("loadFailed"),
         );
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [earningsPage, payoutPage],
+    [earningsPage, payoutPage, t],
   );
 
   useEffect(() => {
@@ -143,12 +146,12 @@ export default function EarningsPage() {
     setActionLoading(true);
     try {
       await apiService.requestPayout();
-      toast.success("Payout request sent for admin approval");
+      toast.success(t("requestSent"));
       setWithdrawOpen(false);
       await loadData(true);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not request payout",
+        error instanceof Error ? error.message : t("requestFailed"),
       );
     } finally {
       setActionLoading(false);
@@ -166,9 +169,9 @@ export default function EarningsPage() {
   if (!summary) {
     return (
       <div className="py-24 text-center">
-        <p className="font-semibold text-gray-900">Earnings are unavailable</p>
+        <p className="font-semibold text-gray-900">{t("unavailable")}</p>
         <Button variant="outline" className="mt-4" onClick={() => loadData()}>
-          Try again
+          {common("retry")}
         </Button>
       </div>
     );
@@ -186,11 +189,10 @@ export default function EarningsPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
-            Earnings & payouts
+            {t("title")}
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-600">
-            Follow every paid order from customer acceptance to your verified
-            Ghana bank or mobile-money destination.
+            {t("subtitle")}
           </p>
         </div>
         <Button
@@ -202,7 +204,7 @@ export default function EarningsPage() {
           <RefreshCw
             className={cn("h-4 w-4", isRefreshing && "animate-spin")}
           />
-          Refresh
+          {t("refresh")}
         </Button>
       </header>
 
@@ -211,15 +213,13 @@ export default function EarningsPage() {
           <div>
             <div className="flex items-center gap-2 text-sm font-medium text-green-100">
               <CircleDollarSign className="h-4 w-4" />
-              Available to withdraw
+              {t("available")}
             </div>
             <p className="mt-3 text-4xl font-bold tracking-[-0.03em] sm:text-5xl">
               {money(summary.available)}
             </p>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-green-100/85">
-              This balance contains only customer-accepted work, less any
-              resolved chargeback adjustments. The order’s marketplace
-              commission is already deducted.
+              {t("balanceBody")}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button
@@ -228,7 +228,7 @@ export default function EarningsPage() {
                 disabled={!canWithdraw}
               >
                 <ArrowDownToLine className="h-4 w-4" />
-                Withdraw full balance
+                {t("withdraw")}
               </Button>
               {!summary.account && (
                 <Button
@@ -236,18 +236,18 @@ export default function EarningsPage() {
                   className="border-green-300/50 bg-transparent text-white hover:bg-white/10 hover:text-white"
                   onClick={() => setAccountOpen(true)}
                 >
-                  Set up payout account
+                  {t("setUpAccount")}
                 </Button>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-x-7 gap-y-6 border-green-200/20 md:border-l md:pl-8">
-            <BalanceStat label="Awaiting acceptance" value={summary.held} />
-            <BalanceStat label="In payout" value={summary.reserved} />
-            <BalanceStat label="Paid to date" value={summary.paid} />
+            <BalanceStat label={t("awaitingAcceptance")} value={summary.held} />
+            <BalanceStat label={t("inPayout")} value={summary.reserved} />
+            <BalanceStat label={t("paidToDate")} value={summary.paid} />
             <BalanceStat
-              label="Balance adjustments"
+              label={t("adjustments")}
               value={summary.adjustmentBalance}
               warning={Number(summary.adjustmentBalance) > 0}
             />
@@ -270,10 +270,10 @@ export default function EarningsPage() {
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-gray-950">
-                  Order earnings
+                  {t("orderEarnings")}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  The release state and financial split for each paid order.
+                  {t("orderEarningsBody")}
                 </p>
               </div>
               <span className="text-xs font-medium text-gray-500">
@@ -284,8 +284,8 @@ export default function EarningsPage() {
               {earnings.length === 0 ? (
                 <EmptyState
                   icon={Banknote}
-                  title="No earnings yet"
-                  description="Paid orders will appear here as soon as their payments are verified."
+                  title={t("noEarnings")}
+                  description={t("noEarningsBody")}
                 />
               ) : (
                 <div className="divide-y divide-gray-100">
@@ -350,18 +350,18 @@ export default function EarningsPage() {
           <section>
             <div className="mb-4">
               <h2 className="text-lg font-bold text-gray-950">
-                Payout history
+                {t("payoutHistory")}
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Combined transfers approved against your available balance.
+                {t("payoutHistoryBody")}
               </p>
             </div>
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               {payouts.length === 0 ? (
                 <EmptyState
                   icon={ArrowDownToLine}
-                  title="No payout requests"
-                  description="Your first full-balance withdrawal will be tracked here."
+                  title={t("noPayouts")}
+                  description={t("noPayoutsBody")}
                 />
               ) : (
                 <div className="divide-y divide-gray-100">
@@ -422,10 +422,10 @@ export default function EarningsPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-sm font-bold text-gray-950">
-                  Payout destination
+                  {t("payoutDestination")}
                 </h2>
                 <p className="mt-1 text-xs text-gray-500">
-                  Protected with phone verification
+                  {t("protected")}
                 </p>
               </div>
               <ShieldCheck className="h-5 w-5 text-green-700" />
@@ -513,7 +513,7 @@ export default function EarningsPage() {
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-800">
               <ArrowDownToLine className="h-5 w-5" />
             </div>
-            <DialogTitle>Withdraw your full balance?</DialogTitle>
+            <DialogTitle>{t("withdrawTitle")}</DialogTitle>
             <DialogDescription className="leading-relaxed">
               {money(summary.available)} will be reserved across all eligible
               orders and sent to {summary.account?.institutionName} ••••{" "}
@@ -526,7 +526,7 @@ export default function EarningsPage() {
               onClick={() => setWithdrawOpen(false)}
               disabled={actionLoading}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="bg-green-700 text-white hover:bg-green-800"
@@ -534,7 +534,7 @@ export default function EarningsPage() {
               disabled={actionLoading}
             >
               {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Submit request
+              {t("submitRequest")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -589,12 +589,13 @@ function ListPagination({
   pagination: Pagination;
   onPageChange: (page: number) => void;
 }) {
+  const common = useTranslations("Common");
   if (pagination.pages <= 1) return null;
 
   return (
     <nav
       className="mt-4 flex items-center justify-between gap-4"
-      aria-label="List pagination"
+      aria-label={common("pageOf", { page: pagination.page, total: pagination.pages })}
     >
       <Button
         type="button"
@@ -603,10 +604,10 @@ function ListPagination({
         onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
         disabled={pagination.page <= 1}
       >
-        Previous
+        {common("previous")}
       </Button>
       <p className="text-xs text-gray-600">
-        Page {pagination.page} of {pagination.pages}
+        {common("pageOf", { page: pagination.page, total: pagination.pages })}
       </p>
       <Button
         type="button"
@@ -617,7 +618,7 @@ function ListPagination({
         }
         disabled={pagination.page >= pagination.pages}
       >
-        Next
+        {common("next")}
       </Button>
     </nav>
   );
@@ -632,6 +633,8 @@ function PayoutAccountDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("Earnings");
+  const common = useTranslations("Common");
   const [type, setType] = useState<PayoutDestinationType>("MOBILE_MONEY");
   const [institutions, setInstitutions] = useState<PayoutInstitution[]>([]);
   const [institutionCode, setInstitutionCode] = useState("");
@@ -671,7 +674,7 @@ function PayoutAccountDialog({
     try {
       const result = await apiService.sendPayoutAccountOtp();
       setOtpSentTo(result.phoneNumber);
-      toast.success("Verification code sent");
+      toast.success(t("codeSent"));
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Could not send code",
@@ -702,7 +705,7 @@ function PayoutAccountDialog({
         accountName,
         otpCode,
       });
-      toast.success("Payout destination verified");
+      toast.success(t("destinationVerified"));
       onOpenChange(false);
       onSaved();
       setAccountNumber("");
@@ -724,10 +727,9 @@ function PayoutAccountDialog({
           <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-800">
             <WalletCards className="h-5 w-5" />
           </div>
-          <DialogTitle>Set your payout destination</DialogTitle>
+          <DialogTitle>{t("setDestination")}</DialogTitle>
           <DialogDescription>
-            Paystack verifies the destination. Pavodah stores only the recipient
-            token and masked account details.
+            {t("destinationBody")}
           </DialogDescription>
         </DialogHeader>
 
@@ -752,7 +754,7 @@ function PayoutAccountDialog({
                   ) : (
                     <Building2 className="h-4 w-4" />
                   )}
-                  {value === "MOBILE_MONEY" ? "Mobile money" : "Bank account"}
+                  {value === "MOBILE_MONEY" ? t("mobileMoney") : t("bankAccount")}
                 </button>
               ),
             )}
@@ -773,7 +775,7 @@ function PayoutAccountDialog({
               <SelectTrigger id="payout-institution" className="h-11 bg-white">
                 <SelectValue
                   placeholder={
-                    isLoadingInstitutions ? "Loading…" : "Select institution"
+                    isLoadingInstitutions ? common("loading") : t("selectInstitution")
                   }
                 />
               </SelectTrigger>
@@ -792,13 +794,13 @@ function PayoutAccountDialog({
               htmlFor="payout-account-name"
               className="text-sm font-semibold text-gray-800"
             >
-              Account holder name
+              {t("accountHolder")}
             </label>
             <Input
               id="payout-account-name"
               value={accountName}
               onChange={(event) => setAccountName(event.target.value)}
-              placeholder="Name registered on the account"
+              placeholder={t("accountHolderPlaceholder")}
               className="h-11"
             />
           </div>
@@ -810,7 +812,7 @@ function PayoutAccountDialog({
             >
               {type === "MOBILE_MONEY"
                 ? "Mobile-money number"
-                : "Account number"}
+                : t("accountNumber")}
             </label>
             <Input
               id="payout-account-number"
@@ -840,7 +842,7 @@ function PayoutAccountDialog({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-gray-900">
-                  Confirm with your verified phone
+                  {t("verifiedPhone")}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-gray-600">
                   {otpSentTo
@@ -858,7 +860,7 @@ function PayoutAccountDialog({
                 {isSendingOtp && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 )}
-                {otpSentTo ? "Resend" : "Send code"}
+                {otpSentTo ? t("resend") : t("sendCode")}
               </Button>
             </div>
             {otpSentTo && (

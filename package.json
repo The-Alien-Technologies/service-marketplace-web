@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test --experimental-strip-types lib/payment-state.test.mjs lib/languages.test.mjs lib/chat-visibility.test.mjs lib/support-navigation.test.mjs lib/client-session.test.mjs lib/geocoding.test.mjs"
+    "test": "node --test --experimental-strip-types lib/payment-state.test.mjs lib/languages.test.mjs lib/i18n-catalogs.test.mjs lib/chat-visibility.test.mjs lib/support-navigation.test.mjs lib/client-session.test.mjs lib/geocoding.test.mjs lib/provider-access.test.mjs lib/auth-entry-state.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -28,6 +28,7 @@
     "libphonenumber-js": "^1.12.23",
     "lucide-react": "^0.542.0",
     "next": "15.5.22",
+    "next-intl": "^4.14.1",
     "pg": "^8.20.0",
     "react": "19.1.0",
     "react-country-region-selector": "^4.0.2",

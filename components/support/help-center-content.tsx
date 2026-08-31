@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useContactSupport } from "@/hooks/use-contact-support";
 import { useProtectedNavigation } from "@/hooks/use-protected-navigation";
+import {useTranslations} from "next-intl";
 
 type HelpTopic =
   | "Getting started"
@@ -34,6 +35,54 @@ const TOPICS: HelpTopic[] = [
   "Payments & disputes",
   "Providing services",
 ];
+
+const TOPIC_KEYS: Record<HelpTopic, string> = {
+  "Getting started": "gettingStarted",
+  "Account & security": "accountSecurity",
+  "Hiring & orders": "hiringOrders",
+  "Payments & disputes": "paymentsDisputes",
+  "Providing services": "providingServices"
+};
+
+const ARTICLE_KEYS = [
+  "findProvider",
+  "supportAccount",
+  "updateProfile",
+  "forgotPassword",
+  "changePassword",
+  "notifications",
+  "trackOrder",
+  "quotes",
+  "projectDetails",
+  "delivery",
+  "paymentSuccess",
+  "paymentFailed",
+  "refund",
+  "dispute",
+  "service",
+  "providerQuotes",
+  "earnings"
+] as const;
+
+const ACTION_KEYS = [
+  "browseServices",
+  null,
+  "openProfile",
+  null,
+  "changePassword",
+  "manageNotifications",
+  "viewOrders",
+  "viewQuotes",
+  "openMessages",
+  null,
+  "checkOrders",
+  null,
+  null,
+  "viewDisputes",
+  "manageServices",
+  "openQuoteRequests",
+  "viewEarnings"
+] as const;
 
 const ARTICLES: HelpArticle[] = [
   {
@@ -166,10 +215,30 @@ export function HelpCenterContent({
 }: {
   readonly variant?: "public" | "dashboard";
 }) {
+  const t = useTranslations("Help");
+  const nav = useTranslations("Navigation");
+  const topicLabel = (topic: HelpTopic) => t(`topics.${TOPIC_KEYS[topic]}`);
+  const translatedArticles = useMemo(
+    () =>
+      ARTICLES.map((article, index) => {
+        const key = ARTICLE_KEYS[index];
+        const actionKey = ACTION_KEYS[index];
+        return {
+          ...article,
+          question: t(`articles.${key}Q`),
+          answer: t(`articles.${key}A`),
+          action:
+            article.action && actionKey
+              ? {...article.action, label: t(`actions.${actionKey}`)}
+              : undefined
+        };
+      }),
+    [t],
+  );
   const [activeTopic, setActiveTopic] = useState<HelpTopic>(TOPICS[0]);
   const [query, setQuery] = useState("");
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(
-    ARTICLES[0].question,
+    translatedArticles[0].question,
   );
   const contactSupport = useContactSupport();
   const navigate = useProtectedNavigation();
@@ -177,14 +246,14 @@ export function HelpCenterContent({
 
   const visibleArticles = useMemo(() => {
     if (normalizedQuery) {
-      return ARTICLES.filter((article) =>
-        `${article.question} ${article.answer} ${article.topic}`
+      return translatedArticles.filter((article) =>
+        `${article.question} ${article.answer} ${topicLabel(article.topic)}`
           .toLowerCase()
           .includes(normalizedQuery),
       );
     }
-    return ARTICLES.filter((article) => article.topic === activeTopic);
-  }, [activeTopic, normalizedQuery]);
+    return translatedArticles.filter((article) => article.topic === activeTopic);
+  }, [activeTopic, normalizedQuery, translatedArticles]);
 
   const isPublic = variant === "public";
 
@@ -207,19 +276,18 @@ export function HelpCenterContent({
           )}
         >
           <p className="mb-3 text-sm font-semibold text-brand-200">
-            Pavodah Help Center
+            {t("eyebrow")}
           </p>
           <h1 className="max-w-3xl text-3xl font-bold tracking-[-0.025em] sm:text-5xl">
-            Find the next step, without losing the thread.
+            {t("title")}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-green-100 sm:text-lg">
-            Practical answers for accounts, orders, payments, disputes, and
-            provider work.
+            {t("subtitle")}
           </p>
 
           <div className="relative mt-8 max-w-2xl">
             <label htmlFor={`help-search-${variant}`} className="sr-only">
-              Search the Help Center
+              {t("search")}
             </label>
             <Search
               aria-hidden="true"
@@ -230,14 +298,14 @@ export function HelpCenterContent({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search orders, payments, passwords…"
+              placeholder={t("searchPlaceholder")}
               className="h-14 w-full rounded-xl border border-white/20 bg-white pl-12 pr-12 text-base text-gray-950 shadow-[0_12px_28px_rgba(0,0,0,0.18)] outline-none placeholder:text-gray-500 focus-visible:ring-2 focus-visible:ring-brand-300 focus-visible:ring-offset-2 focus-visible:ring-offset-marketplace-600"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                aria-label="Clear Help Center search"
+                aria-label={t("clearSearch")}
                 className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
               >
                 <X className="h-4 w-4" />
@@ -263,11 +331,11 @@ export function HelpCenterContent({
             : "px-1 sm:px-0",
         )}
       >
-        <aside aria-label="Help topics">
-          <h2 className="text-sm font-semibold text-gray-950">Browse topics</h2>
+        <aside aria-label={t("helpTopics")}>
+          <h2 className="text-sm font-semibold text-gray-950">{t("browseTopics")}</h2>
           <div className="mt-4 flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
             {TOPICS.map((topic) => {
-              const count = ARTICLES.filter(
+              const count = translatedArticles.filter(
                 (article) => article.topic === topic,
               ).length;
               const isActive = !normalizedQuery && activeTopic === topic;
@@ -279,7 +347,7 @@ export function HelpCenterContent({
                     setActiveTopic(topic);
                     setQuery("");
                     setExpandedQuestion(
-                      ARTICLES.find((article) => article.topic === topic)
+                      translatedArticles.find((article) => article.topic === topic)
                         ?.question ?? null,
                     );
                   }}
@@ -291,7 +359,7 @@ export function HelpCenterContent({
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-950",
                   )}
                 >
-                  <span>{topic}</span>
+                  <span>{topicLabel(topic)}</span>
                   <span
                     className={cn(
                       "text-xs",
@@ -310,13 +378,11 @@ export function HelpCenterContent({
           <div className="border-b border-gray-200 pb-5">
             <h2 className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
               {normalizedQuery
-                ? `Search results for “${query.trim()}”`
-                : activeTopic}
+                ? t("searchResults", {query: query.trim()})
+                : topicLabel(activeTopic)}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              {visibleArticles.length === 1
-                ? "1 answer"
-                : `${visibleArticles.length} answers`}
+              {t("answerCount", {count: visibleArticles.length})}
             </p>
           </div>
 
@@ -372,18 +438,17 @@ export function HelpCenterContent({
           ) : (
             <div className="py-16 text-center">
               <h3 className="text-lg font-semibold text-gray-950">
-                No matching answer yet
+                {t("noAnswer")}
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-600">
-                Try a shorter search, browse a topic, or contact support for an
-                account-specific question.
+                {t("noAnswerBody")}
               </p>
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 className="mt-5 min-h-11 font-semibold text-green-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
               >
-                Clear search
+                {t("clearSearch")}
               </button>
             </div>
           )}
@@ -403,11 +468,10 @@ export function HelpCenterContent({
         >
           <div>
             <h2 className="text-2xl font-bold tracking-[-0.02em]">
-              Need help with your account?
+              {t("needHelp")}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-gray-300">
-              Start a secure support conversation so the team can follow the
-              issue and your previous messages in one place.
+              {t("needHelpBody")}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -417,14 +481,14 @@ export function HelpCenterContent({
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-green-500 px-5 py-3 text-sm font-semibold text-white hover:bg-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             >
               <MessageCircle className="h-4 w-4" />
-              Contact support
+              {nav("contactSupport")}
             </button>
             <a
               href="mailto:support@pavodah.com"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-700 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             >
               <Mail className="h-4 w-4" />
-              Email support
+              {t("emailSupport")}
             </a>
           </div>
         </div>

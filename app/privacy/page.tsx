@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
+import {getTranslations} from "next-intl/server";
 import {
   DocumentSection,
   PublicDocumentPage,
 } from "@/components/legal/public-document-page";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | Pavodah",
-  description:
-    "How Pavodah collects, uses, shares, and protects personal information.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal");
+  return {title: `${t("privacyTitle")} | Pavodah`, description: t("privacyDescription")};
+}
 
 const SECTIONS: DocumentSection[] = [
   {
@@ -90,13 +90,14 @@ const SECTIONS: DocumentSection[] = [
   },
 ];
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getTranslations("PrivacyDocument");
   return (
     <PublicDocumentPage
-      title="Privacy Policy"
-      summary="This policy explains what information Pavodah uses to operate the marketplace, complete transactions, communicate with users, and protect the service."
-      updatedAt="9 August 2026"
-      sections={SECTIONS}
+      title={t("title")}
+      summary={t("summary")}
+      updatedAt={new Date("2026-08-09T00:00:00Z")}
+      sections={t.raw("sections") as DocumentSection[]}
     />
   );
 }

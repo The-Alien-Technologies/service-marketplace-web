@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
+import {getTranslations} from "next-intl/server";
 import {
   DocumentSection,
   PublicDocumentPage,
 } from "@/components/legal/public-document-page";
 
-export const metadata: Metadata = {
-  title: "Terms of Service | Pavodah",
-  description:
-    "The terms that apply when clients, service providers, and administrators use Pavodah.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal");
+  return {title: `${t("termsTitle")} | Pavodah`, description: t("termsDescription")};
+}
 
 const SECTIONS: DocumentSection[] = [
   {
@@ -89,13 +89,14 @@ const SECTIONS: DocumentSection[] = [
   },
 ];
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getTranslations("TermsDocument");
   return (
     <PublicDocumentPage
-      title="Terms of Service"
-      summary="These terms explain the responsibilities that keep marketplace work, payment, communication, and dispute handling clear for everyone using Pavodah."
-      updatedAt="9 August 2026"
-      sections={SECTIONS}
+      title={t("title")}
+      summary={t("summary")}
+      updatedAt={new Date("2026-08-09T00:00:00Z")}
+      sections={t.raw("sections") as DocumentSection[]}
     />
   );
 }

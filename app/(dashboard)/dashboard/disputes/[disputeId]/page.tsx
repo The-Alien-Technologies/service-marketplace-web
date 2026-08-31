@@ -45,10 +45,12 @@ import {
 } from "@/types/dispute";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: DisputeStatus }) {
+  const t = useTranslations("Disputes");
   const styles: Record<DisputeStatus, string> = {
     OPEN: "bg-red-50 text-red-700 border-red-200",
     INVESTIGATING: "bg-amber-50 text-amber-700 border-amber-200",
@@ -66,7 +68,7 @@ function StatusBadge({ status }: { status: DisputeStatus }) {
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dots[status]}`} />
-      {DISPUTE_STATUS_LABELS[status]}
+      {t(status === "OPEN" ? "open" : status === "INVESTIGATING" ? "investigating" : status === "RESOLVED" ? "resolved" : "closed")}
     </span>
   );
 }
@@ -78,8 +80,9 @@ function PartyCard({
   role,
 }: {
   party: Dispute["client"];
-  role: "Client" | "Provider";
+  role: "client" | "provider";
 }) {
+  const common = useTranslations("Common");
   return (
     <div className="flex items-start gap-3">
       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
@@ -102,7 +105,7 @@ function PartyCard({
             {party.firstName} {party.lastName}
           </span>
           <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full">
-            {role}
+            {common(role)}
           </span>
         </div>
         <div className="space-y-0.5">
@@ -131,6 +134,9 @@ export default function DisputeDetailsPage({
 }: {
   params: Promise<{ disputeId: string }>;
 }) {
+  const t = useTranslations("Disputes");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { disputeId } = use(params);
   const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
   const [dispute, setDispute] = useState<Dispute | null>(null);
@@ -164,11 +170,11 @@ export default function DisputeDetailsPage({
         setRefundAmount(String(data.resolutionRefundAmount));
       }
     } catch {
-      toast.error("Failed to load dispute");
+      toast.error(t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [disputeId]);
+  }, [disputeId, t]);
 
   useEffect(() => {
     fetchDispute();
@@ -184,9 +190,9 @@ export default function DisputeDetailsPage({
         adminNote,
       );
       setDispute(updated);
-      toast.success("Review status updated");
+      toast.success(t("statusUpdated"));
     } catch {
-      toast.error("Failed to update dispute");
+      toast.error(t("updateFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -198,7 +204,7 @@ export default function DisputeDetailsPage({
       const amount = Number(refundAmount);
       if (!isValidPartialRefund(amount, refundableAmount)) {
         toast.error(
-          `Enter a partial refund below the remaining GHS ${refundableAmount.toFixed(2)} balance`,
+          t("partialRefundInvalid", { amount: format.number(refundableAmount, "currency") }),
         );
         return;
       }
@@ -218,14 +224,14 @@ export default function DisputeDetailsPage({
       );
       toast.success(
         resolutionType === "RELEASE_PROVIDER"
-          ? "Provider earnings released"
-          : "Refund submitted to Paystack",
+          ? t("earningsReleased")
+          : t("refundSubmitted"),
       );
       setResolveConfirmOpen(false);
       await fetchDispute();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to resolve dispute",
+        error instanceof Error ? error.message : t("resolveFailed"),
       );
     } finally {
       setIsSaving(false);
@@ -242,7 +248,7 @@ export default function DisputeDetailsPage({
 
   if (!dispute) {
     return (
-      <div className="text-center py-20 text-gray-500">Dispute not found.</div>
+      <div className="text-center py-20 text-gray-500">{t("notFound")}</div>
     );
   }
 
@@ -251,11 +257,11 @@ export default function DisputeDetailsPage({
       {/* Header & Breadcrumbs */}
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-500 mt-1">
             {isAdmin
-              ? "Review and resolve conflicts between customers and service providers."
-              : "Review the dispute status and resolution for this order."}
+              ? t("adminSubtitle")
+              : t("detailSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -263,7 +269,7 @@ export default function DisputeDetailsPage({
             href="/dashboard/disputes"
             className="hover:text-gray-900 transition-colors"
           >
-            Disputes
+            {t("title")}
           </Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900 font-medium font-mono">
@@ -284,46 +290,42 @@ export default function DisputeDetailsPage({
               <StatusBadge status={dispute.status} />
             </div>
             <span className="text-sm text-gray-500">
-              {new Date(dispute.createdAt).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              {format.dateTime(new Date(dispute.createdAt), "long")}
             </span>
           </div>
 
           {/* Order info */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm bg-gray-50 rounded-xl p-4">
             <div>
-              <span className="text-gray-500 text-xs block">Order</span>
+              <span className="text-gray-500 text-xs block">{t("order")}</span>
               <span className="font-bold text-gray-900">
                 #{dispute.order.orderNumber}
               </span>
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">Service</span>
+              <span className="text-gray-500 text-xs block">{common("service")}</span>
               <span className="font-medium text-gray-900">
                 {dispute.order.service.title}
               </span>
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">Plan</span>
+              <span className="text-gray-500 text-xs block">{t("plan")}</span>
               <span className="font-medium text-gray-900">
                 {dispute.order.planTitle}
               </span>
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">Total</span>
+              <span className="text-gray-500 text-xs block">{common("total")}</span>
               <span className="font-bold text-gray-900">
-                GHS {Number(dispute.order.total).toFixed(2)}
+                {format.number(Number(dispute.order.total), "currency")}
               </span>
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">Priority</span>
+              <span className="text-gray-500 text-xs block">{t("priority")}</span>
               <span
                 className={cn(
                   "font-medium",
@@ -334,7 +336,7 @@ export default function DisputeDetailsPage({
                       : "text-gray-600",
                 )}
               >
-                {DISPUTE_PRIORITY_LABELS[dispute.priority]}
+                {t(dispute.priority === "LOW" ? "low" : dispute.priority === "MEDIUM" ? "medium" : "high")}
               </span>
             </div>
           </div>
@@ -342,35 +344,47 @@ export default function DisputeDetailsPage({
           {/* Parties Involved */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-900">
-              Parties Involved
+              {t("parties")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white border border-gray-100 rounded-xl">
-              <PartyCard party={dispute.client} role="Client" />
-              <PartyCard party={dispute.provider} role="Provider" />
+              <PartyCard party={dispute.client} role="client" />
+              <PartyCard party={dispute.provider} role="provider" />
             </div>
             <Link
               href={`/dashboard/orders/${dispute.orderId}`}
               className="inline-flex items-center text-sm text-green-700 font-medium hover:underline"
             >
-              View order summary →
+              {t("viewOrderSummary")} →
             </Link>
           </div>
 
           {/* Issue Summary */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">Issue summary</h3>
+            <h3 className="text-lg font-bold text-gray-900">{t("issueSummary")}</h3>
             <div className="space-y-4 p-5 bg-white border border-gray-100 rounded-xl">
               <div>
                 <span className="block text-xs text-gray-500 mb-1">
-                  Issue Type
+                  {t("issueType")}
                 </span>
                 <span className="text-sm font-medium text-gray-900">
-                  {ISSUE_TYPE_LABELS[dispute.issueType]}
+                  {t(
+                    dispute.issueType === "LATE_DELIVERY"
+                      ? "issueLateDelivery"
+                      : dispute.issueType === "NON_DELIVERY"
+                        ? "issueNonDelivery"
+                        : dispute.issueType === "QUALITY_ISSUE"
+                          ? "issueQuality"
+                          : dispute.issueType === "PAYMENT_DISPUTE"
+                            ? "issuePayment"
+                            : dispute.issueType === "MISCOMMUNICATION"
+                              ? "issueCommunication"
+                              : "issueOther",
+                  )}
                 </span>
               </div>
               <div>
                 <span className="block text-xs text-gray-500 mb-1">
-                  Description
+                  {common("description")}
                 </span>
                 <p className="text-sm text-gray-900 leading-relaxed whitespace-pre-wrap">
                   {dispute.description}
@@ -385,14 +399,14 @@ export default function DisputeDetailsPage({
               <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-green-800 text-sm mb-1">
-                  Dispute {DISPUTE_STATUS_LABELS[dispute.status]}
+                  {t("title")} {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
                 </h4>
                 {dispute.adminNote && (
                   <p className="text-sm text-green-700">{dispute.adminNote}</p>
                 )}
                 {dispute.resolvedAt && (
                   <p className="text-xs text-green-600 mt-1">
-                    {new Date(dispute.resolvedAt).toLocaleString()}
+                    {format.dateTime(new Date(dispute.resolvedAt), "dateTime")}
                   </p>
                 )}
               </div>
@@ -406,7 +420,7 @@ export default function DisputeDetailsPage({
           {isAdmin && (
           <div className="bg-white border border-gray-100 rounded-xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-gray-900">
-              Admin Resolution
+              {t("adminResolution")}
             </h3>
 
             {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" ? (
@@ -416,7 +430,7 @@ export default function DisputeDetailsPage({
                     htmlFor="dispute-review-status"
                     className="text-xs font-medium text-gray-700"
                   >
-                    Review status
+                    {t("reviewStatus")}
                   </label>
                   <div className="flex gap-2">
                     <Select
@@ -432,9 +446,9 @@ export default function DisputeDetailsPage({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="OPEN">Open</SelectItem>
+                        <SelectItem value="OPEN">{t("open")}</SelectItem>
                         <SelectItem value="INVESTIGATING">
-                          Investigating
+                          {t("investigating")}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -443,7 +457,7 @@ export default function DisputeDetailsPage({
                       onClick={handleSaveStatus}
                       disabled={isSaving || selectedStatus === dispute.status}
                     >
-                      Save
+                      {common("save")}
                     </Button>
                   </div>
                 </div>
@@ -453,7 +467,7 @@ export default function DisputeDetailsPage({
                     htmlFor="dispute-financial-outcome"
                     className="text-xs font-medium text-gray-700"
                   >
-                    Financial outcome
+                    {t("financialOutcome")}
                   </label>
                   <Select
                     value={resolutionType}
@@ -469,13 +483,13 @@ export default function DisputeDetailsPage({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="RELEASE_PROVIDER">
-                        Release provider earnings
+                        {t("releaseProvider")}
                       </SelectItem>
                       <SelectItem value="FULL_REFUND">
-                        Full customer refund
+                        {t("fullCustomerRefund")}
                       </SelectItem>
                       <SelectItem value="PARTIAL_REFUND">
-                        Partial customer refund
+                        {t("partialCustomerRefund")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -487,7 +501,7 @@ export default function DisputeDetailsPage({
                       htmlFor="dispute-refund-amount"
                       className="text-xs font-medium text-gray-700"
                     >
-                      Customer refund amount (GHS)
+                      {t("refundAmount")}
                     </label>
                     <Input
                       id="dispute-refund-amount"
@@ -531,12 +545,12 @@ export default function DisputeDetailsPage({
                 htmlFor="dispute-resolution-note"
                 className="text-xs font-medium text-gray-700"
               >
-                Resolution note{" "}
+                {t("resolutionNote")}{" "}
                 <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <Textarea
                 id="dispute-resolution-note"
-                placeholder="Add an internal note about how this dispute was resolved..."
+                placeholder={t("resolutionNotePlaceholder")}
                 className="min-h-[120px] bg-white resize-none text-sm"
                 value={adminNote}
                 onChange={(e) => setAdminNote(e.target.value)}
@@ -555,10 +569,10 @@ export default function DisputeDetailsPage({
                   <CheckCircle2 className="w-4 h-4" />
                 )}
                 {isSaving
-                  ? "Submitting..."
+                  ? common("submitting")
                   : resolutionType === "RELEASE_PROVIDER"
-                    ? "Release earnings"
-                    : "Submit refund"}
+                    ? t("releaseEarnings")
+                    : t("submitRefund")}
               </Button>
             )}
           </div>
@@ -566,7 +580,7 @@ export default function DisputeDetailsPage({
 
           {/* Timeline */}
           <div className="border border-gray-200 rounded-xl p-5 bg-white space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">Timeline</h3>
+            <h3 className="text-sm font-bold text-gray-900">{t("timeline")}</h3>
             <div className="relative space-y-6 pl-2">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" />
 
@@ -576,13 +590,13 @@ export default function DisputeDetailsPage({
                   <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
                 </div>
                 <p className="text-sm font-medium text-gray-900 leading-none">
-                  Dispute opened
+                  {t("opened")}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {new Date(dispute.createdAt).toLocaleString()}
+                  {format.dateTime(new Date(dispute.createdAt), "dateTime")}
                 </p>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-gray-100 text-gray-600 mt-1">
-                  Client
+                  {common("client")}
                 </span>
               </div>
 
@@ -593,14 +607,15 @@ export default function DisputeDetailsPage({
                     <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-900 leading-none">
-                    Status changed to &quot;
-                    {DISPUTE_STATUS_LABELS[dispute.status]}&quot;
+                    {t("statusChanged", {
+                      status: t(dispute.status === "INVESTIGATING" ? "investigating" : dispute.status === "RESOLVED" ? "resolved" : "closed"),
+                    })}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {new Date(dispute.updatedAt).toLocaleString()}
+                    {format.dateTime(new Date(dispute.updatedAt), "dateTime")}
                   </p>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-gray-100 text-gray-600 mt-1">
-                    Admin
+                    {common("admin")}
                   </span>
                 </div>
               )}
@@ -612,14 +627,13 @@ export default function DisputeDetailsPage({
                     <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-900 leading-none">
-                    Dispute{" "}
-                    {DISPUTE_STATUS_LABELS[dispute.status].toLowerCase()}
+                    {t("title")} {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {new Date(dispute.resolvedAt).toLocaleString()}
+                    {format.dateTime(new Date(dispute.resolvedAt), "dateTime")}
                   </p>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-medium bg-green-100 text-green-700 mt-1">
-                    Admin
+                    {common("admin")}
                   </span>
                 </div>
               )}
@@ -631,7 +645,7 @@ export default function DisputeDetailsPage({
                     <Clock className="w-3 h-3 text-gray-400" />
                   </div>
                   <p className="text-sm text-gray-400 leading-none italic">
-                    Awaiting review
+                    {t("awaitingReview")}
                   </p>
                 </div>
               )}
@@ -645,15 +659,15 @@ export default function DisputeDetailsPage({
           <DialogHeader>
             <DialogTitle>
               {resolutionType === "RELEASE_PROVIDER"
-                ? "Release provider earnings?"
+                ? t("releaseTitle")
                 : resolutionType === "FULL_REFUND"
                   ? `Refund the remaining GHS ${refundableAmount.toFixed(2)}?`
                   : `Refund GHS ${Number(refundAmount || 0).toFixed(2)}?`}
             </DialogTitle>
             <DialogDescription>
               {resolutionType === "RELEASE_PROVIDER"
-                ? "This makes the provider’s earnings eligible for withdrawal and resolves the dispute."
-                : "This submits a real Paystack refund and reserves the order while the provider confirms it. This action cannot be undone in Pavodah."}
+                ? t("releaseBody")
+                : t("refundBody")}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
@@ -666,7 +680,7 @@ export default function DisputeDetailsPage({
               onClick={() => setResolveConfirmOpen(false)}
               disabled={isSaving}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="bg-green-700 text-white hover:bg-green-800"
@@ -674,7 +688,7 @@ export default function DisputeDetailsPage({
               disabled={isSaving}
             >
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Confirm resolution
+              {t("confirmResolution")}
             </Button>
           </DialogFooter>
         </DialogContent>

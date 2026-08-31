@@ -6,6 +6,7 @@ import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import { CategoryCard, CategoryCardData } from "../cards/category-card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Swiper as SwiperType } from "swiper";
+import { useTranslations } from "next-intl";
 
 // Import Swiper styles
 import "swiper/css";
@@ -25,6 +26,7 @@ export function CategoryCarousel({
   subtitle,
   onCategoryClick,
 }: CategoryCarouselProps) {
+  const t = useTranslations("Common");
   const swiperRef = useRef<SwiperType | null>(null);
 
   return (
@@ -86,14 +88,14 @@ export function CategoryCarousel({
           <button
             onClick={() => swiperRef.current?.slidePrev()}
             className="hidden sm:flex absolute left-0 top-[40%] -translate-y-1/2 z-10 w-12 h-12 items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous slide"
+            aria-label={t("previousSlide")}
           >
             <ChevronLeft className="w-6 h-6 text-gray-900 dark:text-white" />
           </button>
           <button
             onClick={() => swiperRef.current?.slideNext()}
             className="hidden sm:flex absolute right-0 top-[40%] -translate-y-1/2 z-10 w-12 h-12 items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Next slide"
+            aria-label={t("nextSlide")}
           >
             <ChevronRight className="w-6 h-6 text-gray-900 dark:text-white" />
           </button>

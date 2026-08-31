@@ -35,6 +35,7 @@ import {
   getSupportedLanguage,
   SUPPORTED_LANGUAGES,
 } from "@/lib/languages";
+import {useTranslations} from "next-intl";
 
 // Inline Switch Component
 function Switch({
@@ -69,6 +70,8 @@ function Switch({
 }
 
 export default function ProfileSettingsPage() {
+  const t = useTranslations("Profile");
+  const auth = useTranslations("Auth");
   const { user: storedUser, setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(false);
@@ -150,11 +153,11 @@ export default function ProfileSettingsPage() {
       setIsLoading(true);
       const { user: updatedUser } = await apiService.updateUserProfile(data);
       setUser(updatedUser);
-      toast.success("Profile updated successfully");
+      toast.success(t("updated"));
       if (section === "personal") setIsEditingPersonal(false);
       if (section === "professional") setIsEditingProfessional(false);
     } catch (error) {
-      toast.error((error as Error).message || "Failed to update profile");
+      toast.error((error as Error).message || t("updateFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -174,9 +177,9 @@ export default function ProfileSettingsPage() {
       const { user: updatedUser } =
         await apiService.updateUserProfile(updateData);
       setUser(updatedUser);
-      toast.success("Preference updated");
+      toast.success(t("preferenceUpdated"));
     } catch {
-      toast.error("Failed to update preference");
+      toast.error(t("preferenceFailed"));
     }
   };
 
@@ -187,9 +190,9 @@ export default function ProfileSettingsPage() {
       setIsLoading(true);
       await apiService.changePassword(passwordForm.old, passwordForm.new);
       setPasswordForm({ old: "", new: "", confirm: "" });
-      toast.success("Password updated successfully");
+      toast.success(t("passwordUpdated"));
     } catch (error) {
-      toast.error((error as Error).message || "Failed to update password");
+      toast.error((error as Error).message || t("passwordFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -207,25 +210,24 @@ export default function ProfileSettingsPage() {
   }
 
   if (!storedUser)
-    return <div className="p-8">Please log in to view profile.</div>;
+    return <div className="p-8">{t("loginRequired")}</div>;
 
   return (
     <div className="space-y-8 pb-12 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
-          Manage your personal info, professional details, and account
-          preferences.
+          {t("subtitle")}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-100 pb-1 overflow-x-auto">
         {[
-          { id: "general", label: "General settings" },
-          { id: "password", label: "Change password" },
-          { id: "preferences", label: "Preferences & Notifications" },
+          { id: "general", label: t("general") },
+          { id: "password", label: t("changePassword") },
+          { id: "preferences", label: t("preferences") },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -285,7 +287,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6 rounded-xl bg-gray-50/50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-gray-900">
-                Personal Information
+                {t("personalInformation")}
               </h3>
               {!isEditingPersonal ? (
                 <button
@@ -429,7 +431,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">
-                Professional Information
+                {t("professionalDetails")}
               </h3>
               {!isEditingProfessional ? (
                 <button
@@ -749,7 +751,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                In-app Notifications
+                {t("inAppNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.notificationsEnabled ?? true}
@@ -780,7 +782,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                Email Notifications
+                {t("emailNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.emailNotificationsEnabled ?? true}
@@ -810,7 +812,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                SMS Notifications
+                {t("smsNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.smsNotificationsEnabled ?? false}
@@ -838,10 +840,10 @@ export default function ProfileSettingsPage() {
 
           <div className="space-y-4 max-w-md">
             <h3 className="text-sm font-medium text-gray-700">
-              Language Preference
+              {t("languagePreference")}
             </h3>
             <Select
-              defaultValue={
+              value={
                 getSupportedLanguage(storedUser?.preferredLanguage).value
               }
               onValueChange={(val) =>
@@ -851,7 +853,7 @@ export default function ProfileSettingsPage() {
               <SelectTrigger className="bg-white">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-gray-500" />
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={auth("selectLanguage")} />
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -866,12 +868,12 @@ export default function ProfileSettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-red-500 flex items-center gap-2">
-              Delete Account <Trash2 className="w-4 h-4" />
+              {t("deleteAccount")} <Trash2 className="w-4 h-4" />
             </h3>
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
                 {[
-                  "When you delete your account, you lose access to account services, and we permanently delete your personal data.",
+                  t("deleteWarning"),
                 ].map((item) => (
                   <li
                     key={item}

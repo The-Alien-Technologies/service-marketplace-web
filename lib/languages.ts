@@ -1,15 +1,23 @@
-export const SUPPORTED_LANGUAGES = [
-  { value: "en", label: "English", shortLabel: "EN" },
-] as const;
+import {
+  defaultLocale,
+  localeMetadata,
+  locales,
+  normalizeLocale,
+  type Locale
+} from "../i18n/config.ts";
 
-export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0];
+export type {Locale};
+
+export const SUPPORTED_LANGUAGES = locales.map((value) => ({
+  value,
+  ...localeMetadata[value]
+}));
+
+export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES.find(
+  ({value}) => value === defaultLocale
+)!;
 
 export function getSupportedLanguage(value?: string | null) {
-  const normalizedValue = value?.trim().toLowerCase();
-
-  return (
-    SUPPORTED_LANGUAGES.find(
-      (language) => language.value === normalizedValue,
-    ) ?? DEFAULT_LANGUAGE
-  );
+  const locale = normalizeLocale(value) ?? defaultLocale;
+  return SUPPORTED_LANGUAGES.find(({value}) => value === locale)!;
 }

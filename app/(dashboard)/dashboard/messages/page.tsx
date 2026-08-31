@@ -18,10 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/store/chat-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
 
 function MessagesContent() {
+  const t = useTranslations("Messaging");
+  const format = useFormatter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const {
@@ -150,11 +153,11 @@ function MessagesContent() {
         )}
       >
         <div className="p-4 pb-2 sm:p-6 sm:pb-2">
-          <h1 className="text-xl font-bold text-gray-900 mb-4">Messages</h1>
+          <h1 className="text-xl font-bold text-gray-900 mb-4">{t("title")}</h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search for chat"
+              placeholder={t("searchChats")}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-9 bg-white border-gray-200 rounded-lg"
@@ -167,7 +170,7 @@ function MessagesContent() {
             const otherUser =
               chat.userId === user?.id ? chat.provider : chat.user;
             const lastMessage =
-              chat.messages?.[0]?.content || "No messages yet";
+              chat.messages?.[0]?.content || t("noMessages");
             const isImage = IMAGE_EXTENSIONS.test(lastMessage);
 
             return (
@@ -205,7 +208,7 @@ function MessagesContent() {
                       {otherUser?.firstName} {otherUser?.lastName}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {new Date(chat.updatedAt).toLocaleTimeString([], {
+                      {format.dateTime(new Date(chat.updatedAt), {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -213,11 +216,11 @@ function MessagesContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 flex-1 truncate text-sm text-gray-500">
-                      {isImage ? "📎 Image" : lastMessage}
+                      {isImage ? `📎 ${t("imageAttachment")}` : lastMessage}
                     </p>
                     {chat.unreadCount > 0 && (
                       <span className="flex min-h-5 min-w-5 items-center justify-center rounded-full bg-green-700 px-1.5 text-[11px] font-bold text-white">
-                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                        {chat.unreadCount > 99 ? "99+" : format.number(chat.unreadCount)}
                       </span>
                     )}
                   </div>
@@ -228,8 +231,8 @@ function MessagesContent() {
           {filteredConversations.length === 0 && (
             <p className="px-6 py-10 text-center text-sm text-gray-500">
               {conversations.length === 0
-                ? "No conversations yet."
-                : "No conversations match your search."}
+                ? t("noConversations")
+                : t("noSearchMatches")}
             </p>
           )}
         </div>
@@ -256,7 +259,7 @@ function MessagesContent() {
                     <button
                       type="button"
                       onClick={clearActiveConversation}
-                      aria-label="Back to conversations"
+                      aria-label={t("backToConversations")}
                       className="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
                     >
                       <ArrowLeft className="h-5 w-5" />
@@ -315,7 +318,7 @@ function MessagesContent() {
                               >
                                 <Image
                                   src={msg.content}
-                                  alt="shared image"
+                                  alt={t("sharedImage")}
                                   width={200}
                                   height={200}
                                   className="rounded-lg object-cover max-h-48 w-auto"
@@ -331,7 +334,7 @@ function MessagesContent() {
                                 isMe ? "text-green-100" : "text-gray-400",
                               )}
                             >
-                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                              {format.dateTime(new Date(msg.createdAt), {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
@@ -379,7 +382,7 @@ function MessagesContent() {
                       size="icon"
                       className="text-gray-400 hover:text-gray-600 mb-0.5"
                       onClick={() => setShowEmojiPicker((v) => !v)}
-                      aria-label="Choose emoji"
+                      aria-label={t("chooseEmoji")}
                     >
                       <Smile className="w-6 h-6" />
                     </Button>
@@ -391,7 +394,7 @@ function MessagesContent() {
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={handleKeyDown}
                         maxLength={5000}
-                        placeholder="Type here..."
+                        placeholder={t("typeMessage")}
                         className="min-h-11 flex-1 border-0 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-500 sm:text-sm"
                       />
                       <div className="flex items-center gap-2 text-gray-400">
@@ -401,7 +404,7 @@ function MessagesContent() {
                           onClick={handleSend}
                           disabled={!isConnected || !inputText.trim()}
                           className="hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Send message"
+                          aria-label={t("sendMessage")}
                         >
                           <Send className="w-5 h-5 -rotate-45" />
                         </button>
@@ -411,7 +414,7 @@ function MessagesContent() {
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploading || !isConnected}
                           className="hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label="Attach file"
+                          aria-label={t("attachFile")}
                         >
                           {isUploading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -432,8 +435,7 @@ function MessagesContent() {
               <div className="w-8 h-8 bg-gray-400 rounded-full" />
             </div>
             <p className="text-gray-500 font-medium">
-              Messages will appear here. Choose a conversation to discuss
-              requirements, updates, and orders.
+              {t("emptySelection")}
             </p>
           </div>
         )}

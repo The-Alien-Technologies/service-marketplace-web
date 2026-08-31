@@ -28,16 +28,18 @@ import { QuoteRequest, QuoteStatus } from "@/types/quote";
 import { toast } from "react-toastify";
 import { ChatBox } from "@/components/sections/service-detail/chat-box";
 import { useChatStore } from "@/store/chat-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 // --- Components ---
 
 function StatusBadge({ status }: { status: QuoteStatus }) {
+  const t = useTranslations("Quotes");
   const labels: Record<QuoteStatus, string> = {
-    NEW: "New Request",
-    PENDING: "Pending",
-    ACCEPTED: "Accepted",
-    DECLINED: "Declined",
-    EXPIRED: "Expired",
+    NEW: t("newRequest"),
+    PENDING: t("pending"),
+    ACCEPTED: t("accepted"),
+    DECLINED: t("declined"),
+    EXPIRED: t("expired"),
   };
 
   let badgeStyles = "bg-gray-50 text-gray-700 border-gray-200";
@@ -80,11 +82,16 @@ export default function QuoteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = useTranslations("Quotes");
+  const common = useTranslations("Common");
+  const marketplace = useTranslations("Marketplace");
+  const orders = useTranslations("Orders");
+  const format = useFormatter();
   const { id } = use(params);
   const [quote, setQuote] = useState<QuoteRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
-  const [declineReason, setDeclineReason] = useState("Too busy at the moment");
+  const [declineReason, setDeclineReason] = useState(t("tooBusy"));
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { startCustomConversation, setActiveConversation } = useChatStore();
@@ -105,22 +112,22 @@ export default function QuoteDetailPage({
         setOfferBudget(String(Number(data.budget)));
         setOfferDelivery(data.deliveryTime);
       } catch {
-        toast.error("Failed to load quote request.");
+        toast.error(t("detailsLoadFailed"));
       } finally {
         setIsLoading(false);
       }
     };
     fetchQuote();
-  }, [id]);
+  }, [id, t]);
 
   const handleAccept = async () => {
     setIsActionLoading(true);
     try {
       const updated = await apiService.updateQuoteStatus(id, "ACCEPTED");
       setQuote(updated);
-      toast.success("Quote accepted!");
+      toast.success(t("quoteAccepted"));
     } catch {
-      toast.error("Failed to accept quote.");
+      toast.error(t("acceptFailed"));
     } finally {
       setIsActionLoading(false);
     }
@@ -136,9 +143,9 @@ export default function QuoteDetailPage({
       );
       setQuote(updated);
       setIsDeclineModalOpen(false);
-      toast.success("Quote declined.");
+      toast.success(t("quoteDeclined"));
     } catch {
-      toast.error("Failed to decline quote.");
+      toast.error(t("declineFailed"));
     } finally {
       setIsActionLoading(false);
     }
@@ -155,9 +162,9 @@ export default function QuoteDetailPage({
         providerNote: offerNote,
       });
       setQuote(updated);
-      toast.success("Offer sent!");
+      toast.success(t("offerSent"));
     } catch {
-      toast.error("Failed to send offer.");
+      toast.error(t("sendOfferFailed"));
     } finally {
       setIsActionLoading(false);
     }
@@ -185,7 +192,7 @@ export default function QuoteDetailPage({
   if (!quote) {
     return (
       <div className="text-center py-16 text-gray-500">
-        Quote request not found.
+        {t("notFound")}
       </div>
     );
   }
@@ -201,10 +208,8 @@ export default function QuoteDetailPage({
     <div className="space-y-8 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Quote Request</h1>
-        <p className="text-gray-500 mt-1">
-          View, manage, and respond to client quote requests.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("providerTitle")}</h1>
+        <p className="text-gray-500 mt-1">{t("providerSubtitle")}</p>
       </div>
 
       {/* Breadcrumb */}
@@ -213,7 +218,7 @@ export default function QuoteDetailPage({
           href="/dashboard/quotes"
           className="hover:text-gray-900 transition-colors"
         >
-          Quote Requests
+          {t("providerTitle")}
         </Link>
         <ChevronRight className="w-4 h-4" />
         <span className="text-gray-900">{clientName}</span>
@@ -246,32 +251,28 @@ export default function QuoteDetailPage({
               <StatusBadge status={quote.status} />
             </div>
             <span className="text-sm text-gray-500">
-              {new Date(quote.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {format.dateTime(new Date(quote.createdAt), "long")}
             </span>
           </div>
 
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-1">
-                Project title
+                {t("projectTitle")}
               </h3>
               <p className="text-gray-600">{quote.projectTitle}</p>
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-1">Budget</h3>
+              <h3 className="text-sm font-bold text-gray-900 mb-1">{t("budget")}</h3>
               <p className="text-gray-600">
-                {quote.currency} {Number(quote.budget).toLocaleString()}
+                {quote.currency} {format.number(Number(quote.budget))}
               </p>
             </div>
 
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-1">
-                Project description
+                {t("requestDescription")}
               </h3>
               <p className="text-gray-600 leading-relaxed">
                 {quote.description}
@@ -280,7 +281,7 @@ export default function QuoteDetailPage({
 
             <div>
               <h3 className="text-sm font-bold text-gray-900 mb-1">
-                Delivery Time
+                {t("deliveryTime")}
               </h3>
               <p className="text-gray-600">{quote.deliveryTime}</p>
             </div>
@@ -289,7 +290,7 @@ export default function QuoteDetailPage({
             {quote.attachments.length > 0 && (
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-3">
-                  Attachments
+                  {t("attachments")}
                 </h3>
                 <div className="space-y-2">
                   {quote.attachments.map((url, i) => {
@@ -316,7 +317,7 @@ export default function QuoteDetailPage({
                             rel="noreferrer"
                             className="text-green-700 text-sm font-medium hover:underline"
                           >
-                            Preview
+                            {t("preview")}
                           </a>
                           <a
                             href={url}
@@ -324,7 +325,7 @@ export default function QuoteDetailPage({
                             className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
                           >
                             <Download className="w-4 h-4" />
-                            Download
+                            {common("download")}
                           </a>
                         </div>
                       </div>
@@ -345,9 +346,9 @@ export default function QuoteDetailPage({
                   {isActionLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : isAccepted ? (
-                    "Accepted"
+                    t("accepted")
                   ) : (
-                    "Accept offer"
+                    t("acceptOffer")
                   )}
                 </Button>
                 {isNew && (
@@ -357,7 +358,7 @@ export default function QuoteDetailPage({
                     onClick={() => setIsDeclineModalOpen(true)}
                     disabled={isActionLoading}
                   >
-                    Decline
+                    {t("decline")}
                   </Button>
                 )}
                 <Button
@@ -366,7 +367,7 @@ export default function QuoteDetailPage({
                   onClick={handleMessageClient}
                 >
                   <Mail className="w-4 h-4" />
-                  Message client
+                  {t("messageClient")}
                 </Button>
               </div>
             )}
@@ -374,14 +375,14 @@ export default function QuoteDetailPage({
             {isPending && (
               <div className="pt-4 flex items-center gap-3">
                 <Button className="bg-gray-900 hover:bg-gray-800 text-white font-medium min-w-[120px] rounded-lg">
-                  Cancel Quote
+                  {t("cancelQuote")}
                 </Button>
                 <Button
                   variant="outline"
                   className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
                 >
                   <Mail className="w-4 h-4" />
-                  Message client
+                  {t("messageClient")}
                 </Button>
               </div>
             )}
@@ -392,18 +393,18 @@ export default function QuoteDetailPage({
         <div className="xl:col-span-1">
           {isNew && (
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-              <h3 className="font-bold text-gray-900 mb-1">Send Your Offer</h3>
+              <h3 className="font-bold text-gray-900 mb-1">{t("sendOffer")}</h3>
               <p className="text-xs text-gray-500 mb-6">
-                Customize your proposal for this request.
+                {t("customizeOffer")}
               </p>
 
               <form className="space-y-5" onSubmit={handleSendOffer}>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    Project title
+                    {t("projectTitle")}
                   </label>
                   <Input
-                    placeholder='Example: "Standard Interior Package"'
+                    placeholder={t("offerTitlePlaceholder")}
                     className="bg-white"
                     value={offerTitle}
                     onChange={(e) => setOfferTitle(e.target.value)}
@@ -413,27 +414,27 @@ export default function QuoteDetailPage({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    Delivery time
+                    {t("deliveryTime")}
                   </label>
                   <Select
                     value={offerDelivery}
                     onValueChange={setOfferDelivery}
                   >
                     <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Delivery time" />
+                      <SelectValue placeholder={t("deliveryTime")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1-3 Days">1-3 Days</SelectItem>
-                      <SelectItem value="3-5 Days">3-5 Days</SelectItem>
-                      <SelectItem value="1-2 Weeks">1-2 Weeks</SelectItem>
-                      <SelectItem value="1 Month+">1 Month+</SelectItem>
+                      <SelectItem value="1-3 Days">{marketplace("oneToThreeDays")}</SelectItem>
+                      <SelectItem value="3-5 Days">{marketplace("threeToFiveDays")}</SelectItem>
+                      <SelectItem value="1-2 Weeks">{marketplace("oneToTwoWeeks")}</SelectItem>
+                      <SelectItem value="1 Month+">{marketplace("oneMonthPlus")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    Budget (GHS)
+                    {t("budgetGhs")}
                   </label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 border-r border-gray-200 pr-2 h-full py-2">
@@ -454,10 +455,10 @@ export default function QuoteDetailPage({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    Note
+                    {t("note")}
                   </label>
                   <Textarea
-                    placeholder="Type here..."
+                    placeholder={t("messagePlaceholder")}
                     className="bg-white min-h-[100px] resize-none"
                     value={offerNote}
                     onChange={(e) => setOfferNote(e.target.value)}
@@ -472,7 +473,7 @@ export default function QuoteDetailPage({
                   {isActionLoading && (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   )}
-                  Send offer
+                  {t("sendOffer")}
                 </Button>
               </form>
             </div>
@@ -480,9 +481,9 @@ export default function QuoteDetailPage({
 
           {isDeclined && (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="font-bold text-gray-900 mb-4">Decline reason</h3>
+              <h3 className="font-bold text-gray-900 mb-4">{t("declineReason")}</h3>
               <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-                {quote.declineReason || "No reason provided."}
+                {quote.declineReason || t("noReason")}
               </div>
             </div>
           )}
@@ -493,10 +494,10 @@ export default function QuoteDetailPage({
                 <span className="w-4 h-4 rounded-full border border-gray-400 flex items-center justify-center text-[10px] font-serif text-gray-500">
                   i
                 </span>
-                Important note
+                {orders("importantNote")}
               </h3>
               <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-                No response within 7 days
+                {t("noResponse")}
               </div>
             </div>
           )}
@@ -508,21 +509,15 @@ export default function QuoteDetailPage({
         <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-gray-900">
-              Please tell us why you&apos;re declining
+              {t("declinePrompt")}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
-              (Optional, helps us improve and inform the client)
+              {t("declineHelp")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            {[
-              "Too busy at the moment",
-              "Outside my service area",
-              "Budget too low",
-              "Doesn't match my expertise",
-              "Other",
-            ].map((reason) => (
+            {[t("tooBusy"), t("outsideArea"), t("budgetLow"), t("expertiseMismatch"), t("other")].map((reason) => (
               <label
                 key={reason}
                 className="flex items-center gap-3 cursor-pointer group"
@@ -550,13 +545,13 @@ export default function QuoteDetailPage({
               </label>
             ))}
 
-            {declineReason === "Other" && (
+            {declineReason === t("other") && (
               <div className="pt-2 pl-7">
                 <label className="text-xs font-medium text-gray-700 block mb-1.5">
-                  Message to client
+                  {t("messageClientLabel")}
                 </label>
                 <Textarea
-                  placeholder="Type your message here..."
+                  placeholder={t("replyPlaceholder")}
                   className="bg-white resize-none h-24"
                 />
               </div>
@@ -570,7 +565,7 @@ export default function QuoteDetailPage({
               onClick={() => setIsDeclineModalOpen(false)}
               disabled={isActionLoading}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white flex items-center justify-center gap-2"
@@ -578,7 +573,7 @@ export default function QuoteDetailPage({
               disabled={isActionLoading}
             >
               {isActionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit &amp; Decline
+              {t("submitDecline")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import {useTranslations} from "next-intl";
 
 export function AppDownloadSection() {
+  const t = useTranslations("Home");
   return (
     <section className="relative bg-gradient-to-br from-[#1a3a2e] to-[#0d1f1a] dark:from-gray-900 dark:to-gray-950 overflow-hidden md:mb-[96px]">
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
@@ -13,7 +15,7 @@ export function AppDownloadSection() {
               {/* Desktop Image */}
               <Image
                 src="/assets/site-images/home_female_hand.png"
-                alt="Mobile app on phone"
+                alt={t("appImageAlt")}
                 fill
                 className="hidden md:block object-cover object-left"
                 priority
@@ -21,7 +23,7 @@ export function AppDownloadSection() {
               {/* Mobile Image */}
               <Image
                 src="/assets/site-images/home_female_hand_mobile.png"
-                alt="Mobile app on phone"
+                alt={t("appImageAlt")}
                 fill
                 className="block md:hidden object-contain object-center"
                 priority
@@ -33,14 +35,12 @@ export function AppDownloadSection() {
           <div className="flex flex-col justify-center space-y-6 px-1 py-8 text-white sm:px-4 md:col-span-3 md:space-y-8 md:py-0 lg:px-16">
             {/* Stylish Heading */}
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[64px] font-bold leading-tight font-[family-name:var(--font-dancing-script)]">
-              Get Services Anytime, Anywhere
+              {t("appTitle")}
             </h2>
 
             {/* Description */}
             <p className="text-base md:text-lg lg:text-xl text-white/90 max-w-xl leading-relaxed">
-              Hire trusted pros or sell your skills on the go. Download the{" "}
-              <span className="text-[#86EFAC] font-semibold">Pavodah</span> app
-              today.
+              {t("appBody")}
             </p>
 
             {/* App Store Badges */}
@@ -48,11 +48,11 @@ export function AppDownloadSection() {
               <a
                 href="#"
                 className="inline-block transition-transform hover:scale-105"
-                aria-label="Download on Google Play Store"
+                aria-label={t("googlePlay")}
               >
                 <Image
                   src="/assets/site-images/playstore_badge.png"
-                  alt="Get it on Google Play"
+                  alt={t("googlePlay")}
                   width={150}
                   height={45}
                   className="h-[45px] w-auto"
@@ -61,11 +61,11 @@ export function AppDownloadSection() {
               <a
                 href="#"
                 className="inline-block transition-transform hover:scale-105"
-                aria-label="Download on App Store"
+                aria-label={t("appStore")}
               >
                 <Image
                   src="/assets/site-images/app_store_badge.png"
-                  alt="Download on the App Store"
+                  alt={t("appStore")}
                   width={150}
                   height={45}
                   className="h-[45px] w-auto"
