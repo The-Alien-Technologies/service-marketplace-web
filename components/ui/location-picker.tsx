@@ -15,6 +15,7 @@ import {
   searchLocations,
 } from "@/lib/geocoding";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface LocationPickerProps {
   label: string;
@@ -26,16 +27,6 @@ interface LocationPickerProps {
   error?: string;
 }
 
-function geolocationErrorMessage(error: GeolocationPositionError): string {
-  if (error.code === error.PERMISSION_DENIED) {
-    return "Location permission was denied. Search for your area instead.";
-  }
-  if (error.code === error.TIMEOUT) {
-    return "Finding your location took too long. Try again or search manually.";
-  }
-  return "We could not get your current location. Try searching for your area.";
-}
-
 export function LocationPicker({
   label,
   placeholder,
@@ -45,6 +36,7 @@ export function LocationPicker({
   disabled = false,
   error,
 }: LocationPickerProps) {
+  const t = useTranslations("Common");
   const [query, setQuery] = useState(
     selectedLocation?.formattedAddress ?? "",
   );
@@ -130,11 +122,7 @@ export function LocationPicker({
         setResults([]);
         setHasSearched(true);
         setIsOpen(true);
-        setSearchError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Location search is unavailable. Please try again.",
-        );
+        setSearchError(t("locationSearchUnavailable"));
       } finally {
         if (!controller.signal.aborted) setIsSearching(false);
       }
@@ -144,7 +132,7 @@ export function LocationPicker({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, retryCount, selectedLocation?.formattedAddress]);
+  }, [query, retryCount, selectedLocation?.formattedAddress, t]);
 
   const selectLocation = (location: LocationResult) => {
     onSelect(location);
@@ -207,7 +195,7 @@ export function LocationPicker({
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationError(
-        "This browser does not support location access. Search for your area instead.",
+        t("locationUnsupported"),
       );
       return;
     }
@@ -223,17 +211,19 @@ export function LocationPicker({
           );
           selectLocation(location);
         } catch (requestError) {
-          setLocationError(
-            requestError instanceof Error
-              ? requestError.message
-              : "We could not identify your current address. Search for your area instead.",
-          );
+          setLocationError(t("addressUnavailable"));
         } finally {
           setIsLocating(false);
         }
       },
       (geolocationError) => {
-        setLocationError(geolocationErrorMessage(geolocationError));
+        if (geolocationError.code === geolocationError.PERMISSION_DENIED) {
+          setLocationError(t("permissionDenied"));
+        } else if (geolocationError.code === geolocationError.TIMEOUT) {
+          setLocationError(t("locationTimedOut"));
+        } else {
+          setLocationError(t("locationUnavailable"));
+        }
         setIsLocating(false);
       },
       {
@@ -291,14 +281,14 @@ export function LocationPicker({
           <div className="absolute right-2 top-1/2 z-10 -translate-y-1/2">
             {isSearching ? (
               <Loader2
-                aria-label="Searching locations"
+                aria-label={t("searchingLocations")}
                 className="h-4 w-4 animate-spin text-green-600"
               />
             ) : query ? (
               <button
                 type="button"
                 onClick={clearLocation}
-                aria-label="Clear location search"
+                aria-label={t("clearLocationSearch")}
                 className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
               >
                 <X className="h-4 w-4" />
@@ -323,13 +313,12 @@ export function LocationPicker({
                     onClick={() => setRetryCount((count) => count + 1)}
                     className="mt-2 font-semibold text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 dark:text-green-400"
                   >
-                    Try again
+                    {t("retry")}
                   </button>
                 </div>
               ) : hasSearched && !isSearching && results.length === 0 ? (
                 <p className="px-3 py-3 text-sm text-gray-600 dark:text-gray-300">
-                  No matching locations in Ghana or the United Kingdom. Try a
-                  city, neighbourhood, or fuller address.
+                  {t("noMatchingLocations")}
                 </p>
               ) : (
                 results.map((location, index) => (
@@ -372,9 +361,9 @@ export function LocationPicker({
           id={hintId}
           className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
         >
-          <span>Searches Ghana and the United Kingdom.</span>
+          <span>{t("locationSearchCoverage")}</span>
           <span>
-            Search by{" "}
+            {t("searchProvidedBy")}{" "}
             <a
               href="https://photon.komoot.io/"
               target="_blank"
@@ -412,7 +401,7 @@ export function LocationPicker({
         ) : (
           <MapPin className="mr-2 h-4 w-4" />
         )}
-        {isLocating ? "Finding your location..." : "Use my current location"}
+        {isLocating ? t("findingLocation") : t("useCurrentLocation")}
       </button>
 
       {locationError && (

@@ -9,18 +9,12 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
-const resetPasswordSchema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordFormData = { password: string; confirmPassword: string };
 
 export function ResetPasswordForm() {
+  const t = useTranslations('Auth');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,12 +25,18 @@ export function ResetPasswordForm() {
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(z.object({
+      password: z.string().min(6, t('passwordLength')),
+      confirmPassword: z.string().min(6, t('passwordLength')),
+    }).refine((data) => data.password === data.confirmPassword, {
+      message: t('passwordMismatch'),
+      path: ['confirmPassword'],
+    })),
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!forgotPasswordEmail || !forgotPasswordOtp) {
-      toast.error('Missing verification information. Please start over.');
+      toast.error(t('missingVerification'));
       setAuthStep('forgot-password');
       return;
     }
@@ -48,9 +48,9 @@ export function ResetPasswordForm() {
       
       // Move to success confirmation
       setAuthStep('reset-password-success');
-      toast.success('Password reset successfully!');
+      toast.success(t('resetSuccessful'));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      const errorMessage = error instanceof Error ? error.message : t('resetFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -68,7 +68,7 @@ export function ResetPasswordForm() {
         <div className="hidden md:flex md:w-[315px] md:flex-shrink-0">
           <img 
             src="/assets/site-images/forgot-password-left-image.jpg" 
-            alt="Reset Password" 
+            alt={t('resetPassword')}
             className="w-full h-full object-cover object-left rounded-l-lg"
           />
         </div>
@@ -86,20 +86,20 @@ export function ResetPasswordForm() {
           </div>
           
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-            Set up new password
+            {t('newPasswordTitle')}
           </h1>
           
           {/* Lock Icon */}
           <div className="w-12 h-12 mx-auto mb-6 flex items-center justify-center">
             <img 
               src="/assets/icons/padlock.svg" 
-              alt="Padlock Icon" 
+              alt=""
               className="w-8 h-8"
             />
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
-            Enter a new password for your account.
+            {t('newPasswordBody')}
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export function ResetPasswordForm() {
           {/* New Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              New password
+              {t('newPassword')}
             </label>
             <div className="relative">
               <Input
@@ -128,7 +128,7 @@ export function ResetPasswordForm() {
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <span className="text-sm text-green-600 hover:text-green-700">
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? t('hidePassword') : t('showPassword')}
                 </span>
               </button>
             </div>
@@ -140,7 +140,7 @@ export function ResetPasswordForm() {
           {/* Confirm Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Confirm password
+              {t('confirmPassword')}
             </label>
             <div className="relative">
               <Input
@@ -160,7 +160,7 @@ export function ResetPasswordForm() {
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <span className="text-sm text-green-600 hover:text-green-700">
-                  {showConfirmPassword ? 'Hide' : 'Show'}
+                  {showConfirmPassword ? t('hidePassword') : t('showPassword')}
                 </span>
               </button>
             </div>
@@ -175,7 +175,7 @@ export function ResetPasswordForm() {
             disabled={isLoading}
             className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium"
           >
-            {isLoading ? 'Resetting...' : 'Reset password'}
+            {isLoading ? t('resetting') : t('resetPassword')}
           </Button>
         </form>
 
@@ -185,7 +185,7 @@ export function ResetPasswordForm() {
             onClick={handleBackToSignIn}
             className="text-sm text-green-600 hover:text-green-700 font-medium underline"
           >
-            Back to Sign in
+            {t('backToSignIn')}
           </button>
         </div>
       </div>

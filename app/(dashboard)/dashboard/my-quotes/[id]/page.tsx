@@ -20,14 +20,7 @@ import { QuoteRequest, QuoteStatus } from "@/types/quote";
 import { toast } from "react-toastify";
 import { ChatBox } from "@/components/sections/service-detail/chat-box";
 import { useChatStore } from "@/store/chat-store";
-
-const STATUS_LABEL: Record<QuoteStatus, string> = {
-  NEW: "Submitted",
-  PENDING: "Offer Received",
-  ACCEPTED: "Accepted",
-  DECLINED: "Declined",
-  EXPIRED: "Expired",
-};
+import { useFormatter, useTranslations } from "next-intl";
 
 const STATUS_STYLES: Record<QuoteStatus, { badge: string; dot: string }> = {
   NEW: {
@@ -57,6 +50,9 @@ export default function MyQuoteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = useTranslations("Quotes");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { id } = use(params);
   const router = useRouter();
   const [quote, setQuote] = useState<QuoteRequest | null>(null);
@@ -72,13 +68,13 @@ export default function MyQuoteDetailPage({
         const data = await apiService.getQuote(id);
         setQuote(data);
       } catch {
-        toast.error("Failed to load quote details.");
+        toast.error(t("detailsLoadFailed"));
       } finally {
         setIsLoading(false);
       }
     };
     fetchQuote();
-  }, [id]);
+  }, [id, t]);
 
   const handleRespond = async (status: "ACCEPTED" | "DECLINED") => {
     setActionLoading(status);
@@ -86,13 +82,13 @@ export default function MyQuoteDetailPage({
       const updated = await apiService.respondToQuoteOffer(id, status);
       setQuote(updated);
       toast.success(
-        status === "ACCEPTED" ? "Offer accepted!" : "Offer declined.",
+        status === "ACCEPTED" ? t("quoteAccepted") : t("offerDeclined"),
       );
       if (status === "ACCEPTED" && updated.order?.id) {
         router.push(`/checkout?orderId=${updated.order.id}`);
       }
     } catch {
-      toast.error("Failed to respond to offer.");
+      toast.error(t("respondFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -120,9 +116,9 @@ export default function MyQuoteDetailPage({
   if (!quote) {
     return (
       <div className="text-center py-16 text-gray-500">
-        Quote not found.{" "}
+        {t("quoteNotFound")} {" "}
         <Link href="/dashboard/my-quotes" className="text-green-600 underline">
-          Go back
+          {common("back")}
         </Link>
       </div>
     );
@@ -141,10 +137,8 @@ export default function MyQuoteDetailPage({
       <div className="space-y-8 pb-12">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quote Details</h1>
-          <p className="text-gray-500 mt-1">
-            Review your quote request and respond to provider offers.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("detailsTitle")}</h1>
+          <p className="text-gray-500 mt-1">{t("detailsSubtitle")}</p>
         </div>
 
         {/* Breadcrumb */}
@@ -153,7 +147,7 @@ export default function MyQuoteDetailPage({
             href="/dashboard/my-quotes"
             className="hover:text-gray-900 transition-colors"
           >
-            My Quotes
+            {t("clientTitle")}
           </Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900">{quote.projectTitle}</span>
@@ -196,15 +190,21 @@ export default function MyQuoteDetailPage({
                   <span
                     className={cn("w-1.5 h-1.5 rounded-full", styles.dot)}
                   />
-                  {STATUS_LABEL[quote.status]}
+                  {t(
+                    quote.status === "NEW"
+                      ? "submitted"
+                      : quote.status === "PENDING"
+                        ? "offerReceived"
+                        : quote.status === "ACCEPTED"
+                          ? "accepted"
+                          : quote.status === "DECLINED"
+                            ? "declined"
+                            : "expired",
+                  )}
                 </span>
               </div>
               <span className="text-sm text-gray-500">
-                {new Date(quote.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {format.dateTime(new Date(quote.createdAt), "long")}
               </span>
             </div>
 
@@ -212,7 +212,7 @@ export default function MyQuoteDetailPage({
             <div className="space-y-5">
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-1">
-                  Project title
+                  {t("projectTitle")}
                 </h3>
                 <p className="text-gray-600">{quote.projectTitle}</p>
               </div>
@@ -220,15 +220,15 @@ export default function MyQuoteDetailPage({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-1">
-                    Your budget
+                    {t("yourBudget")}
                   </h3>
                   <p className="text-gray-600">
-                    {quote.currency} {Number(quote.budget).toLocaleString()}
+                    {quote.currency} {format.number(Number(quote.budget))}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-1">
-                    Delivery time
+                    {t("deliveryTime")}
                   </h3>
                   <p className="text-gray-600">{quote.deliveryTime}</p>
                 </div>
@@ -236,7 +236,7 @@ export default function MyQuoteDetailPage({
 
               <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-1">
-                  Project description
+                  {t("requestDescription")}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   {quote.description}
@@ -247,7 +247,7 @@ export default function MyQuoteDetailPage({
               {quote.attachments.length > 0 && (
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 mb-3">
-                    Your attachments
+                    {t("yourAttachments")}
                   </h3>
                   <div className="space-y-2">
                     {quote.attachments.map((url, i) => {
@@ -271,7 +271,7 @@ export default function MyQuoteDetailPage({
                             className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
                           >
                             <Download className="w-4 h-4" />
-                            Download
+                            {common("download")}
                           </a>
                         </div>
                       );
@@ -294,7 +294,7 @@ export default function MyQuoteDetailPage({
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  Accept Offer
+                  {t("acceptOffer")}
                 </Button>
                 <Button
                   variant="outline"
@@ -307,7 +307,7 @@ export default function MyQuoteDetailPage({
                   ) : (
                     <XCircle className="w-4 h-4" />
                   )}
-                  Decline
+                  {t("decline")}
                 </Button>
                 <Button
                   variant="outline"
@@ -315,7 +315,7 @@ export default function MyQuoteDetailPage({
                   onClick={handleMessageProvider}
                 >
                   <MessageSquare className="w-4 h-4" />
-                  Message Provider
+                  {t("messageProvider")}
                 </Button>
               </div>
             )}
@@ -328,7 +328,7 @@ export default function MyQuoteDetailPage({
                   onClick={handleMessageProvider}
                 >
                   <MessageSquare className="w-4 h-4" />
-                  Message Provider
+                  {t("messageProvider")}
                 </Button>
               </div>
             )}
@@ -339,12 +339,12 @@ export default function MyQuoteDetailPage({
             {hasOffer && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 space-y-4">
                 <h3 className="font-bold text-amber-800">
-                  Provider&apos;s Offer
+                  {t("providerOffer")}
                 </h3>
                 {quote.providerNote && (
                   <div>
                     <p className="text-xs font-semibold text-amber-700 mb-1">
-                      Note from provider
+                      {t("providerNote")}
                     </p>
                     <p className="text-sm text-amber-900 leading-relaxed">
                       {quote.providerNote}
@@ -353,13 +353,13 @@ export default function MyQuoteDetailPage({
                 )}
                 <div className="border-t border-amber-200 pt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-amber-700">Proposed budget</span>
+                    <span className="text-amber-700">{t("proposedBudget")}</span>
                     <span className="font-bold text-amber-900">
-                      {quote.currency} {Number(quote.budget).toLocaleString()}
+                      {quote.currency} {format.number(Number(quote.budget))}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-amber-700">Delivery time</span>
+                    <span className="text-amber-700">{t("deliveryTime")}</span>
                     <span className="font-bold text-amber-900">
                       {quote.deliveryTime}
                     </span>
@@ -372,18 +372,17 @@ export default function MyQuoteDetailPage({
               <div className="bg-green-50 border border-green-200 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <h3 className="font-bold text-green-800">Offer Accepted</h3>
+                  <h3 className="font-bold text-green-800">{t("offerAccepted")}</h3>
                 </div>
                 <p className="text-sm text-green-700">
-                  You accepted this provider&apos;s offer. Proceed to checkout
-                  to place your order.
+                  {t("acceptedBody")}
                 </p>
               </div>
             )}
 
             {quote.status === "DECLINED" && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                <h3 className="font-bold text-red-800 mb-2">Offer Declined</h3>
+                <h3 className="font-bold text-red-800 mb-2">{t("offerDeclined")}</h3>
                 {quote.declineReason && (
                   <p className="text-sm text-red-700">{quote.declineReason}</p>
                 )}
@@ -392,10 +391,9 @@ export default function MyQuoteDetailPage({
 
             {quote.status === "EXPIRED" && (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-                <h3 className="font-bold text-gray-700 mb-2">Quote Expired</h3>
+                <h3 className="font-bold text-gray-700 mb-2">{t("offerExpired")}</h3>
                 <p className="text-sm text-gray-500">
-                  No response was received within 7 days. You may submit a new
-                  quote request to this provider.
+                  {t("expiredBody")}
                 </p>
               </div>
             )}

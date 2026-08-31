@@ -33,13 +33,9 @@ import {
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { apiService } from "@/lib/api";
-import {
-  Dispute,
-  ISSUE_TYPE_LABELS,
-  DISPUTE_STATUS_LABELS,
-  DISPUTE_PRIORITY_LABELS,
-} from "@/types/dispute";
+import { Dispute } from "@/types/dispute";
 import { useAuthStore } from "@/store/auth-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 // --- Column Helper ---
 
@@ -48,6 +44,7 @@ const columnHelper = createColumnHelper<Dispute>();
 // --- Status badge helper ---
 
 function StatusBadge({ status }: { status: Dispute["status"] }) {
+  const t = useTranslations("Disputes");
   const styles: Record<Dispute["status"], string> = {
     OPEN: "bg-red-50 text-red-700 border-red-200",
     INVESTIGATING: "bg-amber-50 text-amber-700 border-amber-200",
@@ -65,16 +62,61 @@ function StatusBadge({ status }: { status: Dispute["status"] }) {
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dots[status]}`} />
-      {DISPUTE_STATUS_LABELS[status]}
+      {t(
+        status === "OPEN"
+          ? "open"
+          : status === "INVESTIGATING"
+            ? "investigating"
+            : status === "RESOLVED"
+              ? "resolved"
+              : "closed",
+      )}
     </div>
   );
+}
+
+function HeaderLabel({ message, common = false }: { message: string; common?: boolean }) {
+  const t = useTranslations(common ? "Common" : "Disputes");
+  return <>{t(message as never)}</>;
+}
+
+function PriorityLabel({ value }: { value: Dispute["priority"] }) {
+  const t = useTranslations("Disputes");
+  return <>{t(value === "LOW" ? "low" : value === "MEDIUM" ? "medium" : "high")}</>;
+}
+
+function IssueLabel({ value }: { value: Dispute["issueType"] }) {
+  const t = useTranslations("Disputes");
+  const key =
+    value === "LATE_DELIVERY"
+      ? "issueLateDelivery"
+      : value === "NON_DELIVERY"
+        ? "issueNonDelivery"
+        : value === "QUALITY_ISSUE"
+          ? "issueQuality"
+          : value === "PAYMENT_DISPUTE"
+            ? "issuePayment"
+            : value === "MISCOMMUNICATION"
+              ? "issueCommunication"
+              : "issueOther";
+  return <>{t(key)}</>;
+}
+
+function SubmittedDate({ value }: { value: string }) {
+  const format = useFormatter();
+  return <>{format.dateTime(new Date(value), "long")}</>;
+}
+
+function ViewDetailsLink({ id }: { id: string }) {
+  const t = useTranslations("Disputes");
+  return <Link href={`/dashboard/disputes/${id}`}>{t("viewDetails")}</Link>;
 }
 
 // --- Columns ---
 
 const columns = [
   columnHelper.accessor("id", {
-    header: "Dispute ID",
+    header: () => <HeaderLabel message="disputeId" />,
     cell: (info) => (
       <span className="text-gray-600 font-mono text-xs">
         {info.getValue().slice(0, 8).toUpperCase()}
@@ -82,12 +124,12 @@ const columns = [
     ),
   }),
   columnHelper.accessor("order.orderNumber", {
-    header: "Order ID",
+    header: () => <HeaderLabel message="order" />,
     cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
   }),
   columnHelper.display({
     id: "parties",
-    header: "Parties Involved",
+    header: () => <HeaderLabel message="parties" />,
     cell: (info) => (
       <div className="flex -space-x-2">
         {[info.row.original.client, info.row.original.provider].map(
@@ -119,18 +161,18 @@ const columns = [
     ),
   }),
   columnHelper.accessor("priority", {
-    header: "Priority Level",
+    header: () => <HeaderLabel message="priority" />,
     cell: (info) => (
       <span className="text-gray-600">
-        {DISPUTE_PRIORITY_LABELS[info.getValue()]}
+        <PriorityLabel value={info.getValue()} />
       </span>
     ),
   }),
   columnHelper.accessor("issueType", {
-    header: "Issue Type",
+    header: () => <HeaderLabel message="issueType" />,
     cell: (info) => (
       <span className="text-gray-600">
-        {ISSUE_TYPE_LABELS[info.getValue()]}
+        <IssueLabel value={info.getValue()} />
       </span>
     ),
   }),
@@ -140,27 +182,23 @@ const columns = [
         className="flex items-center gap-1 cursor-pointer"
         onClick={() => column.toggleSorting()}
       >
-        Status
+        <HeaderLabel message="status" common />
         <ArrowDown className="w-4 h-4 text-gray-500" />
       </div>
     ),
     cell: (info) => <StatusBadge status={info.getValue()} />,
   }),
   columnHelper.accessor("createdAt", {
-    header: "Date Submitted",
+    header: () => <HeaderLabel message="submittedDate" />,
     cell: (info) => (
       <span className="text-gray-600">
-        {new Date(info.getValue()).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })}
+        <SubmittedDate value={info.getValue()} />
       </span>
     ),
   }),
   columnHelper.display({
     id: "actions",
-    header: "Action",
+    header: () => <HeaderLabel message="actions" common />,
     cell: (info) => (
       <div className="text-right">
         <DropdownMenu>
@@ -171,9 +209,7 @@ const columns = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/dashboard/disputes/${info.row.original.id}`}>
-                View Details
-              </Link>
+              <ViewDetailsLink id={info.row.original.id} />
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -186,6 +222,8 @@ const columns = [
 // --- Main Component ---
 
 export default function DisputesPage() {
+  const t = useTranslations("Disputes");
+  const common = useTranslations("Common");
   const user = useAuthStore((state) => state.user);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -227,11 +265,11 @@ export default function DisputesPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Disputes</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
           {user?.role === "ADMIN"
-            ? "Review and resolve conflicts between customers and service providers."
-            : "Track disputes for orders you’re involved in."}
+            ? t("adminSubtitle")
+            : t("participantSubtitle")}
         </p>
       </div>
 
@@ -240,7 +278,7 @@ export default function DisputesPage() {
         <div className="relative w-full md:max-w-md md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
-            placeholder="Search by order ID, dispute ID, issue type..."
+            placeholder={t("search")}
             className="pl-10 bg-white"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
@@ -252,14 +290,14 @@ export default function DisputesPage() {
             className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
           >
             <Filter className="w-4 h-4" />
-            Filters
+            {t("filters")}
           </Button>
           <Button
             variant="outline"
             className="text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2"
           >
             <Download className="w-4 h-4" />
-            Export data
+            {t("exportData")}
           </Button>
         </div>
       </div>
@@ -337,7 +375,7 @@ export default function DisputesPage() {
                   colSpan={columns.length}
                   className="px-6 py-8 text-center text-gray-500"
                 >
-                  No disputes found.
+                  {t("noDisputes")}
                 </td>
               </tr>
             )}
@@ -355,11 +393,13 @@ export default function DisputesPage() {
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="w-4 h-4" />
-            Previous
+            {common("previous")}
           </Button>
           <span className="text-sm text-gray-600">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount() || 1}
+            {common("pageOf", {
+              page: table.getState().pagination.pageIndex + 1,
+              total: table.getPageCount() || 1,
+            })}
           </span>
           <Button
             variant="outline"
@@ -368,7 +408,7 @@ export default function DisputesPage() {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            {common("next")}
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

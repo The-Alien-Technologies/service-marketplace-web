@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {useTranslations} from "next-intl";
 
 export default function RouteError({
   error,
@@ -10,6 +11,8 @@ export default function RouteError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("Errors");
+  const common = useTranslations("Common");
   useEffect(() => {
     console.error("Route error:", error);
   }, [error]);
@@ -17,18 +20,18 @@ export default function RouteError({
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Something went wrong</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500">
-          We hit an unexpected error while loading this page. Please try again.
+          {t("unexpected")}
         </p>
         {error?.digest && (
-          <p className="text-xs text-gray-400 font-mono">Ref: {error.digest}</p>
+          <p className="text-xs text-gray-400 font-mono">{common("reference", {reference: error.digest})}</p>
         )}
         <div className="flex items-center justify-center gap-3 pt-2">
           <Button onClick={reset} variant="outline">
-            Try again
+            {common("retry")}
           </Button>
-          <Button onClick={() => (window.location.href = "/")}>Go home</Button>
+          <Button onClick={() => (window.location.href = "/")}>{common("goHome")}</Button>
         </div>
       </div>
     </div>

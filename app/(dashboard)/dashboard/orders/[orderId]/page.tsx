@@ -31,10 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useFormatter, useTranslations } from "next-intl";
 
 // --- Helpers ---
-
-const progressSteps = ["Order placed", "Awaiting", "In-progress", "Completed"];
 
 const getProgressIndex = (status: OrderStatus): number => {
   switch (status) {
@@ -68,9 +67,6 @@ const getStatusStyles = (status: OrderStatus) => {
   }
 };
 
-const getStatusLabel = (status: OrderStatus): string =>
-  status.replace("_", " ");
-
 const getActiveTab = (status: OrderStatus): string => {
   switch (status) {
     case "PENDING":
@@ -97,6 +93,9 @@ function OrderDetailsView({
   orderId: string;
   role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
 }) {
+  const t = useTranslations("Orders");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +104,22 @@ function OrderDetailsView({
   const [isAcceptOpen, setIsAcceptOpen] = useState(false);
   const [isDisputeOpen, setIsDisputeOpen] = useState(false);
   const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const progressSteps = [
+    t("stagePlaced"),
+    t("awaiting"),
+    t("inProgress"),
+    t("completed"),
+  ];
+  const getStatusLabel = (status: OrderStatus) =>
+    status === "IN_PROGRESS"
+      ? t("inProgress")
+      : status === "COMPLETED"
+        ? t("completed")
+        : status === "DECLINED"
+          ? t("declined")
+          : status === "REFUNDED"
+            ? t("refunded")
+            : t("awaiting");
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -114,13 +129,13 @@ function OrderDetailsView({
         setOrder(data);
       } catch (error) {
         console.error("Failed to fetch order:", error);
-        toast.error("Failed to load order details");
+        toast.error(t("loadFailed"));
       } finally {
         setIsLoading(false);
       }
     };
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, t]);
 
   const handleStatusUpdate = async (
     newStatus: "IN_PROGRESS" | "COMPLETED" | "DECLINED",
@@ -131,9 +146,9 @@ function OrderDetailsView({
       const updated = await apiService.updateOrderStatus(order.id, newStatus);
       setOrder(updated);
       const messages: Record<string, string> = {
-        IN_PROGRESS: "Order accepted successfully",
-        COMPLETED: "Order marked as completed",
-        DECLINED: "Order declined",
+        IN_PROGRESS: t("orderAcceptedSuccessfully"),
+        COMPLETED: t("markedComplete"),
+        DECLINED: t("orderDeclined"),
       };
       toast.success(messages[newStatus]);
       // Navigate back to the relevant tab
@@ -141,7 +156,7 @@ function OrderDetailsView({
         router.push("/dashboard/orders?tab=Declined");
       }
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update order status");
+      toast.error(error?.message || t("updateFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -149,15 +164,15 @@ function OrderDetailsView({
 
   const handleClientCancel = async () => {
     if (!order) return;
-    if (!window.confirm(`Cancel order #${order.orderNumber}?`)) return;
+    if (!window.confirm(t("cancelConfirm", { number: order.orderNumber }))) return;
     setActionLoading("DECLINED");
     try {
       const updated = await apiService.updateOrderStatus(order.id, "DECLINED");
       setOrder(updated);
-      toast.success("Order cancelled");
+      toast.success(t("cancelledSuccess"));
       router.push("/dashboard/orders?tab=Declined");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to cancel order");
+      toast.error(error?.message || t("cancelFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -177,11 +192,11 @@ function OrderDetailsView({
       setIsRefundOpen(false);
       toast.success(
         result.paymentStatus === "REFUNDED"
-          ? "Refund completed"
-          : "Refund initiated. Paystack is processing it.",
+          ? t("refundCompleted")
+          : t("refundProcessing"),
       );
     } catch (error: any) {
-      toast.error(error?.message || "Failed to initiate refund");
+      toast.error(error?.message || t("refundFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -194,9 +209,9 @@ function OrderDetailsView({
       const settlement = await apiService.acceptOrder(order.id);
       setOrder({ ...order, settlement });
       setIsAcceptOpen(false);
-      toast.success("Work accepted. The provider can now request payout.");
+      toast.success(t("workAccepted"));
     } catch (error: any) {
-      toast.error(error?.message || "Failed to accept the completed work");
+      toast.error(error?.message || t("acceptWorkFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -208,9 +223,9 @@ function OrderDetailsView({
     try {
       const settlement = await apiService.requestOrderReleaseReview(order.id);
       setOrder({ ...order, settlement });
-      toast.success("Admin review requested");
+      toast.success(t("adminReviewRequested"));
     } catch (error: any) {
-      toast.error(error?.message || "Failed to request an admin review");
+      toast.error(error?.message || t("adminReviewFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -227,9 +242,9 @@ function OrderDetailsView({
   if (!order) {
     return (
       <div className="py-20 text-center text-gray-500">
-        Order not found.{" "}
+        {t("notFound")} {" "}
         <Link href="/dashboard/orders" className="text-green-600 underline">
-          Go back
+          {common("back")}
         </Link>
       </div>
     );
@@ -281,9 +296,9 @@ function OrderDetailsView({
       {/* Header & Breadcrumbs */}
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("myOrders")}</h1>
           <p className="text-gray-500 mt-1">
-            Stay on top of your orders to deliver great results.
+            {role === "SERVICE_PROVIDER" ? t("providerSubtitle") : t("clientSubtitle")}
           </p>
         </div>
 
@@ -300,7 +315,13 @@ function OrderDetailsView({
                   : "text-gray-600 hover:bg-gray-50",
               )}
             >
-              {tab}
+              {tab === "Awaiting"
+                ? t("awaiting")
+                : tab === "In-progress"
+                  ? t("inProgress")
+                  : tab === "Completed"
+                    ? t("completed")
+                    : t("declined")}
             </Link>
           ))}
         </div>
@@ -311,17 +332,23 @@ function OrderDetailsView({
             href="/dashboard/orders"
             className="hover:text-gray-900 transition-colors"
           >
-            My orders
+            {t("myOrders")}
           </Link>
           <ChevronRight className="w-4 h-4" />
           <Link
             href={`/dashboard/orders?tab=${activeTab}`}
             className="text-green-600 font-medium hover:underline"
           >
-            {activeTab}
+            {activeTab === "Awaiting"
+              ? t("awaiting")
+              : activeTab === "In-progress"
+                ? t("inProgress")
+                : activeTab === "Completed"
+                  ? t("completed")
+                  : t("declined")}
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-400">Order ID: #{order.orderNumber}</span>
+          <span className="text-gray-400">{t("orderId", { id: order.orderNumber })}</span>
         </div>
       </div>
 
@@ -353,14 +380,14 @@ function OrderDetailsView({
                 {otherParty
                   ? otherParty.displayName ||
                     `${otherParty.firstName} ${otherParty.lastName}`
-                  : "Unknown"}
+                  : common("unknown")}
               </span>
             </div>
 
             {/* Order meta */}
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="font-bold text-gray-900 text-base">
-                Order ID: #{order.orderNumber}
+                {t("orderId", { id: order.orderNumber })}
               </span>
               <span className="text-gray-300">|</span>
               <span className="text-gray-500">
@@ -386,7 +413,7 @@ function OrderDetailsView({
                       : "bg-gray-100 text-gray-700",
                 )}
               >
-                Payment: {order.paymentStatus.replace("_", " ")}
+                {t("paymentStatus", { status: order.paymentStatus.replace("_", " ") })}
               </span>
             </div>
           </div>
@@ -394,11 +421,7 @@ function OrderDetailsView({
           {/* Top Right: Date & Actions */}
           <div className="flex flex-col items-end gap-4">
             <span className="text-sm text-gray-500">
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {format.dateTime(new Date(order.createdAt), "long")}
             </span>
 
             {!isDeclinedOrRefunded && (
@@ -416,7 +439,7 @@ function OrderDetailsView({
                         {actionLoading === "IN_PROGRESS" ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          "Accept Order"
+                          t("acceptOrder")
                         )}
                       </Button>
                     </>
@@ -432,7 +455,7 @@ function OrderDetailsView({
                       {actionLoading === "COMPLETED" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Mark as Completed"
+                        t("completeOrder")
                       )}
                     </Button>
                   )}
@@ -450,8 +473,8 @@ function OrderDetailsView({
                       }
                     >
                       {order.paymentStatus === "PROCESSING"
-                        ? "Resume Payment"
-                        : "Pay Now"}
+                        ? t("resumePayment")
+                        : t("payNow")}
                     </Button>
                   )}
 
@@ -463,7 +486,7 @@ function OrderDetailsView({
                       disabled={actionLoading !== null}
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      Accept work
+                      {t("acceptWork")}
                     </Button>
                     <Button
                       variant="outline"
@@ -472,7 +495,7 @@ function OrderDetailsView({
                       disabled={actionLoading !== null}
                     >
                       <AlertTriangle className="w-4 h-4" />
-                      Raise dispute
+                      {t("raiseDispute")}
                     </Button>
                   </>
                 )}
@@ -493,8 +516,8 @@ function OrderDetailsView({
                       <Clock3 className="w-4 h-4" />
                     )}
                     {order.settlement?.releaseReviewStatus === "REQUESTED"
-                      ? "Admin review pending"
-                      : "Request admin review"}
+                      ? t("adminReviewPending")
+                      : t("requestAdminReview")}
                   </Button>
                 )}
 
@@ -513,8 +536,8 @@ function OrderDetailsView({
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         order.paymentStatus === "PARTIALLY_REFUNDED"
-                          ? "Refund Remaining Balance"
-                          : "Issue Full Refund"
+                          ? t("refundRemaining")
+                          : t("issueFullRefund")
                       )}
                     </Button>
                   )}
@@ -532,7 +555,7 @@ function OrderDetailsView({
                       {actionLoading === "DECLINED" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Cancel Order"
+                        t("cancelOrder")
                       )}
                     </Button>
                   )}
@@ -542,7 +565,7 @@ function OrderDetailsView({
                   settlementReleased && (
                     <Link href={`/orders/${order.id}/review`}>
                       <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                        Leave a Review
+                        {t("leaveReview")}
                       </Button>
                     </Link>
                   )}
@@ -555,8 +578,8 @@ function OrderDetailsView({
                 >
                   <Mail className="w-4 h-4" />
                   {role === "SERVICE_PROVIDER"
-                    ? "Message Client"
-                    : "Message Provider"}
+                    ? t("messageClient")
+                    : t("messageProvider")}
                 </Button>
               </div>
             )}
@@ -581,21 +604,24 @@ function OrderDetailsView({
               <div>
                 <p className="text-sm font-bold">
                   {settlementReleased
-                    ? "Payment released for provider payout"
+                    ? t("paymentReleasedTitle")
                     : settlementAcceptedButHeld
-                      ? "Payment temporarily held for review"
-                      : "Payment is held until the customer accepts the work"}
+                      ? t("paymentReviewTitle")
+                      : t("paymentHeldTitle")}
                 </p>
                 <p className="mt-1 max-w-2xl text-sm opacity-80">
                   {settlementReleased
                     ? role === "USER"
-                      ? `Your GHS ${refundableAmount.toFixed(2)} payment has been released. The provider can now request payout.`
-                      : `GHS ${Number(order.settlement?.providerAmount ?? 0).toFixed(2)} is ${order.settlement?.status.toLowerCase()} for the provider.`
+                      ? t("customerReleasedBody", { amount: format.number(refundableAmount, "currency") })
+                      : t("providerReleasedBody", {
+                          amount: format.number(Number(order.settlement?.providerAmount ?? 0), "currency"),
+                          status: order.settlement?.status.toLowerCase() ?? "",
+                        })
                     : settlementAcceptedButHeld
-                      ? "The customer already accepted this work, but a payment review is temporarily preventing withdrawal."
+                      ? t("paymentReviewBody")
                       : role === "SERVICE_PROVIDER"
-                        ? "The customer can accept the delivery or raise a dispute. If they are unresponsive, request an admin review."
-                        : "Review the delivery carefully. Acceptance is final and makes the provider’s earnings available for withdrawal."}
+                        ? t("providerHeldBody")
+                        : t("customerHeldBody")}
                 </p>
               </div>
             </div>
@@ -607,44 +633,44 @@ function OrderDetailsView({
           {/* Left: Order Summary */}
           <div className="space-y-6 rounded-xl bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-lg font-bold text-gray-900">Order summary</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t("orderSummary")}</h3>
               <span className="text-sm text-gray-400">
-                Order ID: #{order.orderNumber}
+                {t("orderId", { id: order.orderNumber })}
               </span>
             </div>
 
             <div className="space-y-4 text-sm">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">
-                  Subtotal({order.planTitle ?? "Plan"})
+                  {t("planSubtotal", { plan: order.planTitle ?? t("plan") })}
                 </span>
                 <span className="font-bold text-gray-900">
-                  GHS {subtotal.toFixed(2)}
+                  {format.number(subtotal, "currency")}
                 </span>
               </div>
 
               {addOnsTotal > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Add-ons</span>
+                  <span className="text-gray-600">{t("addOns")}</span>
                   <span className="font-bold text-gray-900">
-                    GHS {addOnsTotal.toFixed(2)}
+                    {format.number(addOnsTotal, "currency")}
                   </span>
                 </div>
               )}
 
               {couponDiscount > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Coupon discount</span>
+                  <span className="text-gray-600">{t("couponDiscount")}</span>
                   <span className="font-bold text-red-600">
-                    -GHS {couponDiscount.toFixed(2)}
+                    -{format.number(couponDiscount, "currency")}
                   </span>
                 </div>
               )}
 
               <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between items-center">
-                <span className="text-gray-600 font-medium">Total</span>
+                <span className="text-gray-600 font-medium">{common("total")}</span>
                 <span className="text-xl font-bold text-gray-900">
-                  GHS {total.toFixed(2)}
+                  {format.number(total, "currency")}
                 </span>
               </div>
             </div>
@@ -681,7 +707,7 @@ function OrderDetailsView({
               <div className="pt-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-sm font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  {order.status === "REFUNDED" ? "Refunded" : "Declined"}
+                  {order.status === "REFUNDED" ? t("refunded") : t("declined")}
                 </span>
               </div>
             )}
@@ -690,7 +716,7 @@ function OrderDetailsView({
           {/* Right: Add-ons Selected */}
           <div>
             <h3 className="text-sm font-bold text-gray-900 mb-4">
-              Add-ons selected
+              {t("addOnsSelected")}
             </h3>
             {order.addOns && order.addOns.length > 0 ? (
               <div className="space-y-3">
@@ -712,7 +738,7 @@ function OrderDetailsView({
                         </p>
                       )}
                       <p className="text-sm font-medium text-gray-700 mt-1">
-                        GHS {Number(addon.price).toFixed(2)}
+                        {format.number(Number(addon.price), "currency")}
                       </p>
                     </div>
                   </div>
@@ -720,7 +746,7 @@ function OrderDetailsView({
               </div>
             ) : (
               <div className="rounded-xl border-2 border-dashed border-gray-200 p-5 text-center text-sm text-gray-500 sm:p-8">
-                No add-ons selected
+                {t("noAddOnsSelected")}
               </div>
             )}
           </div>
@@ -747,12 +773,9 @@ function OrderDetailsView({
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-800">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <DialogTitle>Accept the completed work?</DialogTitle>
+            <DialogTitle>{t("acceptCompletedTitle")}</DialogTitle>
             <DialogDescription className="leading-relaxed">
-              This confirms that the service was delivered and releases your
-              GHS {refundableAmount.toFixed(2)} held payment. The provider can
-              then request payout. Normal in-app disputes cannot be opened
-              after acceptance.
+              {t("acceptCompletedBody", { amount: format.number(refundableAmount, "currency") })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -761,7 +784,7 @@ function OrderDetailsView({
               onClick={() => setIsAcceptOpen(false)}
               disabled={actionLoading !== null}
             >
-              Review again
+              {t("reviewAgain")}
             </Button>
             <Button
               className="bg-green-700 text-white hover:bg-green-800"
@@ -771,7 +794,7 @@ function OrderDetailsView({
               {actionLoading === "ACCEPT_WORK" && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              Accept and release
+              {t("acceptRelease")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -782,13 +805,14 @@ function OrderDetailsView({
           <DialogHeader>
             <DialogTitle>
               {order.paymentStatus === "PARTIALLY_REFUNDED"
-                ? "Refund the remaining balance?"
-                : "Issue a full refund?"}
+                ? t("refundRemainingTitle")
+                : t("fullRefundTitle")}
             </DialogTitle>
             <DialogDescription>
-              Paystack will refund GHS {refundableAmount.toFixed(2)} for order #
-              {order.orderNumber}. The provider’s held earnings will be
-              recalculated, and this cannot be undone in Pavodah.
+              {t("refundBody", {
+                amount: format.number(refundableAmount, "currency"),
+                number: order.orderNumber,
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -797,7 +821,7 @@ function OrderDetailsView({
               onClick={() => setIsRefundOpen(false)}
               disabled={actionLoading !== null}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="bg-red-700 text-white hover:bg-red-800"
@@ -807,7 +831,7 @@ function OrderDetailsView({
               {actionLoading === "REFUND" && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              Confirm refund
+              {t("confirmRefund")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -820,7 +844,7 @@ function OrderDetailsView({
         onClose={() => setIsDisputeOpen(false)}
         onSuccess={() => {
           setIsDisputeOpen(false);
-          toast.info("Payment remains held while the dispute is reviewed.");
+          toast.info(t("heldDuringDispute"));
         }}
       />
     </div>

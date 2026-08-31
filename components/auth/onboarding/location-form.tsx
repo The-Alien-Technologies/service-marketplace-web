@@ -8,8 +8,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
 import { LocationResult } from "@/lib/geocoding";
 import { toast } from "react-toastify";
+import { useTranslations } from "next-intl";
 
 export function OnboardingLocationForm() {
+  const t = useTranslations("Onboarding");
+  const common = useTranslations("Common");
   const [isSaving, setIsSaving] = useState(false);
   const [selectedLocation, setSelectedLocation] =
     useState<LocationResult | null>(null);
@@ -24,7 +27,7 @@ export function OnboardingLocationForm() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedLocation) {
-      setValidationError("Select a location before continuing.");
+      setValidationError(t("locationRequired"));
       return;
     }
 
@@ -34,12 +37,12 @@ export function OnboardingLocationForm() {
         ...selectedLocation,
         isPrimary: true,
       });
-      toast.success("Location saved successfully!");
+      toast.success(t("locationSaved"));
       nextUserStep();
     } catch (error) {
       console.error("Failed to save location:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to save location",
+        error instanceof Error ? error.message : t("locationSaveFailed"),
       );
     } finally {
       setIsSaving(false);
@@ -50,23 +53,23 @@ export function OnboardingLocationForm() {
     <div className="p-5 sm:p-8">
       <div className="mb-8">
         <h1 className="mb-2 text-2xl font-semibold text-gray-900 dark:text-white">
-          Let&apos;s finish setting up your account
+          {t("finishSetup")}
         </h1>
         <div className="mt-6">
           <h2 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">
-            Location set-up
+            {t("locationSetup")}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            We&apos;ll use your location to show services and providers near you.
+            {t("locationBody")}
           </p>
         </div>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-6">
         <LocationPicker
-          label="Where are you located?"
-          placeholder="Enter a city, area, or address"
-          selectedHeading="Location selected"
+          label={t("locationQuestion")}
+          placeholder={t("locationPlaceholder")}
+          selectedHeading={t("locationSelected")}
           selectedLocation={selectedLocation}
           onSelect={handleLocationChange}
           disabled={isSaving}
@@ -79,12 +82,12 @@ export function OnboardingLocationForm() {
           className="flex min-h-10 items-center rounded-md text-sm text-gray-600 transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 dark:text-gray-300 dark:hover:text-white"
         >
           <ArrowRight aria-hidden="true" className="mr-2 h-4 w-4" />
-          Skip for now
+          {t("skipForNow")}
         </button>
 
         <div className="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
           <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>You can update this anytime in Settings.</span>
+          <span>{t("updateAnytime")}</span>
         </div>
 
         <Button
@@ -95,12 +98,12 @@ export function OnboardingLocationForm() {
           {isSaving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving location...
+              {t("savingLocation")}
             </>
           ) : selectedLocation ? (
-            "Continue"
+            common("continue")
           ) : (
-            "Select a location"
+            t("selectLocation")
           )}
         </Button>
       </form>

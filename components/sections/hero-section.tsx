@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {useTranslations} from "next-intl";
 
 export function HeroSection() {
+  const t = useTranslations("Home");
   const router = useRouter();
   const { isAuthenticated, user, startUserFlow } = useAuthStore();
   const hasDashboard =
@@ -28,10 +30,10 @@ export function HeroSection() {
   };
 
   const primaryActionLabel = !isAuthenticated
-    ? "Get Started"
+    ? t("getStarted")
     : hasDashboard
-      ? "Go to Dashboard"
-      : "Browse Services";
+      ? t("goToDashboard")
+      : t("browseServices");
 
   return (
     <section className="bg-marketplace-600 overflow-hidden">
@@ -46,8 +48,11 @@ export function HeroSection() {
           <div className="bg-black/30 sm:bg-transparent p-6 sm:p-0 rounded-2xl max-w-fit backdrop-blur-sm sm:backdrop-blur-none transition-all">
             {/* Main Heading */}
             <h1 className="text-4xl lg:text-[48px] font-bold text-white mb-6 lg:mb-[32px] leading-tight max-w-[700px]">
-              Find & hire trusted service providers with{" "}
-              <span className="text-brand-400 relative">Pavodah</span>
+              {t.rich("heroTitle", {
+                Pavodah: (chunks) => (
+                  <span className="text-brand-400 relative">{chunks}</span>
+                )
+              })}
             </h1>
 
             {/* Bullet Points */}
@@ -57,7 +62,7 @@ export function HeroSection() {
                   <Check className="w-[20px] h-[20px] text-black" />
                 </div>
                 <span className="text-white text-lg font-medium">
-                  Get matched with experts near you.
+                  {t("heroBenefitLocal")}
                 </span>
               </div>
 
@@ -66,7 +71,7 @@ export function HeroSection() {
                   <Check className="w-[20px] h-[20px] text-black" />
                 </div>
                 <span className="text-white text-lg font-medium">
-                  Get the job done. Get peace of mind.
+                  {t("heroBenefitPeace")}
                 </span>
               </div>
             </div>

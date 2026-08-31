@@ -23,6 +23,7 @@ import {
   X,
   WalletCards,
   Bell,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -36,6 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {useTranslations} from "next-intl";
 
 type SidebarItem = {
   icon: any;
@@ -65,6 +67,11 @@ const adminSidebarItems: SidebarGroup[] = [
         icon: Users,
         label: "Users",
         href: "/dashboard/users",
+      },
+      {
+        icon: ClipboardCheck,
+        label: "Provider applications",
+        href: "/dashboard/provider-applications",
       },
       {
         icon: Box,
@@ -200,11 +207,39 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
+  const nav = useTranslations("Navigation");
+  const common = useTranslations("Common");
+  const sidebar = useTranslations("Sidebar");
   const pathname = usePathname();
   const { signOut, user } = useAuthStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(["Messages"]);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const translatedLabel: Record<string, string> = {
+    Dashboard: nav("dashboard"),
+    Users: nav("users"),
+    "Provider applications": nav("providerApplications"),
+    Services: nav("services"),
+    Categories: nav("categories"),
+    "Orders & Transaction": sidebar("ordersTransactions"),
+    "Provider payouts": sidebar("providerPayouts"),
+    Disputes: nav("disputes"),
+    "Support Chat": sidebar("supportChat"),
+    "System settings": sidebar("systemSettings"),
+    "My services": sidebar("myServices"),
+    Orders: nav("orders"),
+    "Earnings & payouts": sidebar("earningsPayouts"),
+    Messages: nav("messages"),
+    "Customer chat": sidebar("customerChat"),
+    "Quote request": sidebar("quoteRequest"),
+    Reviews: nav("reviews"),
+    "My orders": nav("myOrders"),
+    "My quotes": nav("myQuotes"),
+    Notifications: nav("notifications"),
+    "Profile & settings": nav("profileSettings"),
+    "Help & support": nav("helpSupport")
+  };
+  const labelFor = (label: string) => translatedLabel[label] ?? label;
 
   // Determine sidebar items based on role
   const sidebarItems =
@@ -216,10 +251,10 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
 
   const userRoleLabel =
     user?.role === "ADMIN"
-      ? "Admin"
+      ? common("admin")
       : user?.role === "SERVICE_PROVIDER"
-        ? "Provider"
-        : "User";
+        ? common("provider")
+        : common("user");
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -253,7 +288,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close dashboard navigation"
+            aria-label={nav("closeNavigation")}
             className="-mr-3 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
           >
             <X className="w-5 h-5" />
@@ -262,7 +297,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isCollapsed ? sidebar("expand") : sidebar("collapse")}
             className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
           >
             {isCollapsed ? (
@@ -279,7 +314,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
           <div key={group.title}>
             {!isCollapsed && (
               <h3 className="px-6 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 transition-opacity duration-200">
-                {group.title}
+                {sidebar("main")}
               </h3>
             )}
             <div className={cn("space-y-1", isCollapsed ? "px-2" : "px-4")}>
@@ -311,7 +346,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                             isActive ? "text-green-600" : "text-gray-500",
                           )}
                         />
-                        <span className="flex-1 text-left">{item.label}</span>
+                        <span className="min-w-0 flex-1 text-left">{labelFor(item.label)}</span>
                         <span className="text-gray-400">
                           {isExpanded ? (
                             <ChevronUp className="w-4 h-4" />
@@ -344,7 +379,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                                 <div className="absolute -left-[17px] top-1/2 -mt-px w-4 h-px bg-gray-200"></div>
                                 <div className="absolute -left-[17px] top-0 bottom-1/2 w-px bg-gray-200 -mt-2"></div>
 
-                                {subItem.label}
+                                {labelFor(subItem.label)}
                               </Link>
                             );
                           })}
@@ -370,7 +405,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                         ? "bg-green-100 text-green-800"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                     )}
-                    title={isCollapsed ? item.label : undefined}
+                    title={isCollapsed ? labelFor(item.label) : undefined}
                   >
                     <item.icon
                       className={cn(
@@ -378,7 +413,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                         isActive ? "text-green-600" : "text-gray-500",
                       )}
                     />
-                    {!isCollapsed && <span>{item.label}</span>}
+                    {!isCollapsed && <span>{labelFor(item.label)}</span>}
                   </Link>
                 );
               })}
@@ -389,7 +424,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
         <div>
           {!isCollapsed && (
             <h3 className="px-6 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-              ACCOUNT SETTINGS
+              {sidebar("accountSettings")}
             </h3>
           )}
           <div className={cn("space-y-1", isCollapsed ? "px-2" : "px-4")}>
@@ -411,7 +446,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                       ? "bg-green-100 text-green-800"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-lg",
                   )}
-                  title={isCollapsed ? item.label : undefined}
+                  title={isCollapsed ? labelFor(item.label) : undefined}
                 >
                   <item.icon
                     className={cn(
@@ -419,7 +454,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                       isActive ? "text-green-600" : "text-gray-500",
                     )}
                   />
-                  {!isCollapsed && <span>{item.label}</span>}
+                  {!isCollapsed && <span>{labelFor(item.label)}</span>}
                 </Link>
               );
             })}
@@ -431,10 +466,10 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                   ? "justify-center px-2 py-3"
                   : "space-x-3 px-4 py-3",
               )}
-              title={isCollapsed ? "Logout" : undefined}
+              title={isCollapsed ? sidebar("logout") : undefined}
             >
               <LogOut className="w-5 h-5 shrink-0 text-gray-500" />
-              {!isCollapsed && <span>Logout</span>}
+              {!isCollapsed && <span>{sidebar("logout")}</span>}
             </button>
           </div>
         </div>
@@ -456,7 +491,7 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
           <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shrink-0">
             <img
               src={user?.avatar || ""}
-              alt={user?.firstName || "User"}
+              alt={user?.firstName || common("user")}
               className="w-full h-full object-cover"
             />
           </div>
@@ -480,11 +515,10 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
             </div>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-900 text-center">
-                Are you sure you want to log out?
+                {sidebar("logoutTitle")}
               </DialogTitle>
               <DialogDescription className="text-center text-gray-500 mt-2">
-                You&apos;ll be signed out from your account and will need to log
-                in again to continue.
+                {sidebar("logoutBody")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -494,13 +528,13 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
               className="flex-1 border-gray-200"
               onClick={() => setShowLogoutDialog(false)}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="flex-1 bg-red-600 hover:bg-red-700 text-white"
               onClick={handleLogout}
             >
-              Log Out
+              {sidebar("logout")}
             </Button>
           </DialogFooter>
         </DialogContent>

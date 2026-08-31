@@ -1,5 +1,6 @@
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import {getFormatter, getTranslations} from "next-intl/server";
 
 export type DocumentSection = {
   id: string;
@@ -8,7 +9,7 @@ export type DocumentSection = {
   bullets?: string[];
 };
 
-export function PublicDocumentPage({
+export async function PublicDocumentPage({
   title,
   summary,
   updatedAt,
@@ -16,9 +17,12 @@ export function PublicDocumentPage({
 }: {
   readonly title: string;
   readonly summary: string;
-  readonly updatedAt: string;
+  readonly updatedAt: Date;
   readonly sections: DocumentSection[];
 }) {
+  const t = await getTranslations("Legal");
+  const format = await getFormatter();
+
   return (
     <>
       <Header />
@@ -26,7 +30,7 @@ export function PublicDocumentPage({
         <section className="border-b border-green-950/10 bg-green-50">
           <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
             <p className="text-sm font-semibold text-green-800">
-              Pavodah policies
+              {t("policies")}
             </p>
             <h1 className="mt-3 max-w-4xl text-4xl font-bold tracking-[-0.03em] sm:text-6xl">
               {title}
@@ -35,7 +39,7 @@ export function PublicDocumentPage({
               {summary}
             </p>
             <p className="mt-6 text-sm text-gray-500">
-              Last updated {updatedAt}
+              {t("lastUpdated", {date: format.dateTime(updatedAt, "long")})}
             </p>
           </div>
         </section>
@@ -43,9 +47,9 @@ export function PublicDocumentPage({
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-20 lg:px-8 lg:py-20">
           <aside
             className="lg:sticky lg:top-8 lg:self-start"
-            aria-label="Policy contents"
+            aria-label={t("policyContents")}
           >
-            <p className="text-sm font-semibold text-gray-950">Contents</p>
+            <p className="text-sm font-semibold text-gray-950">{t("contents")}</p>
             <nav className="mt-4 flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
               {sections.map((section) => (
                 <a

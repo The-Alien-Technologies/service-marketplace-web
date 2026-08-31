@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppNotification, NotificationType } from "@/types/notification";
+import {useFormatter, useTranslations} from "next-intl";
 
 function iconFor(type: NotificationType) {
   if (type.includes("PAYMENT") || type.includes("ORDER")) return ShoppingBag;
@@ -22,24 +23,6 @@ function iconFor(type: NotificationType) {
   if (type === "MESSAGE_RECEIVED") return MessageSquare;
   if (type === "SUPPORT_ESCALATED") return Headphones;
   return CircleAlert;
-}
-
-export function formatNotificationTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Recently";
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "Just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
-  });
 }
 
 interface NotificationItemProps {
@@ -53,8 +36,16 @@ export function NotificationItem({
   onOpen,
   compact = false,
 }: NotificationItemProps) {
+  const t = useTranslations("Notifications");
+  const format = useFormatter();
   const Icon = iconFor(notification.type);
   const isUnread = !notification.readAt;
+  const createdAt = new Date(notification.createdAt);
+  const validDate = !Number.isNaN(createdAt.getTime());
+  const timeLabel = validDate ? format.relativeTime(createdAt) : t("recently");
+  const fullDateLabel = validDate
+    ? format.dateTime(createdAt, "dateTime")
+    : t("dateUnavailable");
 
   return (
     <button
@@ -87,14 +78,14 @@ export function NotificationItem({
               isUnread ? "font-semibold" : "font-medium",
             )}
           >
-            {isUnread && <span className="sr-only">Unread: </span>}
+            {isUnread && <span className="sr-only">{t("unread")}: </span>}
             {notification.title}
           </span>
           <span
             className="shrink-0 text-xs text-gray-500"
-            title={dateLabel(notification.createdAt)}
+            title={fullDateLabel}
           >
-            {formatNotificationTime(notification.createdAt)}
+            {timeLabel}
           </span>
         </span>
         <span
@@ -109,14 +100,9 @@ export function NotificationItem({
       {isUnread && (
         <span
           className="absolute right-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-green-600"
-          aria-label="Unread"
+          aria-label={t("unread")}
         />
       )}
     </button>
   );
-}
-
-function dateLabel(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleString();
 }

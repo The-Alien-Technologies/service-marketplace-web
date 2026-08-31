@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageSquare, FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export function ContactModal({
   onStartChat,
   onGetQuote,
 }: ContactModalProps) {
+  const t = useTranslations("Marketplace");
   if (!isOpen) return null;
 
   return (
@@ -28,7 +30,7 @@ export function ContactModal({
           {/* Header */}
           <div className="p-6 pb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              How would you like to connect?
+              {t("connectPrompt")}
             </h3>
           </div>
 
@@ -43,7 +45,7 @@ export function ContactModal({
                 <FileText className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               </div>
               <span className="text-base font-medium text-gray-900 dark:text-white">
-                Get a quote
+                {t("getQuote")}
               </span>
             </button>
 
@@ -56,7 +58,7 @@ export function ContactModal({
                 <MessageSquare className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               </div>
               <span className="text-base font-medium text-gray-900 dark:text-white">
-                Start a chat
+                {t("startChat")}
               </span>
             </button>
           </div>

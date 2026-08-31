@@ -47,6 +47,7 @@ import {
   AnalyticsTrend,
   UserAnalytics,
 } from "@/types/analytics";
+import { useFormatter, useTranslations } from "next-intl";
 
 const STATUS_COLORS: Record<string, string> = {
   Completed: "var(--success)",
@@ -124,6 +125,9 @@ function describeTrend(value: AnalyticsTrend) {
 // --- Admin Dashboard ---
 
 function AdminDashboard() {
+  const t = useTranslations("DashboardAnalytics");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const [data, setData] = useState<AdminAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -178,7 +182,7 @@ function AdminDashboard() {
         aria-live="polite"
       >
         <Loader2 className="h-8 w-8 animate-spin text-green-700" />
-        <p className="text-sm font-medium">Loading live dashboard data…</p>
+        <p className="text-sm font-medium">{t("loadingAdmin")}</p>
       </div>
     );
   }
@@ -191,7 +195,7 @@ function AdminDashboard() {
       >
         <AlertCircle className="mx-auto h-7 w-7 text-red-700" />
         <h1 className="mt-4 text-lg font-bold text-red-950">
-          Dashboard data is unavailable
+          {t("adminUnavailable")}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-red-800">
           {loadError ?? "The analytics API did not return dashboard data."}
@@ -201,7 +205,7 @@ function AdminDashboard() {
           className="mt-5 border-red-300 bg-white text-red-900 hover:bg-red-100"
           onClick={() => setRetryKey((value) => value + 1)}
         >
-          Try again
+          {common("retry")}
         </Button>
       </div>
     );
@@ -220,14 +224,14 @@ function AdminDashboard() {
   );
   const donutData = totalOrders
     ? orderStatusBreakdown
-    : [{ name: "No orders", value: 1 }];
+    : [{ name: t("noOrders"), value: 1 }];
   const staleFilterSnapshot =
     data.selectedYear !== selectedYear ||
     data.categoryMonth !== selectedCategoryMonth;
 
   const statCards = [
     {
-      label: "Total Users",
+      label: t("totalUsers"),
       value: numberFormatter.format(stats.totalUsers),
       trend: describeTrend(trends.totalUsers),
       trendDetail: `${numberFormatter.format(trends.totalUsers.current)} registrations this month; ${numberFormatter.format(trends.totalUsers.previous)} last month`,
@@ -236,7 +240,7 @@ function AdminDashboard() {
       barColor: "bg-orange-600",
     },
     {
-      label: "Active Providers",
+      label: t("activeProviders"),
       value: numberFormatter.format(stats.activeProviders),
       trend: describeTrend(trends.activeProviders),
       trendDetail: `${numberFormatter.format(trends.activeProviders.current)} new active providers this month; ${numberFormatter.format(trends.activeProviders.previous)} last month`,
@@ -245,7 +249,7 @@ function AdminDashboard() {
       barColor: "bg-purple-600",
     },
     {
-      label: "Active Orders",
+      label: t("activeOrders"),
       value: numberFormatter.format(stats.activeOrders),
       trend: describeTrend(trends.activeOrders),
       trendDetail: `${numberFormatter.format(trends.activeOrders.current)} active orders opened this month; ${numberFormatter.format(trends.activeOrders.previous)} last month`,
@@ -254,7 +258,7 @@ function AdminDashboard() {
       barColor: "bg-blue-600",
     },
     {
-      label: "Revenue",
+      label: t("revenue"),
       value: formatCurrency(stats.revenue, data.currency),
       trend: describeTrend(trends.revenue),
       trendDetail: `${formatCurrency(trends.revenue.current, data.currency)} retained this month; ${formatCurrency(trends.revenue.previous, data.currency)} last month`,
@@ -273,15 +277,15 @@ function AdminDashboard() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-900">
-            Dashboard
+            {t("title")}
           </h1>
           <p className="mt-1 text-gray-500">
-            Monitor live platform performance and take quick actions.
+            {t("adminSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <p className="hidden text-xs text-gray-500 md:block">
-            Updated {new Date(data.generatedAt).toLocaleString("en-GH")}
+            {t("updated", { date: format.dateTime(new Date(data.generatedAt), "dateTime") })}
           </p>
           <Button
             variant="outline"
@@ -293,7 +297,7 @@ function AdminDashboard() {
             <RefreshCw
               className={cn("h-4 w-4", refreshing && "animate-spin")}
             />
-            Refresh
+            {t("refresh")}
           </Button>
         </div>
       </header>
@@ -308,7 +312,7 @@ function AdminDashboard() {
             <p>
               {staleFilterSnapshot
                 ? `Could not load ${selectedYear} revenue and ${formatMonthKey(selectedCategoryMonth)} category activity. Showing the last successful snapshot for ${data.selectedYear} and ${formatMonthKey(data.categoryMonth)}.`
-                : "The dashboard could not be refreshed. The last successful snapshot remains visible."}{" "}
+                : t("refreshFailed")}{" "}
               {loadError}
             </p>
           </div>
@@ -316,7 +320,7 @@ function AdminDashboard() {
             className="shrink-0 self-start font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 sm:self-auto"
             onClick={() => setRetryKey((value) => value + 1)}
           >
-            Try again
+            {common("retry")}
           </button>
         </div>
       )}
@@ -357,7 +361,7 @@ function AdminDashboard() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-gray-900">
-                Revenue Overview
+                {t("revenueOverview")}
               </h3>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -383,7 +387,7 @@ function AdminDashboard() {
                 <span className="font-semibold text-gray-700">
                   {formatCurrency(data.revenueSummary.total, data.currency)}
                 </span>{" "}
-                in {data.selectedYear}
+                {t("inYear", { year: data.selectedYear })}
                 {data.revenueSummary.bestMonth && (
                   <>
                     {" "}
@@ -399,15 +403,15 @@ function AdminDashboard() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-blue-400" />
-                  <span className="text-gray-600">Net revenue</span>
+                  <span className="text-gray-600">{t("netRevenue")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-orange-400" />
-                  <span className="text-gray-600">Commissions</span>
+                  <span className="text-gray-600">{t("commissions")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-green-400" />
-                  <span className="text-gray-600">Payouts</span>
+                  <span className="text-gray-600">{t("payouts")}</span>
                 </div>
               </div>
             </div>
@@ -444,10 +448,10 @@ function AdminDashboard() {
                   formatter={(value, name) => [
                     formatCurrency(Number(value ?? 0), data.currency),
                     name === "revenue"
-                      ? "Net revenue"
+                      ? t("netRevenue")
                       : name === "commission"
-                        ? "Commission"
-                        : "Payout",
+                        ? t("commissions")
+                        : t("payouts"),
                   ]}
                   contentStyle={{
                     backgroundColor: "#1f2937",
@@ -488,7 +492,7 @@ function AdminDashboard() {
             {!chartHasData && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <p className="rounded-lg bg-white/90 px-4 py-2 text-sm font-medium text-gray-500 shadow-sm dark:bg-gray-900/90">
-                  No financial activity recorded for {data.selectedYear}.
+                  {t("noFinancialActivity", { year: data.selectedYear })}
                 </p>
               </div>
             )}
@@ -500,10 +504,10 @@ function AdminDashboard() {
           {/* Order Status Summary */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Order status summary
+              {t("orderStatusSummary")}
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              Track order completion and identify service delivery rate.
+              {t("orderStatusBody")}
             </p>
 
             <div className="flex flex-col items-center gap-4 sm:flex-row lg:flex-col xl:flex-row">
@@ -576,7 +580,7 @@ function AdminDashboard() {
                 className="flex items-center text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
                 onClick={() => router.push("/dashboard/orders")}
               >
-                View detail report <ArrowRight className="ml-1 h-4 w-4" />
+                {t("viewReport")} <ArrowRight className="ml-1 h-4 w-4" />
               </button>
             </div>
           </div>
@@ -586,7 +590,7 @@ function AdminDashboard() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-card-foreground">
-                  Top Categories
+                  {t("topCategories")}
                 </h3>
                 <Info
                   className="h-4 w-4 text-gray-400"
@@ -671,6 +675,8 @@ function AdminDashboard() {
 // --- Provider Dashboard ---
 
 function ProviderDashboard() {
+  const t = useTranslations("DashboardAnalytics");
+  const common = useTranslations("Common");
   const router = useRouter();
   const [data, setData] = useState<ProviderAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -724,7 +730,7 @@ function ProviderDashboard() {
         aria-live="polite"
       >
         <Loader2 className="h-8 w-8 animate-spin text-green-700 motion-reduce:animate-none" />
-        <p className="text-sm font-medium">Loading live provider data…</p>
+        <p className="text-sm font-medium">{t("loadingProvider")}</p>
       </div>
     );
   }
@@ -737,7 +743,7 @@ function ProviderDashboard() {
       >
         <AlertCircle className="mx-auto h-7 w-7 text-red-700 dark:text-red-300" />
         <h1 className="mt-4 text-lg font-bold text-red-950 dark:text-red-100">
-          Provider dashboard is unavailable
+          {t("providerUnavailable")}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-red-800 dark:text-red-200">
           {loadError ?? "The analytics API did not return dashboard data."}
@@ -747,7 +753,7 @@ function ProviderDashboard() {
           className="mt-5 min-h-11 border-red-300 bg-card text-red-900 hover:bg-red-100 dark:border-red-800 dark:text-red-100 dark:hover:bg-red-950"
           onClick={() => setRetryKey((value) => value + 1)}
         >
-          Try again
+          {common("retry")}
         </Button>
       </div>
     );
@@ -770,7 +776,7 @@ function ProviderDashboard() {
 
   const providerStats = [
     {
-      label: "Lifetime Earnings",
+      label: t("lifetimeEarnings"),
       value: formatCurrency(stats.earnings, data.currency),
       trend: describeTrend(trends.earnings),
       trendDetail: `${formatCurrency(trends.earnings.current, data.currency)} earned this month; ${formatCurrency(trends.earnings.previous, data.currency)} last month`,
@@ -780,7 +786,7 @@ function ProviderDashboard() {
       barColor: "bg-green-600",
     },
     {
-      label: "Active Orders",
+      label: t("activeOrders"),
       value: numberFormatter.format(stats.activeOrders),
       trend: describeTrend(trends.newPaidOrders),
       trendLabel:
@@ -793,7 +799,7 @@ function ProviderDashboard() {
       barColor: "bg-blue-600",
     },
     {
-      label: "Completed Orders",
+      label: t("completedOrders"),
       value: numberFormatter.format(stats.completedOrders),
       trend: describeTrend(trends.completedOrders),
       trendLabel:
@@ -806,7 +812,7 @@ function ProviderDashboard() {
       barColor: "bg-purple-600",
     },
     {
-      label: "Average Rating",
+      label: t("averageRating"),
       value: `${stats.averageRating} / 5`,
       supportingText: `${numberFormatter.format(stats.reviewCount)} ${stats.reviewCount === 1 ? "review" : "reviews"}`,
       icon: Star,
@@ -819,9 +825,9 @@ function ProviderDashboard() {
     <div className="space-y-8">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            Manage your services, track earnings, and grow your business.
+            {t("providerSubtitle")}
           </p>
         </div>
         {refreshing && (
@@ -831,7 +837,7 @@ function ProviderDashboard() {
             aria-live="polite"
           >
             <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-            Refreshing
+            {t("refreshing")}
           </div>
         )}
       </header>
@@ -846,7 +852,7 @@ function ProviderDashboard() {
             <p>
               {staleFilterSnapshot
                 ? `Could not load ${selectedYear} earnings and ${formatMonthKey(selectedOrderMonth)} orders. Showing the last successful snapshot for ${data.selectedYear} and ${formatMonthKey(data.orderMonth)}.`
-                : "The dashboard could not be refreshed. The last successful snapshot remains visible."}{" "}
+                : t("refreshFailed")}{" "}
               {loadError}
             </p>
           </div>
@@ -854,7 +860,7 @@ function ProviderDashboard() {
             className="min-h-11 shrink-0 self-start px-1 font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 sm:self-auto"
             onClick={() => setRetryKey((value) => value + 1)}
           >
-            Try again
+            {common("retry")}
           </button>
         </div>
       )}
@@ -913,7 +919,7 @@ function ProviderDashboard() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-bold text-card-foreground">
-                  Earnings overview
+                  {t("earningsOverview")}
                 </h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1056,8 +1062,7 @@ function ProviderDashboard() {
               {!chartHasData && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p className="rounded-lg bg-card/95 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm">
-                    No earnings recorded for {data.selectedYear} or{" "}
-                    {data.selectedYear - 1}.
+                    {t("noEarnings", { year: data.selectedYear, previous: data.selectedYear - 1 })}
                   </p>
                 </div>
               )}
@@ -1095,13 +1100,13 @@ function ProviderDashboard() {
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-card-foreground">
-                Recent Order Requests
+                {t("recentRequests")}
               </h3>
               <button
                 className="min-h-11 self-start px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300 sm:self-auto"
                 onClick={() => router.push("/dashboard/orders")}
               >
-                View all orders
+                {t("viewAllOrders")}
               </button>
             </div>
 
@@ -1188,11 +1193,10 @@ function ProviderDashboard() {
                 <div className="py-10 text-center">
                   <Briefcase className="mx-auto h-6 w-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium text-card-foreground">
-                    No paid order requests yet
+                    {t("noPaidRequests")}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    New paid requests will appear here when customers place
-                    them.
+                    {t("paidRequestsBody")}
                   </p>
                 </div>
               )}
@@ -1206,7 +1210,7 @@ function ProviderDashboard() {
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-card-foreground">
-                Order summary
+                {t("orderSummary")}
               </h3>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1302,7 +1306,7 @@ function ProviderDashboard() {
                 className="flex min-h-11 items-center px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300"
                 onClick={() => router.push("/dashboard/orders")}
               >
-                View all orders <ArrowRight className="ml-1 h-4 w-4" />
+                {t("viewAllOrders")} <ArrowRight className="ml-1 h-4 w-4" />
               </button>
             </div>
           </div>
@@ -1315,6 +1319,8 @@ function ProviderDashboard() {
 // --- User Dashboard ---
 
 function UserDashboard() {
+  const t = useTranslations("DashboardAnalytics");
+  const common = useTranslations("Common");
   const router = useRouter();
   const [data, setData] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1366,7 +1372,7 @@ function UserDashboard() {
         aria-live="polite"
       >
         <Loader2 className="h-8 w-8 animate-spin text-green-700 motion-reduce:animate-none" />
-        <p className="text-sm font-medium">Loading your dashboard…</p>
+        <p className="text-sm font-medium">{t("loadingUser")}</p>
       </div>
     );
   }
@@ -1379,7 +1385,7 @@ function UserDashboard() {
       >
         <AlertCircle className="mx-auto h-7 w-7 text-red-700 dark:text-red-300" />
         <h1 className="mt-4 text-lg font-bold text-red-950 dark:text-red-100">
-          Your dashboard is unavailable
+          {t("userUnavailable")}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-red-800 dark:text-red-200">
           {loadError ?? "The analytics API did not return dashboard data."}
@@ -1389,7 +1395,7 @@ function UserDashboard() {
           className="mt-5 min-h-11 border-red-300 bg-card text-red-900 hover:bg-red-100 dark:border-red-800 dark:text-red-100 dark:hover:bg-red-950"
           onClick={() => setRetryKey((value) => value + 1)}
         >
-          Try again
+          {common("retry")}
         </Button>
       </div>
     );
@@ -1409,7 +1415,7 @@ function UserDashboard() {
 
   const userStats = [
     {
-      label: "Lifetime Spending",
+      label: t("lifetimeSpending"),
       value: formatCurrency(stats.totalSpent, data.currency),
       trend: describeTrend(trends.spending),
       trendLabel:
@@ -1423,7 +1429,7 @@ function UserDashboard() {
       barColor: "bg-green-600",
     },
     {
-      label: "Active Orders",
+      label: t("activeOrders"),
       value: numberFormatter.format(stats.activeOrders),
       trend: describeTrend(trends.newPaidOrders),
       trendLabel:
@@ -1436,7 +1442,7 @@ function UserDashboard() {
       barColor: "bg-blue-600",
     },
     {
-      label: "Completed Orders",
+      label: t("completedOrders"),
       value: numberFormatter.format(stats.completedOrders),
       trend: describeTrend(trends.completedOrders),
       trendLabel:
@@ -1449,7 +1455,7 @@ function UserDashboard() {
       barColor: "bg-purple-600",
     },
     {
-      label: "Total Orders",
+      label: t("totalOrders"),
       value: numberFormatter.format(stats.totalOrders),
       supportingText: "Paid and refunded history",
       icon: ShoppingBag,
@@ -1462,9 +1468,9 @@ function UserDashboard() {
     <div className="space-y-8">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            Monitor your orders and track your spending.
+            {t("userSubtitle")}
           </p>
         </div>
         {refreshing && (
@@ -1474,7 +1480,7 @@ function UserDashboard() {
             aria-live="polite"
           >
             <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-            Refreshing
+            {t("refreshing")}
           </div>
         )}
       </header>
@@ -1489,7 +1495,7 @@ function UserDashboard() {
             <p>
               {staleYearSnapshot
                 ? `Could not load ${selectedYear} spending. Showing the last successful ${data.selectedYear} snapshot.`
-                : "The dashboard could not be refreshed. The last successful snapshot remains visible."}{" "}
+                : t("refreshFailed")}{" "}
               {loadError}
             </p>
           </div>
@@ -1497,7 +1503,7 @@ function UserDashboard() {
             className="min-h-11 shrink-0 self-start px-1 font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 sm:self-auto"
             onClick={() => setRetryKey((value) => value + 1)}
           >
-            Try again
+            {common("retry")}
           </button>
         </div>
       )}
@@ -1556,7 +1562,7 @@ function UserDashboard() {
             <div className="mb-6">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-card-foreground">
-                  Spending overview
+                  {t("spendingOverview")}
                 </h3>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1699,8 +1705,7 @@ function UserDashboard() {
               {!chartHasData && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p className="rounded-lg bg-card/95 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm">
-                    No spending recorded for {data.selectedYear} or{" "}
-                    {data.selectedYear - 1}.
+                    {t("noSpending", { year: data.selectedYear, previous: data.selectedYear - 1 })}
                   </p>
                 </div>
               )}
@@ -1712,7 +1717,7 @@ function UserDashboard() {
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Month</th>
+                  <th scope="col">{t("month")}</th>
                   <th scope="col">{data.selectedYear}</th>
                   <th scope="col">{data.selectedYear - 1}</th>
                 </tr>
@@ -1737,13 +1742,13 @@ function UserDashboard() {
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-card-foreground">
-                Recent Orders
+                {t("recentOrders")}
               </h3>
               <button
                 className="min-h-11 self-start px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300 sm:self-auto"
                 onClick={() => router.push("/dashboard/orders")}
               >
-                View all orders
+                {t("viewAllOrders")}
               </button>
             </div>
 
@@ -1780,8 +1785,7 @@ function UserDashboard() {
                           {order.providerName}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          · Net paid:{" "}
-                          {formatCurrency(order.netTotal, order.currency)}
+                          · {t("netPaid", { amount: formatCurrency(order.netTotal, order.currency) })}
                         </span>
                       </div>
                       <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -1831,17 +1835,17 @@ function UserDashboard() {
                 <div className="py-10 text-center">
                   <ShoppingBag className="mx-auto h-6 w-6 text-muted-foreground" />
                   <p className="mt-3 text-sm font-medium text-card-foreground">
-                    No paid orders yet
+                    {t("noPaidOrders")}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Your paid orders will appear here after checkout.
+                    {t("paidOrdersBody")}
                   </p>
                   <Button
                     variant="outline"
                     className="mt-4 min-h-11"
                     onClick={() => router.push("/")}
                   >
-                    Browse services
+                    {common("viewAll")}
                   </Button>
                 </div>
               )}
@@ -1855,7 +1859,7 @@ function UserDashboard() {
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-card-foreground">
-                Order summary
+                {t("orderSummary")}
               </h3>
             </div>
 
@@ -1864,7 +1868,7 @@ function UserDashboard() {
                 {numberFormatter.format(stats.totalOrders)}
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Paid and refunded order history
+                {t("paidHistory")}
               </div>
             </div>
 
@@ -1921,7 +1925,7 @@ function UserDashboard() {
                 className="flex min-h-11 items-center px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300"
                 onClick={() => router.push("/dashboard/orders")}
               >
-                View all orders <ArrowRight className="ml-1 h-4 w-4" />
+                {t("viewAllOrders")} <ArrowRight className="ml-1 h-4 w-4" />
               </button>
             </div>
           </div>

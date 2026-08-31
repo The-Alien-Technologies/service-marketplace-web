@@ -16,8 +16,12 @@ import { NotificationItem } from "@/components/notifications/notification-item";
 import { useNotificationStore } from "@/store/notification-store";
 import { AppNotification } from "@/types/notification";
 import { cn } from "@/lib/utils";
+import {useTranslations} from "next-intl";
 
 export default function NotificationsPage() {
+  const t = useTranslations("Notifications");
+  const common = useTranslations("Common");
+  const errors = useTranslations("Errors");
   const router = useRouter();
   const {
     notifications,
@@ -49,10 +53,10 @@ export default function NotificationsPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-950">
-            Notifications
+            {t("title")}
           </h1>
           <p className="mt-1 text-sm text-gray-600">
-            Follow order, payment, message, dispute, and support activity.
+            {t("subtitle")}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -64,7 +68,7 @@ export default function NotificationsPage() {
             className="self-start border-gray-200 text-gray-700 hover:bg-gray-50 sm:self-auto"
           >
             <CheckCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-            Mark all as read
+            {t("markAll")}
           </Button>
         )}
       </div>
@@ -74,7 +78,7 @@ export default function NotificationsPage() {
           <div
             className="flex rounded-lg bg-gray-100 p-1"
             role="group"
-            aria-label="Notification filters"
+            aria-label={t("filters")}
           >
             {(["all", "unread"] as const).map((filter) => (
               <button
@@ -89,7 +93,7 @@ export default function NotificationsPage() {
                 )}
                 aria-pressed={activeFilter === filter}
               >
-                {filter === "all" ? "All" : `Unread (${unreadCount})`}
+                {filter === "all" ? t("all") : t("unreadFilter", {count: unreadCount})}
               </button>
             ))}
           </div>
@@ -100,7 +104,7 @@ export default function NotificationsPage() {
             }
             disabled={isLoading}
             className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Refresh notifications"
+            aria-label={t("refresh")}
           >
             <RefreshCw
               className={cn("h-4 w-4", isLoading && "animate-spin")}
@@ -110,7 +114,7 @@ export default function NotificationsPage() {
         </div>
 
         {isLoading && notifications.length === 0 ? (
-          <div className="divide-y divide-gray-100" aria-label="Loading notifications">
+          <div className="divide-y divide-gray-100" aria-label={t("loading")}>
             {[0, 1, 2, 3, 4].map((item) => (
               <div key={item} className="flex animate-pulse gap-3 px-5 py-4">
                 <div className="h-10 w-10 rounded-full bg-gray-200" />
@@ -124,10 +128,10 @@ export default function NotificationsPage() {
         ) : error && notifications.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="font-semibold text-gray-900">
-              Notifications couldn’t load
+              {t("loadFailed")}
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm text-gray-600">
-              {error} Check your connection and try again.
+              {error} {errors("network")}
             </p>
             <Button
               type="button"
@@ -136,7 +140,7 @@ export default function NotificationsPage() {
               }
               className="mt-5 bg-green-700 text-white hover:bg-green-800"
             >
-              Try again
+              {common("retry")}
             </Button>
           </div>
         ) : notifications.length === 0 ? (
@@ -146,13 +150,13 @@ export default function NotificationsPage() {
             </span>
             <p className="mt-4 font-semibold text-gray-900">
               {activeFilter === "unread"
-                ? "You’re all caught up"
-                : "No notifications yet"}
+                ? t("caughtUp")
+                : t("empty")}
             </p>
             <p className="mx-auto mt-1 max-w-md text-sm text-gray-600">
               {activeFilter === "unread"
-                ? "New activity that needs your attention will appear here."
-                : "Updates about your Pavodah activity will appear here when they happen."}
+                ? t("caughtUpBody")
+                : t("historyEmptyBody")}
             </p>
           </div>
         ) : (
@@ -176,14 +180,14 @@ export default function NotificationsPage() {
               onClick={() => void loadMore()}
               className="border-gray-200 text-gray-700 hover:bg-gray-50"
             >
-              {isLoadingMore ? "Loading…" : "Load older notifications"}
+              {isLoadingMore ? common("loading") : t("loadOlder")}
             </Button>
           </div>
         )}
 
         {error && notifications.length > 0 && (
           <div className="border-t border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error} You can retry with the refresh button.
+            {error} {t("retryRefresh")}
           </div>
         )}
       </div>

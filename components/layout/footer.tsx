@@ -4,20 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useContactSupport } from "@/hooks/use-contact-support";
 import { useCategories } from "@/store/categories-store";
-
-const HELP_LINKS = [
-  { label: "Help Center", href: "/help" },
-  { label: "Trust & Safety", href: "/trust-and-safety" },
-];
-
-const LEGAL_LINKS = [
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Privacy Policy", href: "/privacy" },
-];
+import {useTranslations} from "next-intl";
 
 export function Footer() {
   const { topLevelCategories, isLoading } = useCategories();
   const contactSupport = useContactSupport();
+  const nav = useTranslations("Navigation");
+  const common = useTranslations("Common");
+  const legal = useTranslations("Legal");
+  const helpLinks = [
+    {label: nav("helpCenter"), href: "/help"},
+    {label: legal("trustSafety"), href: "/trust-and-safety"}
+  ];
+  const legalLinks = [
+    {label: legal("termsTitle"), href: "/terms"},
+    {label: legal("privacyTitle"), href: "/privacy"}
+  ];
 
   return (
     <footer className="bg-black text-white">
@@ -34,16 +36,15 @@ export function Footer() {
               />
             </Link>
             <p className="max-w-xs text-sm leading-6 text-gray-400">
-              Find trusted services, manage the work, and keep every important
-              update in one place.
+              {legal("footerDescription")}
             </p>
             <p className="text-sm text-gray-500">© Pavodah 2026</p>
           </div>
 
           <div>
-            <h2 className="mb-4 text-base font-semibold">Categories</h2>
+            <h2 className="mb-4 text-base font-semibold">{nav("categories")}</h2>
             <ul className="space-y-2.5">
-              {isLoading && <li className="text-sm text-gray-500">Loading…</li>}
+              {isLoading && <li className="text-sm text-gray-500">{common("loading")}</li>}
               {!isLoading &&
                 topLevelCategories.length > 0 &&
                 topLevelCategories.slice(0, 8).map((category) => (
@@ -58,16 +59,16 @@ export function Footer() {
                 ))}
               {!isLoading && topLevelCategories.length === 0 && (
                 <li className="text-sm text-gray-500">
-                  No categories available
+                  {legal("noCategories")}
                 </li>
               )}
             </ul>
           </div>
 
           <div>
-            <h2 className="mb-4 text-base font-semibold">Help</h2>
+            <h2 className="mb-4 text-base font-semibold">{legal("help")}</h2>
             <ul className="space-y-2.5">
-              {HELP_LINKS.map((link) => (
+              {helpLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -83,16 +84,16 @@ export function Footer() {
                   onClick={contactSupport}
                   className="min-h-10 text-sm text-gray-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
                 >
-                  Contact Support
+                  {nav("contactSupport")}
                 </button>
               </li>
             </ul>
           </div>
 
           <div>
-            <h2 className="mb-4 text-base font-semibold">Legal</h2>
+            <h2 className="mb-4 text-base font-semibold">{legal("legal")}</h2>
             <ul className="space-y-2.5">
-              {LEGAL_LINKS.map((link) => (
+              {legalLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}

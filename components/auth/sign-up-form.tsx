@@ -10,25 +10,26 @@ import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
 import { toast } from "react-toastify";
 import { authClient } from "@/lib/auth-client";
+import {useTranslations} from "next-intl";
 
-const signUpSchema = z
-  .object({
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Please confirm your password"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type SignUpFormData = z.infer<typeof signUpSchema>;
+type SignUpFormData = {email: string; password: string; confirmPassword: string};
 
 export function SignUpForm() {
+  const t = useTranslations("Auth");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setAuthStep, setUser, nextUserStep } = useAuthStore();
+  const signUpSchema = z
+    .object({
+      email: z.string().email(t("invalidEmail")),
+      password: z.string().min(6, t("passwordLength")),
+      confirmPassword: z.string().min(6, t("passwordLength")),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("passwordMismatch"),
+      path: ["confirmPassword"],
+    });
 
   const {
     register,
@@ -51,12 +52,12 @@ export function SignUpForm() {
       }
 
       toast.success(
-        "Account created successfully! Please check your email for verification.",
+        t("accountCreated"),
       );
       nextUserStep();
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Sign up failed";
+        error instanceof Error ? error.message : t("authFailed");
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -78,7 +79,7 @@ export function SignUpForm() {
     } catch (error) {
       console.error("Google sign up error:", error);
       toast.error(
-        `Google sign up failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error instanceof Error ? error.message : t("authFailed"),
       );
       setIsLoading(false);
     }
@@ -91,14 +92,14 @@ export function SignUpForm() {
         <div className="w-16 h-16 mx-auto mb-4">
           <img
             src="/assets/logo/logo.svg"
-            alt="Pavodah Logo"
+            alt="Pavodah"
             className="w-full h-full"
           />
         </div>
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-[30px]">
-          Welcome to Pavodah
+          {t("welcomePavodah")}
         </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Sign up</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t("createAccount")}</p>
       </div>
 
       {/* Social Auth Buttons */}
@@ -115,7 +116,7 @@ export function SignUpForm() {
             alt="Google"
             className="w-5 h-5 mr-3"
           />
-          Sign up with Google
+          {t("signUpGoogle")}
         </Button>
       </div>
 
@@ -126,7 +127,7 @@ export function SignUpForm() {
         </div>
         <div className="relative flex justify-center text-sm">
           <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">
-            OR
+            {t("or")}
           </span>
         </div>
       </div>
@@ -136,7 +137,7 @@ export function SignUpForm() {
         {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Email
+            {t("emailAddress")}
           </label>
           <div className="relative">
             <Input
@@ -169,7 +170,7 @@ export function SignUpForm() {
         {/* Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Password
+            {t("password")}
           </label>
           <div className="relative">
             <Input
@@ -199,7 +200,7 @@ export function SignUpForm() {
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <span className="text-sm text-green-600 hover:text-green-700">
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("hidePassword") : t("showPassword")}
               </span>
             </button>
           </div>
@@ -213,7 +214,7 @@ export function SignUpForm() {
         {/* Confirm Password */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Confirm Password
+            {t("confirmPassword")}
           </label>
           <div className="relative">
             <Input
@@ -243,7 +244,7 @@ export function SignUpForm() {
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <span className="text-sm text-green-600 hover:text-green-700">
-                {showConfirmPassword ? "Hide" : "Show"}
+                {showConfirmPassword ? t("hidePassword") : t("showPassword")}
               </span>
             </button>
           </div>
@@ -260,44 +261,30 @@ export function SignUpForm() {
           disabled={isLoading}
           className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium"
         >
-          {isLoading ? "Creating account..." : "Sign up"}
+          {isLoading ? t("creatingAccount") : t("createAccount")}
         </Button>
       </form>
 
       {/* Terms and Privacy */}
       <div className="text-center mt-6">
         <p className="text-xs text-gray-600 dark:text-gray-400">
-          By continuing, you agree to our{" "}
-          <a
-            href="/terms"
-            target="_blank"
-            rel="noreferrer"
-            className="text-green-600 hover:text-green-700"
-          >
-            Terms of service
-          </a>{" "}
-          &{" "}
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noreferrer"
-            className="text-green-600 hover:text-green-700"
-          >
-            Privacy Policy
-          </a>
+          {t.rich("termsAgreement", {
+            terms: (chunks) => <a href="/terms" target="_blank" rel="noreferrer" className="text-green-600 hover:text-green-700">{chunks}</a>,
+            privacy: (chunks) => <a href="/privacy" target="_blank" rel="noreferrer" className="text-green-600 hover:text-green-700">{chunks}</a>
+          })}
         </p>
       </div>
 
       {/* Sign In Link */}
       <div className="text-center mt-4">
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          Already on Pavodah?{" "}
+          {t("alreadyOnPavodah")}{" "}
         </span>
         <button
           onClick={() => setAuthStep("signin")}
           className="text-sm text-green-600 hover:text-green-700 font-medium"
         >
-          Sign in
+          {t("signIn")}
         </button>
       </div>
     </div>

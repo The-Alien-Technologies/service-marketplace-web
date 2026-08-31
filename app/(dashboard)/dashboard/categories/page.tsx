@@ -53,6 +53,7 @@ import { apiService } from "@/lib/api";
 import { Category } from "@/types/auth";
 import { toast } from "react-toastify";
 import { useCategoriesStore } from "@/store/categories-store";
+import { useTranslations } from "next-intl";
 
 // --- Types ---
 
@@ -76,6 +77,8 @@ const categoryColumnHelper = createColumnHelper<CategoryTableRow>();
 const tabs = ["Categories", "Featured"];
 
 export default function CategoriesPage() {
+  const t = useTranslations("AdminOps");
+  const common = useTranslations("Common");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [activeTab, setActiveTab] = useState("Categories");
@@ -182,7 +185,7 @@ export default function CategoriesPage() {
   // Handle form submit
   const handleSubmit = async () => {
     if (!formName.trim()) {
-      toast.error("Category name is required");
+      toast.error(t("categoryRequired"));
       return;
     }
 
@@ -257,7 +260,7 @@ export default function CategoriesPage() {
     try {
       setIsDeleting(true);
       await apiService.deleteCategory(categoryToDelete);
-      toast.success("Category deleted successfully!");
+      toast.success(t("categoryDeleted"));
       fetchCategories();
       invalidateGlobalCache(); // Refresh cache for other components
     } catch (err) {
@@ -459,8 +462,8 @@ export default function CategoriesPage() {
   });
 
   const getAddButtonText = () => {
-    if (activeTab === "Featured") return "Add featured Item";
-    return "Add new category";
+    if (activeTab === "Featured") return t("addFeatured");
+    return t("addCategory");
   };
 
   // Get parent category options (exclude current category if editing)
@@ -474,10 +477,10 @@ export default function CategoriesPage() {
       <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Category Management
+            {t("categoryTitle")}
           </h1>
           <p className="text-gray-500 mt-1">
-            Organize and oversee all marketplace categories.
+            {t("categorySubtitle")}
           </p>
         </div>
 
@@ -498,7 +501,7 @@ export default function CategoriesPage() {
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
               )}
             >
-              {tab}
+              {tab === "Categories" ? t("categories") : t("featured")}
             </button>
           ))}
         </div>
@@ -509,7 +512,7 @@ export default function CategoriesPage() {
         <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
-            placeholder={"Search by category name..."}
+            placeholder={t("searchCategories")}
             className="pl-10 bg-white"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
@@ -607,12 +610,14 @@ export default function CategoriesPage() {
               disabled={!table.getCanPreviousPage()}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              {common("previous")}
             </Button>
             <div className="flex items-center gap-1">
               <span className="text-sm text-gray-600">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                {common("pageOf", {
+                  page: table.getState().pagination.pageIndex + 1,
+                  total: table.getPageCount(),
+                })}
               </span>
             </div>
             <Button
@@ -622,7 +627,7 @@ export default function CategoriesPage() {
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              Next
+              {common("next")}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -640,7 +645,7 @@ export default function CategoriesPage() {
         <SheetContent className="sm:max-w-[500px] p-0">
           <SheetHeader className="px-6 py-6 border-b border-gray-100">
             <SheetTitle className="text-xl font-semibold">
-              {isEditMode ? "Edit Category" : "Add New Category"}
+              {isEditMode ? t("editCategory") : t("addCategoryTitle")}
             </SheetTitle>
           </SheetHeader>
 
@@ -648,7 +653,7 @@ export default function CategoriesPage() {
             {/* Category Image */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                Category Image
+                {t("categoryImage")}
               </label>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -667,7 +672,7 @@ export default function CategoriesPage() {
                   <>
                     <Upload className="w-8 h-8 text-gray-400 mb-2" />
                     <p className="text-sm text-gray-500">
-                      Click to upload image
+                      {t("uploadImage")}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       SVG, PNG, JPG (max 5MB)
@@ -690,11 +695,11 @@ export default function CategoriesPage() {
                 htmlFor="category-name"
                 className="text-sm font-medium text-gray-700"
               >
-                Category name
+                {t("categoryName")}
               </label>
               <Input
                 id="category-name"
-                placeholder="e.g. electronics"
+                placeholder={t("categoryNamePlaceholder")}
                 className="bg-white"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
@@ -707,11 +712,11 @@ export default function CategoriesPage() {
                 htmlFor="description"
                 className="text-sm font-medium text-gray-700"
               >
-                Description
+                {common("description")}
               </label>
               <textarea
                 id="description"
-                placeholder="Enter a description..."
+                placeholder={t("descriptionPlaceholder")}
                 className="flex min-h-[120px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
@@ -724,7 +729,7 @@ export default function CategoriesPage() {
                 htmlFor="parent-category"
                 className="text-sm font-medium text-gray-700"
               >
-                Parent category (Optional)
+                {t("parentCategory")} ({common("optional")})
               </label>
               <div className="relative">
                 <select
@@ -733,7 +738,7 @@ export default function CategoriesPage() {
                   value={formParentCategoryId}
                   onChange={(e) => setFormParentCategoryId(e.target.value)}
                 >
-                  <option value="">Select an option</option>
+                  <option value="">{t("selectOption")}</option>
                   {parentCategoryOptions.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -750,7 +755,7 @@ export default function CategoriesPage() {
                 htmlFor="featured-toggle"
                 className="text-sm font-medium text-gray-900"
               >
-                Featured
+                {t("featured")}
               </label>
               <button
                 id="featured-toggle"
@@ -781,7 +786,7 @@ export default function CategoriesPage() {
                 className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 h-11"
                 disabled={isSubmitting}
               >
-                Cancel
+                {common("cancel")}
               </Button>
               <Button
                 className="flex-1 bg-green-800 hover:bg-green-900 text-white h-11"

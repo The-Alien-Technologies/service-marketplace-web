@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
 export function VerifyPasswordResetOtp() {
+  const t = useTranslations('Auth');
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -55,12 +57,12 @@ export function VerifyPasswordResetOtp() {
 
   const handleVerify = useCallback(async (code: string) => {
     if (!forgotPasswordEmail) {
-      toast.error('No email address found');
+      toast.error(t('missingEmail'));
       return;
     }
 
     if (code.length !== 6) {
-      toast.error('Please enter the complete 6-digit code');
+      toast.error(t('completeCode'));
       return;
     }
 
@@ -74,13 +76,13 @@ export function VerifyPasswordResetOtp() {
       
       // Move to reset password form
       setAuthStep('reset-password');
-      toast.success('Code verified successfully!');
+      toast.success(t('codeVerified'));
     } catch (error: unknown) {
       // Clear the code on error
       setOtpCode(['', '', '', '', '', '']);
       
       // Handle specific error messages from the API
-      let errorMessage = 'Invalid verification code';
+      let errorMessage = t('invalidCode');
       if (error && typeof error === 'object' && 'message' in error) {
         errorMessage = (error as { message: string }).message;
       }
@@ -88,7 +90,7 @@ export function VerifyPasswordResetOtp() {
       // Show attempts left if available
       if (error && typeof error === 'object' && 'attemptsLeft' in error) {
         const attemptsLeft = (error as { attemptsLeft: number }).attemptsLeft;
-        errorMessage = `${errorMessage} (${attemptsLeft} attempts remaining)`;
+        errorMessage = t('attemptsRemaining', { message: errorMessage, count: attemptsLeft });
       }
       
       toast.error(errorMessage);
@@ -99,11 +101,11 @@ export function VerifyPasswordResetOtp() {
     } finally {
       setIsLoading(false);
     }
-  }, [forgotPasswordEmail, setForgotPasswordOtp, setAuthStep]);
+  }, [forgotPasswordEmail, setForgotPasswordOtp, setAuthStep, t]);
 
   const handleResend = async () => {
     if (!forgotPasswordEmail) {
-      toast.error('No email address found');
+      toast.error(t('missingEmail'));
       return;
     }
 
@@ -112,14 +114,14 @@ export function VerifyPasswordResetOtp() {
       // Resend the forgot password email
       await apiService.forgotPassword(forgotPasswordEmail);
       
-      toast.success('Verification code sent again!');
+      toast.success(t('codeSentAgain'));
       setResendTimer(30);
       setCanResend(false);
       
       // Clear current code
       setOtpCode(['', '', '', '', '', '']);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to resend code';
+      const errorMessage = error instanceof Error ? error.message : t('resendCodeFailed');
       toast.error(errorMessage);
     } finally {
       setIsResending(false);
@@ -137,7 +139,7 @@ export function VerifyPasswordResetOtp() {
       <div className="hidden md:flex md:w-[315px] md:flex-shrink-0">
         <img 
           src="/assets/site-images/forgot-password-left-image.jpg" 
-          alt="Verify Code" 
+          alt={t('enterVerificationCode')}
           className="w-full h-full object-cover object-left rounded-l-lg"
         />
       </div>
@@ -155,30 +157,32 @@ export function VerifyPasswordResetOtp() {
           </div>
           
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-            Enter verification code
+            {t('enterVerificationCode')}
           </h1>
           
           {/* Email Icon */}
           <div className="w-12 h-12 mx-auto mb-6 flex items-center justify-center">
             <img 
               src="/assets/icons/email-sent.svg" 
-              alt="Email Sent Icon" 
+              alt=""
               className="w-8 h-8"
             />
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
-            We&apos;ve sent a 6-digit verification code to{' '}
-            <span className="font-medium text-gray-900 dark:text-white">
-              {forgotPasswordEmail}
-            </span>
+            {t.rich('codeSentTo', {
+              address: forgotPasswordEmail ?? '',
+              strong: (chunks) => (
+                <span className="font-medium text-gray-900 dark:text-white">{chunks}</span>
+              ),
+            })}
           </p>
         </div>
 
         {/* OTP Input */}
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4 text-center">
-            Verification code
+            {t('verificationCode')}
           </label>
           <div className="flex justify-center space-x-3">
             {otpCode.map((digit, index) => (
@@ -190,6 +194,7 @@ export function VerifyPasswordResetOtp() {
                 pattern="[0-9]*"
                 maxLength={1}
                 value={digit}
+                aria-label={t('verificationDigit', { position: index + 1 })}
                 onChange={(e) => handleCodeChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 className="w-12 h-12 text-center text-xl font-semibold border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-green-500 focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -204,7 +209,7 @@ export function VerifyPasswordResetOtp() {
         {isLoading && (
           <div className="text-center mb-6">
             <p className="text-sm text-blue-600 dark:text-blue-400">
-              Verifying code...
+              {t('verifyingCode')}
             </p>
           </div>
         )}
@@ -212,18 +217,18 @@ export function VerifyPasswordResetOtp() {
         {/* Resend Section */}
         <div className="text-center mb-8">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Didn&apos;t receive the code?{' '}
+            {t('didNotReceiveCode')}{' '}
             {canResend ? (
               <button
                 onClick={handleResend}
                 disabled={isResending}
                 className="text-green-600 hover:text-green-700 font-medium underline disabled:opacity-50"
               >
-                {isResending ? 'Sending...' : 'Resend'}
+                {isResending ? t('sending') : t('resend')}
               </button>
             ) : (
               <span className="text-gray-500">
-                Resend ({resendTimer}s)
+                {t('resendCountdown', { seconds: resendTimer })}
               </span>
             )}
           </p>
@@ -235,7 +240,7 @@ export function VerifyPasswordResetOtp() {
             onClick={handleBackToSignIn}
             className="text-sm text-green-600 hover:text-green-700 font-medium underline"
           >
-            Back to Sign in
+            {t('backToSignIn')}
           </button>
         </div>
       </div>

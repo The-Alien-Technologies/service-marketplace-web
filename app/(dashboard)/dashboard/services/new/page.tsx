@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { toast } from "react-toastify";
 import { useCategoriesStore } from "@/store/categories-store";
+import { useTranslations } from "next-intl";
 
 type Plan = {
   id: string;
@@ -39,6 +40,9 @@ type Addon = {
 };
 
 export default function AddServicePage() {
+  const t = useTranslations("ServiceForm");
+  const services = useTranslations("Services");
+  const common = useTranslations("Common");
   const router = useRouter();
   const { categories, fetchCategories } = useCategoriesStore();
 
@@ -84,7 +88,7 @@ export default function AddServicePage() {
 
   const addPlan = () => {
     if (plans.length >= 5) {
-      toast.error("Maximum 5 pricing plans allowed");
+      toast.error(t("maxPlansError"));
       return;
     }
     const newId = (plans.length + 1).toString();
@@ -103,7 +107,7 @@ export default function AddServicePage() {
 
   const removePlan = (id: string) => {
     if (plans.length <= 1) {
-      toast.error("You must have at least one pricing plan");
+      toast.error(t("minPlansError"));
       return;
     }
     const updatedPlans = plans.filter((p) => p.id !== id);
@@ -113,7 +117,7 @@ export default function AddServicePage() {
       updatedPlans[0].isExpanded = true;
     }
     setPlans(updatedPlans);
-    toast.success("Plan removed successfully");
+    toast.success(t("planRemoved"));
   };
 
   const updateAddon = (id: string, field: keyof Addon, value: any) => {
@@ -163,7 +167,7 @@ export default function AddServicePage() {
 
     if (files.length > remainingSlots) {
       toast.warning(
-        `Maximum 10 images allowed. Only ${remainingSlots} images will be added.`,
+        t("maxImages", { count: remainingSlots }),
       );
     }
 
@@ -202,20 +206,20 @@ export default function AddServicePage() {
   const handleSubmit = async (status: "DRAFT" | "PUBLISHED") => {
     // Validation
     if (!title.trim()) {
-      toast.error("Please enter a service title");
+      toast.error(t("titleRequired"));
       return;
     }
     if (!categoryId) {
-      toast.error("Please select a category");
+      toast.error(t("categoryRequired"));
       return;
     }
     if (!overview.trim()) {
-      toast.error("Please enter an overview");
+      toast.error(t("overviewRequired"));
       return;
     }
     if (plans.length === 0) {
       toast.error(
-        "Please add at least one pricing plan using the 'Add another plan' button",
+        t("atLeastOnePlan"),
       );
       return;
     }
@@ -224,20 +228,18 @@ export default function AddServicePage() {
     for (let i = 0; i < plans.length; i++) {
       const plan = plans[i];
       if (!plan.title.trim()) {
-        toast.error(`Plan ${i + 1}: Please add a plan title`);
+        toast.error(t("planTitleRequired", { number: i + 1 }));
         return;
       }
       if (!plan.price || Number.parseFloat(plan.price) <= 0) {
         toast.error(
-          `Plan ${i + 1} ("${plan.title}"): Please add a valid price`,
+          t("planPriceRequired", { number: i + 1, title: plan.title }),
         );
         return;
       }
       if (!plan.inclusions.trim()) {
         toast.error(
-          `Plan ${i + 1} ("${
-            plan.title
-          }"): Please add plan inclusions (what's included)`,
+          t("planInclusionsRequired", { number: i + 1, title: plan.title }),
         );
         return;
       }
@@ -280,19 +282,19 @@ export default function AddServicePage() {
         coverImage || undefined,
       );
 
-      toast.success("Service created successfully!");
+      toast.success(t("created"));
 
       // Upload portfolio images if any
       if (portfolioImages.length > 0) {
         try {
           await apiService.uploadServiceImages(service.id, portfolioImages);
           toast.success(
-            `${portfolioImages.length} portfolio image(s) uploaded!`,
+            t("imagesUploaded", { count: portfolioImages.length }),
           );
         } catch (error) {
           console.error("Failed to upload portfolio images:", error);
           toast.warning(
-            "Service created but some portfolio images failed to upload",
+            t("imagesUploadPartial"),
           );
         }
       }
@@ -300,14 +302,14 @@ export default function AddServicePage() {
       // If user wants to publish, update status
       if (status === "PUBLISHED") {
         await apiService.updateServiceStatus(service.id, "PUBLISHED");
-        toast.success("Service published!");
+        toast.success(t("published"));
       }
 
       // Redirect to services list
       router.push("/dashboard/services");
     } catch (error: any) {
       console.error("Error creating service:", error);
-      toast.error(error?.message || "Failed to create service");
+      toast.error(error?.message || t("createFailed"));
     } finally {
       setIsDraftSaving(false);
       setIsPublishing(false);
@@ -323,18 +325,17 @@ export default function AddServicePage() {
             href="/dashboard/services"
             className="hover:text-gray-900 transition-colors"
           >
-            My services
+            {services("myServices")}
           </Link>
           <ChevronLeft className="w-4 h-4 mx-2 rotate-180" />
-          <span className="text-gray-900 font-medium">Preview & Publish</span>
+          <span className="text-gray-900 font-medium">{t("previewPublish")}</span>
         </nav>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My services</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{services("myServices")}</h1>
             <p className="text-gray-500 mt-1">
-              Define your service, highlight your work, and start getting
-              booked.
+              {t("createSubtitle")}
             </p>
           </div>
         </div>
@@ -349,7 +350,7 @@ export default function AddServicePage() {
               className="block text-sm font-semibold text-gray-900"
               id="cover-image-label"
             >
-              Cover image
+              {services("coverImage")}
             </span>
             <input
               type="file"
@@ -367,14 +368,14 @@ export default function AddServicePage() {
                 <>
                   <Image
                     src={coverImagePreview}
-                    alt="Cover"
+                    alt={services("coverImage")}
                     fill
                     className="object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                     <div className="bg-white/90 backdrop-blur rounded-lg px-4 py-2 text-sm font-medium text-gray-900 flex items-center gap-2">
                       <Upload className="w-4 h-4" />
-                      Change Image
+                      {t("changeImage")}
                     </div>
                   </div>
                 </>
@@ -384,10 +385,10 @@ export default function AddServicePage() {
                     <Upload className="w-6 h-6 text-gray-400" />
                   </div>
                   <p className="text-sm font-medium text-gray-700">
-                    Click to upload cover image
+                    {t("uploadCover")}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    JPG, PNG (max. 5MB)
+                    {t("fileRequirements")}
                   </p>
                 </div>
               )}
@@ -397,7 +398,7 @@ export default function AddServicePage() {
           {/* General Details */}
           <div className="space-y-6">
             <h2 className="text-lg font-semibold text-gray-900">
-              General details
+              {t("generalDetails")}
             </h2>
 
             <div className="space-y-2">
@@ -405,7 +406,7 @@ export default function AddServicePage() {
                 htmlFor="title"
                 className="text-sm font-medium text-gray-700"
               >
-                Service title
+                {t("serviceTitle")}
               </label>
               <Input
                 id="title"
@@ -420,11 +421,11 @@ export default function AddServicePage() {
                 htmlFor="category-select"
                 className="text-sm font-medium text-gray-700"
               >
-                Service category
+                {t("serviceCategory")}
               </label>
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger id="category-select" className="bg-white">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={t("selectCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -435,7 +436,7 @@ export default function AddServicePage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
-                Choose the category that best describes your service.
+                {t("categoryHelp")}
               </p>
             </div>
 
@@ -444,7 +445,7 @@ export default function AddServicePage() {
                 htmlFor="overview"
                 className="text-sm font-medium text-gray-700"
               >
-                Overview
+                {services("overview")}
               </label>
               <Textarea
                 id="overview"
@@ -461,7 +462,7 @@ export default function AddServicePage() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Tags</span>
+              <span className="text-sm font-medium text-gray-700">{services("tags")}</span>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
                   <div
@@ -473,7 +474,7 @@ export default function AddServicePage() {
                       type="button"
                       onClick={() => removeTag(tag)}
                       className="hidden group-hover:block hover:text-red-600"
-                      aria-label={`Remove tag ${tag}`}
+                      aria-label={t("removeTag", { tag })}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -486,7 +487,7 @@ export default function AddServicePage() {
                     onKeyDown={(e) =>
                       e.key === "Enter" && (e.preventDefault(), addTag())
                     }
-                    placeholder="Add tag..."
+                    placeholder={t("addTag")}
                     className="text-xs h-7 w-24"
                   />
                   <button
@@ -494,7 +495,7 @@ export default function AddServicePage() {
                     onClick={addTag}
                     className="text-xs text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 rounded-full px-3 py-1 flex items-center gap-1 hover:border-gray-400 transition-colors"
                   >
-                    <Plus className="w-3 h-3" /> Add
+                    <Plus className="w-3 h-3" /> {t("add")}
                   </button>
                 </div>
               </div>
@@ -503,9 +504,9 @@ export default function AddServicePage() {
 
           {/* Catalogue */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Catalogue</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("catalogue")}</h2>
             <p className="text-sm text-gray-500 -mt-2">
-              Upload your best work to impress clients. (Max 10 images)
+              {t("catalogueHelp")}
             </p>
 
             <input
@@ -524,13 +525,13 @@ export default function AddServicePage() {
                 <Upload className="w-5 h-5 text-gray-400" />
               </div>
               <p className="text-sm font-medium text-green-700">
-                Click to upload{" "}
+                {t("clickUpload")}{" "}
                 <span className="text-gray-500 font-normal">
-                  or drag and drop
+                  {t("dragDrop")}
                 </span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                JPG, PNG (max. 5MB each)
+                {t("portfolioRequirements")}
               </p>
             </label>
 
@@ -543,7 +544,7 @@ export default function AddServicePage() {
                   >
                     <Image
                       src={preview}
-                      alt={`Portfolio image ${index + 1}`}
+                      alt={t("portfolioAlt", { number: index + 1 })}
                       fill
                       className="object-cover"
                     />
@@ -569,18 +570,17 @@ export default function AddServicePage() {
           <div>
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Pricing plans
+                {services("pricingPlans")}
               </h2>
               <p className="text-sm text-gray-500">
-                Break down your service into simple, clear plans that showcase
-                your value. (Max 5 plans)
+                {t("pricingHelp")}
               </p>
             </div>
 
             {/* Suggested Examples */}
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs font-medium text-blue-900 mb-2">
-                💡 Suggested plan names:
+                💡 {t("suggestedPlans")}
               </p>
               <div className="flex flex-wrap gap-2 text-xs text-blue-700">
                 <span className="bg-white px-2 py-1 rounded">
@@ -631,7 +631,7 @@ export default function AddServicePage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
-                          {plan.title || "Untitled Plan"}
+                          {plan.title || t("untitledPlan")}
                         </h3>
                         {!plan.isExpanded && plan.price && (
                           <p className="text-xs text-gray-500">
@@ -643,7 +643,7 @@ export default function AddServicePage() {
                     <div className="flex items-center gap-2">
                       {plan.isPopular && !plan.isExpanded && (
                         <span className="bg-green-50 text-green-700 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                          Popular
+                          {services("popular")}
                         </span>
                       )}
                       {plan.isExpanded ? (
@@ -672,7 +672,7 @@ export default function AddServicePage() {
                             htmlFor={`popular-${plan.id}`}
                             className="text-sm text-gray-600 cursor-pointer"
                           >
-                            Mark as popular
+                            {t("markPopular")}
                           </label>
                         </div>
                       </div>
@@ -682,7 +682,7 @@ export default function AddServicePage() {
                           htmlFor={`plan-title-${plan.id}`}
                           className="text-sm font-medium text-gray-700"
                         >
-                          Plan title
+                          {t("planTitle")}
                         </label>
                         <Input
                           id={`plan-title-${plan.id}`}
@@ -691,12 +691,12 @@ export default function AddServicePage() {
                             updatePlan(plan.id, "title", e.target.value)
                           }
                           className="bg-white"
-                          placeholder="e.g., Basic Plan, Quick Service, Starter Package"
+                          placeholder={t("planTitlePlaceholder")}
                           maxLength={50}
                         />
                         <div className="flex justify-between">
                           <span className="text-xs text-gray-400">
-                            Use clear, descriptive names
+                            {t("clearNames")}
                           </span>
                           <span className="text-xs text-gray-400">
                             {plan.title.length}/50
@@ -709,7 +709,7 @@ export default function AddServicePage() {
                           htmlFor={`plan-price-${plan.id}`}
                           className="text-sm font-medium text-gray-700"
                         >
-                          Price
+                          {t("price")}
                         </label>
                         <div className="relative">
                           <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
@@ -737,7 +737,7 @@ export default function AddServicePage() {
                           htmlFor={`plan-inclusions-${plan.id}`}
                           className="text-sm font-medium text-gray-700"
                         >
-                          Plan inclusions
+                          {t("planInclusions")}
                         </label>
                         <Textarea
                           id={`plan-inclusions-${plan.id}`}
@@ -746,10 +746,10 @@ export default function AddServicePage() {
                             updatePlan(plan.id, "inclusions", e.target.value)
                           }
                           className="min-h-[120px] bg-white resize-none text-sm"
-                          placeholder="• 1-hour consultation\n• 2 revisions included\n• Delivery within 3 days\n• Email support"
+                          placeholder={t("inclusionsPlaceholder")}
                         />
                         <p className="text-xs text-gray-400">
-                          List what's included in this plan (one item per line)
+                          {t("inclusionsHelp")}
                         </p>
                       </div>
 
@@ -768,13 +768,13 @@ export default function AddServicePage() {
                           className="flex-1"
                           onClick={() => togglePlanExpansion(plan.id)}
                         >
-                          Cancel
+                          {common("cancel")}
                         </Button>
                         <Button
                           className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
                           onClick={() => togglePlanExpansion(plan.id)}
                         >
-                          Save
+                          {common("save")}
                         </Button>
                       </div>
                     </div>
@@ -794,8 +794,8 @@ export default function AddServicePage() {
               >
                 <Plus className="w-4 h-4" />
                 {plans.length >= 5
-                  ? "Maximum plans reached"
-                  : "Add another plan"}
+                  ? t("maximumPlans")
+                  : t("addPlan")}
               </button>
             </div>
           </div>
@@ -805,15 +805,15 @@ export default function AddServicePage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-                  Add-ons{" "}
-                  <span className="text-gray-400 font-normal">(Optional)</span>
+                  {services("addOns")}{" "}
+                  <span className="text-gray-400 font-normal">({common("optional")})</span>
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
-                  Give clients more flexibility with optional upgrades.
+                  {t("addOnsBody")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Show</span>
+                <span className="text-sm text-gray-600">{t("show")}</span>
                 <Switch checked={showAddons} onCheckedChange={setShowAddons} />
               </div>
             </div>
@@ -836,7 +836,7 @@ export default function AddServicePage() {
                         htmlFor={`addon-title-${addon.id}`}
                         className="text-sm font-medium text-gray-700"
                       >
-                        Title
+                        {t("title")}
                       </label>
                       <Input
                         id={`addon-title-${addon.id}`}
@@ -845,7 +845,7 @@ export default function AddServicePage() {
                           updateAddon(addon.id, "title", e.target.value)
                         }
                         className="bg-white"
-                        placeholder="e.g., Express Delivery, Extra Revision, Priority Support"
+                        placeholder={t("addonTitlePlaceholder")}
                       />
                     </div>
 
@@ -854,9 +854,9 @@ export default function AddServicePage() {
                         htmlFor={`addon-desc-${addon.id}`}
                         className="text-sm font-medium text-gray-700"
                       >
-                        Short description{" "}
+                        {t("shortDescription")}{" "}
                         <span className="text-gray-400 font-normal">
-                          (Optional)
+                          ({common("optional")})
                         </span>
                       </label>
                       <Input
@@ -866,7 +866,7 @@ export default function AddServicePage() {
                           updateAddon(addon.id, "description", e.target.value)
                         }
                         className="bg-white"
-                        placeholder="Brief description of what this add-on provides"
+                        placeholder={t("addonDescriptionPlaceholder")}
                       />
                     </div>
 
@@ -875,7 +875,7 @@ export default function AddServicePage() {
                         htmlFor={`addon-price-${addon.id}`}
                         className="text-sm font-medium text-gray-700"
                       >
-                        Price
+                        {t("price")}
                       </label>
                       <div className="relative">
                         <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
@@ -904,10 +904,10 @@ export default function AddServicePage() {
                         className="flex-1"
                         onClick={() => removeAddon(addon.id)}
                       >
-                        Cancel
+                        {common("cancel")}
                       </Button>
                       <Button className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white">
-                        Save
+                        {common("save")}
                       </Button>
                     </div>
                   </div>
@@ -916,7 +916,7 @@ export default function AddServicePage() {
                   onClick={addAddon}
                   className="flex items-center gap-2 text-sm font-medium text-[#15803d] hover:text-[#14532d] transition-colors pl-1"
                 >
-                  <Plus className="w-4 h-4" /> Add another
+                  <Plus className="w-4 h-4" /> {t("addAnother")}
                 </button>
               </div>
             )}
@@ -933,10 +933,10 @@ export default function AddServicePage() {
               {isDraftSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Saving...
+                  {common("saving")}
                 </>
               ) : (
-                "Save as draft"
+                t("saveDraft")
               )}
             </Button>
             <Button
@@ -947,10 +947,10 @@ export default function AddServicePage() {
               {isPublishing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Publishing...
+                  {t("publishing")}
                 </>
               ) : (
-                "Publish"
+                t("publish")
               )}
             </Button>
           </div>

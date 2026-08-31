@@ -17,8 +17,13 @@ import { useRouter } from "next/navigation";
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
 import { ServiceCardData } from "@/components/sections/cards/service-card";
+import {useFormatter, useTranslations} from "next-intl";
 
 export default function Home() {
+  const t = useTranslations("Home");
+  const marketplace = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { showAuth } = useAuthStore();
   const router = useRouter();
   const { featuredCategories, topLevelCategories, isLoading } = useCategories();
@@ -38,7 +43,7 @@ export default function Home() {
     const providerName =
       service.provider?.displayName ||
       `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-      "Provider";
+      common("provider");
 
     return {
       id: service.id,
@@ -48,7 +53,9 @@ export default function Home() {
       isOnline: false, // TODO: Add online status later
       serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
       description: service.title,
-      price: `From ${minPrice} $`,
+      price: marketplace("from", {
+        price: format.number(minPrice, {style: "currency", currency: "GHS"})
+      }),
       rating: 0, // TODO: Add rating system later
     };
   };
@@ -112,9 +119,9 @@ export default function Home() {
         {!isLoadingServices && bestsellers.length > 0 && (
           <ServiceCarousel
             services={bestsellers}
-            title="Bestsellers"
+            title={t("bestsellers")}
             showAllLink={{
-              text: "See all best sellers",
+              text: t("seeBestsellers"),
               onClick: () => router.push("/services"),
             }}
             onServiceClick={(service) =>
@@ -131,9 +138,9 @@ export default function Home() {
       {!isLoadingServices && mostViewed.length > 0 && (
         <ServiceCarousel
           services={mostViewed}
-          title="Most Viewed"
+          title={t("mostViewed")}
           showAllLink={{
-            text: "See all most viewed",
+            text: t("seeMostViewed"),
             onClick: () => router.push("/services"),
           }}
           onServiceClick={(service) => router.push(`/services/${service.id}`)}
@@ -148,7 +155,7 @@ export default function Home() {
         <div id="browse-categories" className="scroll-mt-20">
           <CategoryCarousel
             categories={categoryCardData}
-            title="Popular Service"
+            title={t("popularService")}
             onCategoryClick={handleCategoryClick}
           />
         </div>

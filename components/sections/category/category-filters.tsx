@@ -12,14 +12,7 @@ import { HorizontalSeparator } from "../../layout/horizontal-separator";
 
 import { PriceRangeDropdown } from "./filters/price-range-dropdown";
 import { RatingDropdown } from "./filters/rating-dropdown";
-
-const SORT_OPTIONS = [
-  { label: "Best match", value: "best_match" },
-  { label: "Most popular", value: "popular" },
-  { label: "Highest rated", value: "rating" },
-  { label: "Lowest price", value: "price_asc" },
-  { label: "Highest price", value: "price_desc" },
-];
+import { useFormatter, useTranslations } from "next-intl";
 
 interface CategoryFiltersProps {
   categoryName: string;
@@ -38,6 +31,16 @@ export function CategoryFilters({
   resultCount,
   onFilterChange,
 }: CategoryFiltersProps) {
+  const t = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
+  const sortOptions = [
+    { label: t("bestMatch"), value: "best_match" },
+    { label: t("mostPopular"), value: "popular" },
+    { label: t("highestRated"), value: "rating" },
+    { label: t("lowestPrice"), value: "price_asc" },
+    { label: t("highestPrice"), value: "price_desc" },
+  ];
   const [searchQuery, setSearchQuery] = useState<string>("");
   // const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({
@@ -73,23 +76,28 @@ export function CategoryFilters({
 
   const getPriceRangeDisplay = () => {
     if (priceRange.min === 0 && priceRange.max === 50000) {
-      return "Price range";
+      return t("priceRange");
     }
-    return `$${priceRange.min.toLocaleString()}-$${priceRange.max.toLocaleString()}`;
+    const currencyOptions = {
+      style: "currency" as const,
+      currency: "GHS",
+      maximumFractionDigits: 0,
+    };
+    return `${format.number(priceRange.min, currencyOptions)}–${format.number(priceRange.max, currencyOptions)}`;
   };
 
   const getRatingDisplay = () => {
-    if (ratingIds.length === 0) return "Rating";
+    if (ratingIds.length === 0) return t("rating");
     if (ratingIds.length === 1) {
       const ratingLabels: Record<string, string> = {
-        "top-rated": "Top rated(4.5+)",
-        reliable: "Reliable(4.0+)",
-        "good-service": "Good service(3.5+)",
-        all: "All",
+        "top-rated": t("topRated"),
+        reliable: t("reliable"),
+        "good-service": t("goodService"),
+        all: t("allRatings"),
       };
-      return ratingLabels[ratingIds[0]] || "Rating";
+      return ratingLabels[ratingIds[0]] || t("rating");
     }
-    return `${ratingIds.length} selected`;
+    return t("selectedCount", { count: ratingIds.length });
   };
 
   const triggerFilterChange = (
@@ -156,7 +164,7 @@ export function CategoryFilters({
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
           type="text"
-          placeholder="What service are you looking for"
+          placeholder={t("serviceSearchPrompt")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleSearchKeyDown}
@@ -166,7 +174,7 @@ export function CategoryFilters({
           onClick={handleSearch}
           className="absolute right-0 top-0 bottom-0 px-6 bg-brand-900 hover:bg-brand-700 text-white font-medium rounded-r-lg transition-colors"
         >
-          Search
+          {common("search")}
         </button>
       </div>
 
@@ -174,19 +182,19 @@ export function CategoryFilters({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center flex-wrap gap-2 text-sm sm:text-base">
           <span className="text-gray-700 font-medium">
-            Showing search results for
+            {t("showingResultsFor")}
           </span>
           <span className="font-bold text-gray-900 truncate max-w-[200px] sm:max-w-none">
             &apos;{categoryName}&apos;
           </span>
           <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-sm rounded-md font-medium shrink-0">
-            {resultCount}
+            {format.number(resultCount)}
           </span>
         </div>
 
         {/* Sort By Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-gray-700 font-medium">Sort by:</span>
+          <span className="text-gray-700 font-medium">{t("sortBy")}</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -194,14 +202,14 @@ export function CategoryFilters({
                 className="flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
               >
                 <span className="font-medium text-gray-900">
-                  {SORT_OPTIONS.find((opt) => opt.value === sortBy)?.label ||
-                    "Best match"}
+                  {sortOptions.find((opt) => opt.value === sortBy)?.label ||
+                    t("bestMatch")}
                 </span>
                 <ChevronDown className="w-4 h-4 text-gray-600" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {SORT_OPTIONS.map((option) => (
+              {sortOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
                   onClick={() => handleSortByChange(option.value)}
@@ -232,7 +240,7 @@ export function CategoryFilters({
         <div className="flex items-center gap-2 sm:shrink-0">
           <div className="flex items-center gap-2 text-gray-700 font-medium">
             <Filter className="w-5 h-5" />
-            <span>Filters:</span>
+            <span>{t("filters")}</span>
           </div>
         </div>
 
@@ -308,7 +316,7 @@ export function CategoryFilters({
             onClick={clearAllFilters}
             className="min-h-11 justify-self-start px-1 text-sm font-medium text-red-600 transition-colors hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 sm:ml-auto"
           >
-            Clear all
+            {t("clearFilters")}
           </button>
         )}
       </div>
