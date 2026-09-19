@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Star,
   Box,
-  ThumbsUp,
-  ThumbsDown,
   ArrowDown,
   Loader2,
   MessageSquare,
@@ -23,7 +23,9 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { Review, ReviewSummary } from "@/types/order";
 import { toast } from "react-toastify";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useMarketStore } from "@/store/market-store";
+import { marketDisplayName } from "@/lib/market-display";
 
 const DEFAULT_SUMMARY: ReviewSummary & { completedOrders: number } = {
   average: 0,
@@ -37,6 +39,12 @@ export default function ReviewsPage() {
   const common = useTranslations("Common");
   const marketplace = useTranslations("Marketplace");
   const format = useFormatter();
+  const locale = useLocale();
+  const searchParams = useSearchParams();
+  const dashboardSource = searchParams.get("source") === "dashboard";
+  const marketId = searchParams.get("marketId") || undefined;
+  const markets = useMarketStore((state) => state.markets);
+  const scopedMarket = markets.find((market) => market.id === marketId);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +56,7 @@ export default function ReviewsPage() {
   const [responseText, setResponseText] = useState("");
   const [submittingResponse, setSubmittingResponse] = useState(false);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setIsLoading(true);
     try {
       const result = await apiService.getMyReviews({
@@ -56,6 +64,7 @@ export default function ReviewsPage() {
         rating: ratingFilter !== "all" ? Number(ratingFilter) : undefined,
         page,
         limit: 10,
+        marketId,
       });
       setReviews(result.data);
       setSummary(result.summary);
@@ -65,11 +74,11 @@ export default function ReviewsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [marketId, page, ratingFilter, sort, t]);
 
   useEffect(() => {
     fetchReviews();
-  }, [sort, ratingFilter, page]);
+  }, [fetchReviews]);
 
   const handleRespond = async (reviewId: string) => {
     if (!responseText.trim()) return;
@@ -98,6 +107,24 @@ export default function ReviewsPage() {
           {t("subtitle")}
         </p>
       </div>
+
+      {dashboardSource && marketId && (
+        <div className="flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {t("dashboardScope", {
+              market: scopedMarket
+                ? marketDisplayName(locale, scopedMarket)
+                : t("selectedMarket"),
+            })}
+          </p>
+          <Link
+            href="/dashboard/reviews"
+            className="shrink-0 font-semibold text-green-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          >
+            {t("clearDashboardScope")}
+          </Link>
+        </div>
+      )}
 
       {/* Ratings Summary */}
       <div className="flex flex-col gap-8">

@@ -24,6 +24,8 @@ import {
   WalletCards,
   Bell,
   ClipboardCheck,
+  Globe2,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -37,7 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {useTranslations} from "next-intl";
+import { useTranslations } from "next-intl";
 
 type SidebarItem = {
   icon: any;
@@ -74,14 +76,14 @@ const adminSidebarItems: SidebarGroup[] = [
         href: "/dashboard/provider-applications",
       },
       {
+        icon: Globe2,
+        label: "Market applications",
+        href: "/dashboard/markets",
+      },
+      {
         icon: Box,
         label: "Services",
         href: "/dashboard/services",
-      },
-      {
-        icon: Layers,
-        label: "Categories",
-        href: "/dashboard/categories",
       },
       {
         icon: ShoppingBag,
@@ -112,6 +114,38 @@ const adminSidebarItems: SidebarGroup[] = [
   },
 ];
 
+const superAdminSidebarItems: SidebarGroup[] = [
+  {
+    title: "GLOBAL",
+    items: [
+      {
+        icon: LayoutDashboard,
+        label: "Dashboard",
+        href: "/dashboard",
+      },
+      {
+        icon: Globe2,
+        label: "Markets",
+        href: "/dashboard/markets",
+      },
+      {
+        icon: ShieldCheck,
+        label: "Country administrators",
+        href: "/dashboard/country-administrators",
+      },
+      {
+        icon: Layers,
+        label: "Categories",
+        href: "/dashboard/categories",
+      },
+      ...adminSidebarItems[0].items.filter(
+        (item) =>
+          item.href !== "/dashboard" && item.href !== "/dashboard/markets",
+      ),
+    ],
+  },
+];
+
 const providerSidebarItems: SidebarGroup[] = [
   {
     title: "MAIN",
@@ -120,6 +154,11 @@ const providerSidebarItems: SidebarGroup[] = [
         icon: LayoutDashboard,
         label: "Dashboard",
         href: "/dashboard",
+      },
+      {
+        icon: Globe2,
+        label: "Service markets",
+        href: "/dashboard/markets",
       },
       {
         icon: Box,
@@ -237,24 +276,32 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
     "My quotes": nav("myQuotes"),
     Notifications: nav("notifications"),
     "Profile & settings": nav("profileSettings"),
-    "Help & support": nav("helpSupport")
+    "Help & support": nav("helpSupport"),
+    Markets: sidebar("markets"),
+    "Country administrators": sidebar("countryAdministrators"),
+    "Service markets": sidebar("serviceMarkets"),
+    "Market applications": sidebar("marketApplications"),
   };
   const labelFor = (label: string) => translatedLabel[label] ?? label;
 
   // Determine sidebar items based on role
   const sidebarItems =
-    user?.role === "ADMIN"
-      ? adminSidebarItems
-      : user?.role === "SERVICE_PROVIDER"
-        ? providerSidebarItems
-        : userSidebarItems;
+    user?.role === "SUPER_ADMIN"
+      ? superAdminSidebarItems
+      : user?.role === "ADMIN"
+        ? adminSidebarItems
+        : user?.role === "SERVICE_PROVIDER"
+          ? providerSidebarItems
+          : userSidebarItems;
 
   const userRoleLabel =
-    user?.role === "ADMIN"
-      ? common("admin")
-      : user?.role === "SERVICE_PROVIDER"
-        ? common("provider")
-        : common("user");
+    user?.role === "SUPER_ADMIN"
+      ? sidebar("superAdmin")
+      : user?.role === "ADMIN"
+        ? common("admin")
+        : user?.role === "SERVICE_PROVIDER"
+          ? common("provider")
+          : common("user");
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>
@@ -346,7 +393,9 @@ export function Sidebar({ isMobile, onClose, className }: SidebarProps = {}) {
                             isActive ? "text-green-600" : "text-gray-500",
                           )}
                         />
-                        <span className="min-w-0 flex-1 text-left">{labelFor(item.label)}</span>
+                        <span className="min-w-0 flex-1 text-left">
+                          {labelFor(item.label)}
+                        </span>
                         <span className="text-gray-400">
                           {isExpanded ? (
                             <ChevronUp className="w-4 h-4" />

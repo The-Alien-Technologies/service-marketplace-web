@@ -8,6 +8,6 @@ export function resolveContactSupportAction(
   role?: string,
 ): ContactSupportAction {
   if (!isAuthenticated) return "SIGN_IN";
-  if (role === "ADMIN") return "OPEN_ADMIN_SUPPORT";
+  if (role === "ADMIN" || role === "SUPER_ADMIN") return "OPEN_ADMIN_SUPPORT";
   return "OPEN_SUPPORT_CHAT";
 }

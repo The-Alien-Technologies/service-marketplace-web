@@ -79,13 +79,21 @@ const BADGE: Record<
 
 function StatusBadge({ status }: { status: SupportConversationStatus }) {
   const t = useTranslations("SupportAdmin");
-  const b = BADGE[status] ?? BADGE.CLOSED
+  const b = BADGE[status] ?? BADGE.CLOSED;
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${b.bg} ${b.text}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${b.dot}`} />
-      {t(status === "BOT" ? "bot" : status === "AWAITING_FOR_ADMIN" ? "waiting" : status === "ACTIVE_WITH_ADMIN" ? "active" : "closed")}
+      {t(
+        status === "BOT"
+          ? "bot"
+          : status === "AWAITING_FOR_ADMIN"
+            ? "waiting"
+            : status === "ACTIVE_WITH_ADMIN"
+              ? "active"
+              : "closed",
+      )}
     </span>
   );
 }
@@ -121,7 +129,6 @@ function ConvCard({
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden shrink-0">
             {conv.initiator?.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={conv.initiator.avatar}
                 alt={initiatorName(conv)}
@@ -184,8 +191,7 @@ function AdminMessageBubble({ message }: { message: SupportMessage }) {
   const isBot = message.senderType === "BOT";
   const isAdmin = message.senderType === "ADMIN";
   const isUser =
-    message.senderType === "USER" ||
-    message.senderType === "SERVICE_PROVIDER";
+    message.senderType === "USER" || message.senderType === "SERVICE_PROVIDER";
   const time = new Date(message.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -250,7 +256,11 @@ export default function AdminSupportChatPage() {
   // Redirect non-admins
   useEffect(() => {
     if (!hasHydrated) return;
-    if (!isAuthenticated || user?.role !== "ADMIN") router.push("/dashboard");
+    if (
+      !isAuthenticated ||
+      (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN")
+    )
+      router.push("/dashboard");
   }, [hasHydrated, isAuthenticated, user, router]);
 
   const [tab, setTab] = useState<Tab>("waiting");
@@ -272,34 +282,33 @@ export default function AdminSupportChatPage() {
 
   //selected trigger
   useEffect(() => {
-  if (!selected) return;
+    if (!selected) return;
 
-  setWaiting((prev) =>
-    prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c))
-  );
+    setWaiting((prev) =>
+      prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c)),
+    );
 
-  setActive((prev) =>
-    prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c))
-  );
+    setActive((prev) =>
+      prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c)),
+    );
 
-  setClosed((prev) =>
-    prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c))
-  );
-}, [selected]);
+    setClosed((prev) =>
+      prev.map((c) => (c.id === selected.id ? { ...c, ...selected } : c)),
+    );
+  }, [selected]);
 
-//auto update admin page for new support request
-// useEffect(() => {
-//   const interval = setInterval(async () => {
-//     const data = await apiService.getAdminSupportConversations();
+  //auto update admin page for new support request
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     const data = await apiService.getAdminSupportConversations();
 
-//     setWaiting(data.waiting);
-//     setActive(data.active);
-//     setClosed(data.close);
-//   }, 10000);
+  //     setWaiting(data.waiting);
+  //     setActive(data.active);
+  //     setClosed(data.close);
+  //   }, 10000);
 
-//   return () => clearInterval(interval);
-// }, []);
-
+  //   return () => clearInterval(interval);
+  // }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -321,7 +330,11 @@ export default function AdminSupportChatPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "ADMIN") return;
+    if (
+      !isAuthenticated ||
+      (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN")
+    )
+      return;
     loadConversations();
   }, [isAuthenticated, user, loadConversations]);
 
@@ -329,13 +342,13 @@ export default function AdminSupportChatPage() {
 
   const handleSocketMessage = useCallback((msg: SupportMessage) => {
     setMessages((prev) =>
-      prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]
+      prev.find((m) => m.id === msg.id) ? prev : [...prev, msg],
     );
   }, []);
 
   const handleNewWaiting = useCallback((conv: SupportConversation) => {
     setWaiting((prev) =>
-      prev.find((c) => c.id === conv.id) ? prev : [conv, ...prev]
+      prev.find((c) => c.id === conv.id) ? prev : [conv, ...prev],
     );
   }, []);
 
@@ -343,38 +356,43 @@ export default function AdminSupportChatPage() {
     setWaiting((prev) => prev.filter((c) => c.id !== conversationId));
   }, []);
 
-  const handleAdminJoined = useCallback((conv: SupportConversation) => {
-  setWaiting((prev) => prev.filter((c) => c.id !== conv.id));
+  const handleAdminJoined = useCallback(
+    (conv: SupportConversation) => {
+      setWaiting((prev) => prev.filter((c) => c.id !== conv.id));
 
-  const waitingConv = waiting.find((c) => c.id === conv.id);
+      const waitingConv = waiting.find((c) => c.id === conv.id);
 
-  setActive((prev) => {
-    const existing = prev.find((c) => c.id === conv.id);
+      setActive((prev) => {
+        const existing = prev.find((c) => c.id === conv.id);
 
-    const updated = {
-      ...existing,
-      ...waitingConv,
-      ...conv,
-      status: "ACTIVE_WITH_ADMIN" as SupportConversationStatus,
-      initiator: conv.initiator || waitingConv?.initiator || existing?.initiator,
-      messages: conv.messages ||  waitingConv?.messages || existing?.messages || [],
-    };
-
-    return [updated, ...prev.filter((c) => c.id !== conv.id)];
-  });
-
-  setSelected((prev) =>
-    prev?.id === conv.id
-      ? {
-          ...prev,
+        const updated = {
+          ...existing,
+          ...waitingConv,
           ...conv,
           status: "ACTIVE_WITH_ADMIN" as SupportConversationStatus,
-          initiator: conv.initiator || prev.initiator,
-          messages: conv.messages || prev.messages,
-        }
-      : prev
+          initiator:
+            conv.initiator || waitingConv?.initiator || existing?.initiator,
+          messages:
+            conv.messages || waitingConv?.messages || existing?.messages || [],
+        };
+
+        return [updated, ...prev.filter((c) => c.id !== conv.id)];
+      });
+
+      setSelected((prev) =>
+        prev?.id === conv.id
+          ? {
+              ...prev,
+              ...conv,
+              status: "ACTIVE_WITH_ADMIN" as SupportConversationStatus,
+              initiator: conv.initiator || prev.initiator,
+              messages: conv.messages || prev.messages,
+            }
+          : prev,
+      );
+    },
+    [waiting],
   );
-}, [waiting]);
 
   const handleClosed = useCallback((conv: SupportConversation) => {
     setWaiting((prev) => prev.filter((c) => c.id !== conv.id));
@@ -402,17 +420,20 @@ export default function AdminSupportChatPage() {
             initiator: prev.initiator,
             messages: prev.messages,
           }
-        : prev
+        : prev,
     );
   }, []);
 
-  useSupportSocket(isAuthenticated && user?.role === "ADMIN", {
-    onMessage: handleSocketMessage,
-    onNewWaiting: handleNewWaiting,
-    onAdminTookConversation: handleAdminTook,
-    onAdminJoined: handleAdminJoined,
-    onClosed: handleClosed,
-  });
+  useSupportSocket(
+    isAuthenticated && (user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"),
+    {
+      onMessage: handleSocketMessage,
+      onNewWaiting: handleNewWaiting,
+      onAdminTookConversation: handleAdminTook,
+      onAdminJoined: handleAdminJoined,
+      onClosed: handleClosed,
+    },
+  );
 
   // ── Poll for new messages in the selected conversation ────────────────────
   // Needed because the backend's support:join handler has a bug that prevents
@@ -435,20 +456,24 @@ export default function AdminSupportChatPage() {
             return prev;
           }
           // return [...serverMessages, ...pending];
-          return Array.from(new Map([...serverMessages, ...pending].map((m) => [m.id, m])).values());
+          return Array.from(
+            new Map(
+              [...serverMessages, ...pending].map((m) => [m.id, m]),
+            ).values(),
+          );
         });
 
         // Keep conversation metadata in sync (status, adminId)
-          setSelected((prev) => {
-            if (!prev) return fresh;
+        setSelected((prev) => {
+          if (!prev) return fresh;
 
-            return {
-              ...prev,
-              ...fresh,
-              initiator: fresh.initiator || prev.initiator,
-              messages: fresh.messages || prev.messages,
-            };
-          });
+          return {
+            ...prev,
+            ...fresh,
+            initiator: fresh.initiator || prev.initiator,
+            messages: fresh.messages || prev.messages,
+          };
+        });
 
         // Keep the lists in sync too
         // if (fresh.status === "CLOSED") {
@@ -480,19 +505,19 @@ export default function AdminSupportChatPage() {
     setIsLoadingMessages(true);
     try {
       const full = await apiService.getSupportConversation(conv.id);
-        setSelected((prev) => ({
-          ...prev,
-          ...full,
-          initiator: full.initiator || prev?.initiator,
-          messages: full.messages || prev?.messages,
-        }));
+      setSelected((prev) => ({
+        ...prev,
+        ...full,
+        initiator: full.initiator || prev?.initiator,
+        messages: full.messages || prev?.messages,
+      }));
 
       setMessages(
         Array.from(
           new Map(
-            (full.messages ?? []).map((m, i) => [`${m.id}-${i}`, m])
-          ).values()
-        )
+            (full.messages ?? []).map((m, i) => [`${m.id}-${i}`, m]),
+          ).values(),
+        ),
       );
     } catch {
       setMessages(conv.messages ?? []);
@@ -504,41 +529,38 @@ export default function AdminSupportChatPage() {
 
   // ── Join a waiting conversation ────────────────────────────────────────────
 
-    const joinConversation = async (convId: string) => {
-      setJoiningId(convId);
+  const joinConversation = async (convId: string) => {
+    setJoiningId(convId);
 
-      try {
-        // preserve existing waiting conversation data
-        const existingConv = waiting.find((c) => c.id === convId);
+    try {
+      // preserve existing waiting conversation data
+      const existingConv = waiting.find((c) => c.id === convId);
 
-        // join API
-        const joinedConv = await apiService.adminJoinSupportConversation(convId);
+      // join API
+      const joinedConv = await apiService.adminJoinSupportConversation(convId);
 
-        // merge joined + old initiator/avatar/messages
-        const safeConv = {
-          ...existingConv,
-          ...joinedConv,
-          initiator: joinedConv.initiator || existingConv?.initiator,
-          messages: joinedConv.messages || existingConv?.messages || [],
-        };
+      // merge joined + old initiator/avatar/messages
+      const safeConv = {
+        ...existingConv,
+        ...joinedConv,
+        initiator: joinedConv.initiator || existingConv?.initiator,
+        messages: joinedConv.messages || existingConv?.messages || [],
+      };
 
-        setWaiting((prev) => prev.filter((c) => c.id !== convId));
+      setWaiting((prev) => prev.filter((c) => c.id !== convId));
 
-        setActive((prev) => [
-          safeConv,
-          ...prev.filter((c) => c.id !== convId),
-        ]);
+      setActive((prev) => [safeConv, ...prev.filter((c) => c.id !== convId)]);
 
-        setTab("active");
-        setSelected(safeConv);
+      setTab("active");
+      setSelected(safeConv);
 
-        await openConversation(safeConv);
-      } catch (e) {
-        console.error("Join failed", e);
-      } finally {
-        setJoiningId(null);
-      }
-    };
+      await openConversation(safeConv);
+    } catch (e) {
+      console.error("Join failed", e);
+    } finally {
+      setJoiningId(null);
+    }
+  };
 
   // ── Send message ───────────────────────────────────────────────────────────
 
@@ -591,7 +613,10 @@ export default function AdminSupportChatPage() {
 
       setActive((prev) => prev.filter((c) => c.id !== updatedCov.id));
 
-      setClosed((prev) => [updatedCov, ...prev.filter((c)=> c.id !== updatedCov.id)]);
+      setClosed((prev) => [
+        updatedCov,
+        ...prev.filter((c) => c.id !== updatedCov.id),
+      ]);
       setSelected(updatedCov);
     } catch (e: unknown) {
       console.error("Close failed", e);
@@ -600,7 +625,8 @@ export default function AdminSupportChatPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if (!hasHydrated || user?.role !== "ADMIN") return null;
+  if (!hasHydrated || (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN"))
+    return null;
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: "waiting", label: t("waiting"), count: waiting.length },
@@ -626,9 +652,7 @@ export default function AdminSupportChatPage() {
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-        <p className="text-gray-500 mt-1">
-          {t("subtitle")}
-        </p>
+        <p className="text-gray-500 mt-1">{t("subtitle")}</p>
       </div>
 
       {/* Stats row */}
@@ -666,7 +690,9 @@ export default function AdminSupportChatPage() {
               <s.icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900 sm:text-2xl">{s.count}</p>
+              <p className="text-xl font-bold text-gray-900 sm:text-2xl">
+                {s.count}
+              </p>
               <p className="text-xs text-gray-500">{s.label}</p>
             </div>
           </div>
@@ -720,7 +746,12 @@ export default function AdminSupportChatPage() {
                 />
                 <p className="text-xs text-gray-400">
                   {t("noConversations", {
-                    status: tab === "waiting" ? t("waiting") : tab === "active" ? t("active") : t("closed"),
+                    status:
+                      tab === "waiting"
+                        ? t("waiting")
+                        : tab === "active"
+                          ? t("active")
+                          : t("closed"),
                   })}
                 </p>
               </div>
@@ -779,7 +810,6 @@ export default function AdminSupportChatPage() {
                   </button>
                   <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden shrink-0">
                     {selected?.initiator?.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={selected.initiator.avatar}
                         alt={initiatorName(selected)}

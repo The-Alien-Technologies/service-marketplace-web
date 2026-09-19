@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 import {
   useReactTable,
@@ -27,16 +27,18 @@ import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
+import { canCreateService } from "@/lib/provider-access";
 
 const columnHelper = createColumnHelper<Service>();
 
 export default function ServicesPage() {
   const t = useTranslations("Services");
   const common = useTranslations("Common");
-  const format = useFormatter();
   const { user } = useAuthStore();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const canCreate = canCreateService(user);
 
   const [data, setData] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +47,43 @@ export default function ServicesPage() {
     pageSize: 10,
   });
   const [total, setTotal] = useState(0);
+
+  const fetchServices = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = isAdmin
+        ? await apiService.getAdminServices({
+            page: pagination.pageIndex + 1,
+            limit: pagination.pageSize,
+          })
+        : await apiService.getMyServices({
+            page: pagination.pageIndex + 1,
+            limit: pagination.pageSize,
+          });
+
+      setData(response.services);
+      setTotal(response.total);
+    } catch (error) {
+      console.error("Failed to fetch services:", error);
+      toast.error(t("loadFailed"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAdmin, pagination.pageIndex, pagination.pageSize, t]);
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await apiService.deleteService(id);
+        toast.success(t("deleted"));
+        await fetchServices();
+      } catch (error) {
+        console.error("Failed to delete service:", error);
+        toast.error(t("deleteFailed"));
+      }
+    },
+    [fetchServices, t],
+  );
 
   const columns = useMemo(() => {
     const cols: ColumnDef<Service, any>[] = [
@@ -126,7 +165,7 @@ export default function ServicesPage() {
           header: t("startingPrice"),
           cell: (info) => (
             <span className="text-gray-600">
-              {format.number(info.getValue(), "currency")}
+              {formatMoney(info.getValue(), info.row.original.currency)}
             </span>
           ),
         },
@@ -173,44 +212,7 @@ export default function ServicesPage() {
       }),
     );
     return cols;
-  }, [common, format, isAdmin, t]);
-
-  const fetchServices = async () => {
-    try {
-      setIsLoading(true);
-      let response;
-      if (isAdmin) {
-        response = await apiService.getAdminServices({
-          page: pagination.pageIndex + 1,
-          limit: pagination.pageSize,
-        });
-      } else {
-        response = await apiService.getMyServices({
-          page: pagination.pageIndex + 1,
-          limit: pagination.pageSize,
-        });
-      }
-
-      setData(response.services);
-      setTotal(response.total);
-    } catch (error) {
-      console.error("Failed to fetch services:", error);
-      toast.error(t("loadFailed"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await apiService.deleteService(id);
-      toast.success(t("deleted"));
-      fetchServices(); // Refresh list
-    } catch (error) {
-      console.error("Failed to delete service:", error);
-      toast.error(t("deleteFailed"));
-    }
-  };
+  }, [common, handleDelete, isAdmin, t]);
 
   const table = useReactTable({
     data,
@@ -229,7 +231,7 @@ export default function ServicesPage() {
     if (user) {
       fetchServices();
     }
-  }, [pagination.pageIndex, pagination.pageSize, user]);
+  }, [fetchServices, user]);
 
   return (
     <div className="space-y-8">
@@ -240,17 +242,17 @@ export default function ServicesPage() {
             {isAdmin ? t("management") : t("myServices")}
           </h1>
           <p className="text-gray-500 mt-1">
-            {isAdmin
-              ? t("adminSubtitle")
-              : t("providerSubtitle")}
+            {isAdmin ? t("adminSubtitle") : t("providerSubtitle")}
           </p>
         </div>
-        <Link href="/dashboard/services/new" className="w-full sm:w-auto">
-          <Button className="w-full gap-2 bg-[#15803d] text-white hover:bg-[#14532d] sm:w-auto">
-            <Plus className="w-4 h-4" />
-            {t("addNew")}
-          </Button>
-        </Link>
+        {canCreate && (
+          <Link href="/dashboard/services/new" className="w-full sm:w-auto">
+            <Button className="w-full gap-2 bg-[#15803d] text-white hover:bg-[#14532d] sm:w-auto">
+              <Plus className="w-4 h-4" />
+              {t("addNew")}
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Search & Filter */}
@@ -259,7 +261,10 @@ export default function ServicesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input placeholder={t("search")} className="pl-10 bg-white" />
         </div>
-        <Button variant="outline" className="w-full gap-2 text-gray-600 sm:w-auto">
+        <Button
+          variant="outline"
+          className="w-full gap-2 text-gray-600 sm:w-auto"
+        >
           <Filter className="w-4 h-4" />
           {t("filters")}
         </Button>
@@ -279,7 +284,10 @@ export default function ServicesPage() {
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <th key={header.id} className="px-6 py-4 font-medium whitespace-nowrap">
+                        <th
+                          key={header.id}
+                          className="px-6 py-4 font-medium whitespace-nowrap"
+                        >
                           {flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
@@ -296,7 +304,9 @@ export default function ServicesPage() {
                         colSpan={columns.length}
                         className="px-6 py-12 text-center text-gray-500"
                       >
-                        {t("noServices")}
+                        {isAdmin
+                          ? t("noMarketplaceServices")
+                          : t("noServices")}
                       </td>
                     </tr>
                   ) : (
@@ -306,7 +316,10 @@ export default function ServicesPage() {
                         className="hover:bg-gray-50 transition-colors"
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                          <td
+                            key={cell.id}
+                            className="px-6 py-4 whitespace-nowrap"
+                          >
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext(),
@@ -418,9 +431,7 @@ const ActionsCell = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("deleteTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteBody")}
-            </DialogDescription>
+            <DialogDescription>{t("deleteBody")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button

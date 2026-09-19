@@ -91,6 +91,7 @@
     "contactSupport": "Contact support",
     "supportHistory": "Support history",
     "dashboard": "Dashboard",
+    "myDashboard": "My dashboard",
     "messages": "Messages",
     "orders": "Orders",
     "myOrders": "My orders",
@@ -278,7 +279,6 @@
     "getStarted": "Get started",
     "finishSetup": "Let's finish setting up your account",
     "basicProfile": "Basic profile details",
-    "fullName": "Full name",
     "basicProfileBody": "A few details to personalise your experience and build trust.",
     "avatarPreview": "Profile picture preview",
     "removePicture": "Remove profile picture",
@@ -479,8 +479,8 @@
     "goodService": "Good service (3.5+)",
     "allRatings": "All",
     "selectedCount": "{count} selected",
-    "ratingHint": "Choose the ratings you want to see."
-    ,"categoryLoadFailed": "We couldn't load the category details.",
+    "ratingHint": "Choose the ratings you want to see.",
+    "categoryLoadFailed": "We couldn't load the category details.",
     "servicesLoadFailed": "We couldn't load the services.",
     "noServicesCategory": "No services were found in this category.",
     "youMayLike": "You may also like",
@@ -492,8 +492,8 @@
     "uncategorized": "Uncategorised",
     "anonymous": "Anonymous",
     "serviceProviderTitle": "Service provider",
-    "popularService": "Popular services"
-    ,"overview": "Overview",
+    "popularService": "Popular services",
+    "overview": "Overview",
     "showLess": "Show less",
     "readMore": "Read more",
     "catalogue": "Catalogue",
@@ -506,8 +506,8 @@
     "choosePlan": "Choose your plan",
     "flexiblePricing": "Flexible pricing to suit your needs.",
     "popular": "Popular",
-    "contactMe": "Contact me"
-    ,"online": "Online",
+    "contactMe": "Contact me",
+    "online": "Online",
     "connectPrompt": "How would you like to connect?",
     "getQuote": "Get a quote",
     "startChat": "Start a chat",
@@ -553,6 +553,36 @@
     "refunded": "Refunded",
     "disputed": "Disputed",
     "awaiting": "Awaiting",
+    "all": "All",
+    "spending": "Spending",
+    "active": "Active",
+    "dashboardOrderScope": "Showing paid and refunded orders for {market}, matching the dashboard totals.",
+    "dashboardCompletedScope": "Showing every order completed in {market}, including orders later refunded or otherwise updated.",
+    "dashboardGlobalOrderScope": "Showing paid and refunded orders across all markets, matching the dashboard total.",
+    "dashboardGlobalActiveScope": "Showing paid active orders across all markets, matching the dashboard total.",
+    "dashboardGlobalCompletedScope": "Showing every completed order across all markets, including orders later refunded or otherwise updated.",
+    "dashboardEmptyTitle": "No matching orders yet",
+    "dashboardEmptyBody": "This dashboard total is currently zero for {market}. New matching orders will appear here.",
+    "dashboardGlobalEmptyBody": "This account-wide dashboard total is currently zero. New matching orders from any market will appear here.",
+    "backToDashboard": "Back to dashboard",
+    "browseServices": "Browse services",
+    "clearDashboardScope": "Show all orders",
+    "selectedMarket": "the selected market",
+    "allMarkets": "all markets",
+    "dashboardAdminOrdersScope": "Showing dashboard orders for {market}.",
+    "dashboardAdminActiveScope": "Showing active dashboard orders for {market}.",
+    "dashboardAdminRevenueScope": "Showing revenue transactions for {market}.",
+    "dashboardProviderOrdersScope": "Showing paid and refunded orders for {market}.",
+    "dashboardProviderActiveScope": "Showing active paid orders for {market}, matching the dashboard total.",
+    "dashboardProviderCompletedScope": "Showing every order completed in {market}, including orders later refunded or otherwise updated.",
+    "dashboardProviderMonthScope": "Showing paid orders placed in {market} during {month}.",
+    "grossPaid": "Gross paid",
+    "processedRefunds": "Processed refunds",
+    "netSpend": "Net spending",
+    "paginationLabel": "Orders pagination",
+    "showingOrders": "Showing {start}–{end} of {total} orders",
+    "previousPage": "Previous",
+    "nextPage": "Next",
     "declined": "Declined",
     "viewProfile": "View profile",
     "orderId": "Order ID: #{id}",
@@ -569,8 +599,8 @@
     "notFound": "Order not found.",
     "stagePlaced": "Order placed",
     "stageProgress": "In progress",
-    "stageDelivered": "Delivered"
-    ,"myOrders": "My orders",
+    "stageDelivered": "Delivered",
+    "myOrders": "My orders",
     "providerSubtitle": "Stay on top of your orders to deliver great results.",
     "clientSubtitle": "Track your bookings and keep every service on schedule.",
     "acceptOrder": "Accept order",
@@ -587,10 +617,17 @@
     "adminTitle": "Orders and transactions",
     "adminSubtitle": "Monitor orders, track payments, and manage service transactions.",
     "transactions": "Transactions",
+    "revenueLedger": "Revenue ledger",
+    "orderIdHeader": "Order ID",
+    "serviceHeader": "Service",
+    "commission": "Commission",
+    "netRevenue": "Net revenue",
+    "actionHeader": "Action",
+    "viewOrder": "View order",
     "filters": "Filters",
     "exportData": "Export data",
-    "noData": "No data available."
-    ,"orderAcceptedSuccessfully": "Order accepted successfully",
+    "noData": "No data available.",
+    "orderAcceptedSuccessfully": "Order accepted successfully",
     "cancelConfirm": "Cancel order #{number}?",
     "cancelledSuccess": "Order cancelled",
     "cancelFailed": "We couldn't cancel the order.",
@@ -652,6 +689,7 @@
     "savedRetry": "Your order is saved, so it is safe to retry.",
     "opening": "Opening secure checkout…",
     "viewStatus": "View order status",
+    "signInToPay": "Sign in to pay {amount}",
     "pay": "Pay {amount}",
     "returnService": "Return to service",
     "paymentPrivacy": "Payment details are entered on Paystack and are never stored by Pavodah.",
@@ -721,8 +759,8 @@
     "replyPlaceholder": "Type your message here…",
     "proposedBudget": "Proposed budget",
     "offerAccepted": "Offer accepted",
-    "offerExpired": "Quote expired"
-    ,"notFound": "Quote request not found.",
+    "offerExpired": "Quote expired",
+    "notFound": "Quote request not found.",
     "requestDescription": "Project description",
     "attachments": "Attachments",
     "preview": "Preview",
@@ -741,8 +779,8 @@
     "expertiseMismatch": "Doesn't match my expertise",
     "other": "Other",
     "messageClientLabel": "Message to client",
-    "submitDecline": "Submit and decline"
-    ,"detailsSubtitle": "Review your quote request and respond to provider offers.",
+    "submitDecline": "Submit and decline",
+    "detailsSubtitle": "Review your quote request and respond to provider offers.",
     "quoteNotFound": "Quote not found.",
     "yourBudget": "Your budget",
     "yourAttachments": "Your attachments",
@@ -772,8 +810,8 @@
     "issueQuality": "Quality issue",
     "issuePayment": "Payment issue",
     "issueCommunication": "Communication issue",
-    "issueOther": "Other issue"
-    ,"adminSubtitle": "Review and resolve conflicts between customers and service providers.",
+    "issueOther": "Other issue",
+    "adminSubtitle": "Review and resolve conflicts between customers and service providers.",
     "participantSubtitle": "Track disputes for orders you're involved in.",
     "detailSubtitle": "Review the dispute status and resolution for this order.",
     "search": "Search by order ID, dispute ID, or issue type…",
@@ -846,6 +884,7 @@
     "deleted": "Service deleted successfully.",
     "deleteFailed": "We couldn't delete the service.",
     "noServices": "No services found. Create your first service to get started!",
+    "noMarketplaceServices": "No marketplace services found.",
     "resultsRange": "Showing {start} to {end} of {total} results",
     "viewDetails": "View details",
     "deleteTitle": "Delete service",
@@ -933,8 +972,11 @@
   "DashboardAnalytics": {
     "title": "Dashboard",
     "adminSubtitle": "Monitor live platform performance and take quick actions.",
+    "adminMarketScope": "Viewing {market} operations",
+    "adminGlobalScope": "Viewing operations across all markets",
     "providerSubtitle": "Manage your services, track earnings, and grow your business.",
     "userSubtitle": "Monitor your orders and track your spending.",
+    "userScopeSummary": "Orders across all markets · Spending shown for {market} ({currency})",
     "loadingAdmin": "Loading live dashboard data…",
     "loadingProvider": "Loading live provider data…",
     "loadingUser": "Loading your dashboard…",
@@ -966,8 +1008,11 @@
     "recentOrders": "Recent orders",
     "recentRequests": "Recent order requests",
     "viewAllOrders": "View all orders",
+    "viewOrders": "View orders",
     "viewReport": "View detailed report",
+    "viewDetails": "View details",
     "topCategories": "Top categories",
+    "topCategoriesDefinition": "Ranked by services created in the selected month.",
     "noFinancialActivity": "No financial activity recorded for {year}.",
     "noEarnings": "No earnings recorded for {year} or {previous}.",
     "noSpending": "No spending recorded for {year} or {previous}.",
@@ -982,6 +1027,31 @@
     "bestMonth": "Best month: {month} ({amount})",
     "highestMonth": "Highest month: {month} ({amount})",
     "noOrders": "No orders"
+    ,"providerLoadFallback": "The dashboard data could not be loaded.",
+    "providerNoData": "The analytics API did not return dashboard data.",
+    "providerStaleSnapshot": "Could not load {requestedYear} earnings and {requestedMonth} orders. Showing the last successful snapshot for {snapshotYear} and {snapshotMonth}.",
+    "providerEarningsDetail": "Provider settlement share before balance adjustments.",
+    "providerEarningsTrendDetail": "{current} earned this month; {previous} last month",
+    "providerActiveTrendNew": "paid orders this month",
+    "providerActiveTrendCompare": "new paid orders vs last month",
+    "providerActiveTrendDetail": "{current} newly paid orders this month; {previous} last month",
+    "providerCompletedTrendNew": "completed this month",
+    "providerCompletedTrendCompare": "completed vs last month",
+    "providerCompletedTrendDetail": "{current} orders completed this month; {previous} last month",
+    "providerReviewCount": "{count, plural, =1 {1 review} other {# reviews}}",
+    "providerChartAria": "Monthly provider earnings for {year} compared with {previous}",
+    "providerEarningsCaption": "Provider settlement share for {year} and {previous}, before balance adjustments",
+    "providerEarningsExplanation": "Earnings show your provider settlement share before balance adjustments. See Earnings and payouts for your withdrawable balance.",
+    "providerOrderTrendTitle": "{current} orders in {currentMonth}; {previous} in the previous month",
+    "vsPreviousMonth": "vs previous month",
+    "paidOrdersPlacedIn": "Paid orders placed in {month}",
+    "providerOrderSummaryAria": "Paid order status summary for {month}: {total} total",
+    "statusCompleted": "Completed",
+    "statusPending": "Pending",
+    "statusAwaiting": "Awaiting",
+    "statusInProgress": "In progress",
+    "statusDeclined": "Declined",
+    "statusRefunded": "Refunded"
   },
   "Earnings": {
     "title": "Earnings and payouts",
@@ -1024,6 +1094,8 @@
     "resend": "Resend",
     "codeSent": "Verification code sent.",
     "destinationVerified": "Payout destination verified."
+    ,"dashboardScope": "Showing earnings and payouts for {market}, matching the dashboard total.",
+    "clearDashboardScope": "Show all earnings"
   },
   "AdminOps": {
     "categoryTitle": "Category management",
@@ -1033,6 +1105,10 @@
     "featured": "Featured",
     "usersTitle": "Users",
     "usersSubtitle": "Manage customer, provider, and administrator accounts.",
+    "dashboardUsersScope": "Showing users included in the dashboard total for {market}.",
+    "dashboardActiveProvidersScope": "Showing active providers included in the dashboard total for {market}.",
+    "clearDashboardScope": "Clear dashboard filter",
+    "allMarkets": "all markets",
     "searchUsers": "Search by name or email…",
     "usersLoadFailed": "We couldn't load the users.",
     "userDeleted": "User deleted successfully.",
@@ -1058,8 +1134,8 @@
     "approveProvider": "Approve provider",
     "requiredChanges": "Required changes",
     "changesPlaceholder": "For example: upload a clear, unexpired identity document.",
-    "sendRequest": "Send request"
-    ,"filters": "Filters",
+    "sendRequest": "Send request",
+    "filters": "Filters",
     "noUsers": "No users found",
     "deleteUser": "Delete user",
     "deleteUserBody": "Are you sure you want to delete this user? This action cannot be undone.",
@@ -1068,8 +1144,8 @@
     "suspendBody": "This user will be suspended and won't be able to access the platform.",
     "activateBody": "This user will be reactivated and can access the platform again.",
     "suspend": "Suspend",
-    "activate": "Activate"
-    ,"categories": "Categories",
+    "activate": "Activate",
+    "categories": "Categories",
     "addFeatured": "Add featured item",
     "editCategory": "Edit category",
     "addCategoryTitle": "Add new category",
@@ -1081,15 +1157,15 @@
     "parentCategory": "Parent category",
     "selectOption": "Select an option",
     "categoryRequired": "Category name is required.",
-    "categoryDeleted": "Category deleted successfully!"
-    ,"payoutRequests": "Payout requests",
+    "categoryDeleted": "Category deleted successfully!",
+    "payoutRequests": "Payout requests",
     "releaseReviews": "Release reviews",
     "refunds": "Refunds",
     "paystackDisputes": "Paystack disputes",
     "reconcileTransfers": "Reconcile transfers",
     "reconcileRefunds": "Reconcile refunds",
-    "refreshQueues": "Refresh queues"
-    ,"pendingReview": "Pending review",
+    "refreshQueues": "Refresh queues",
+    "pendingReview": "Pending review",
     "changesRequested": "Changes requested",
     "approved": "Approved"
   },
@@ -1123,11 +1199,188 @@
     "earningsPayouts": "Earnings and payouts",
     "customerChat": "Customer chat",
     "quoteRequest": "Quote request",
+    "marketsPayments": "Markets & payments",
+    "markets": "Markets",
+    "countryAdministrators": "Country administrators",
+    "serviceMarkets": "Service markets",
+    "marketApplications": "Market applications",
+    "superAdmin": "Super admin",
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar",
     "logout": "Log out",
     "logoutTitle": "Are you sure you want to log out?",
     "logoutBody": "You'll be signed out from your account and will need to sign in again to continue."
+  },
+  "Markets": {
+    "countryOperations": "Country operations",
+    "somethingWentWrong": "Something went wrong",
+    "superAdminTitle": "Markets and payment accounts",
+    "superAdminBody": "Control country availability and rotate each market's Paystack keys. Secret values are encrypted at rest and are never returned by the API.",
+    "assignAdminTitle": "Assign a country administrator",
+    "assignAdminBody": "This changes the selected account to an admin and permanently scopes its operational access to one country.",
+    "userId": "User ID",
+    "userIdAria": "User ID for country administrator",
+    "adminCountryAria": "Administrator country",
+    "chooseCountry": "Choose country",
+    "assign": "Assign",
+    "assignValidation": "Enter a user ID and choose a country",
+    "adminAssigned": "Country administrator assigned",
+    "marketUpdated": "{market} updated",
+    "marketCounts": "{services, plural, =0 {0 services} one {# service} other {# services}} · {orders, plural, =0 {0 orders} one {# order} other {# orders}} · {providers, plural, =0 {0 providers} one {# provider} other {# providers}}",
+    "marketStatus": {
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "INACTIVE": "Inactive"
+    },
+    "checkout": "Checkout",
+    "checkoutHelp": "Accept new customer payments",
+    "providerOnboarding": "Provider onboarding",
+    "providerOnboardingHelp": "Accept market applications",
+    "publishing": "Publishing",
+    "publishingHelp": "Allow new service publishing",
+    "paystackCredentials": "Paystack credentials",
+    "paystackAccount": "Paystack account",
+    "integrationSummary": "{status} · use this deployment's key",
+    "integrationStatus": {
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "RETIRED": "Retired"
+    },
+    "configured": "Configured",
+    "needsKey": "Needs key",
+    "paystackSecretKey": "Paystack secret key",
+    "paystackSecretKeyAria": "Paystack secret key for {market}",
+    "secretRequired": "Enter the new Paystack secret key",
+    "stage": "Stage",
+    "credentialStaged": "Credential validated and staged. Activate it when ready.",
+    "credentialActivated": "Credential activated. Providers must re-verify payout destinations.",
+    "credentialRevoked": "Credential revoked",
+    "credentialStatus": {
+      "STAGED": "Staged",
+      "ACTIVE": "Active",
+      "RETIRING": "Retiring",
+      "REVOKED": "Revoked"
+    },
+    "activate": "Activate",
+    "revoke": "Revoke",
+    "webhookCopied": "Webhook URL copied",
+    "copyWebhookUrl": "Copy webhook URL",
+    "providerTitle": "My service markets",
+    "providerBody": "Apply to operate in more countries. Approval and payout details are managed separately for each market.",
+    "applicationSent": "Application sent to {market}",
+    "membershipStatus": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "REJECTED": "Rejected",
+      "SUSPENDED": "Suspended",
+      "NOT_JOINED": "Not joined"
+    },
+    "servicesAndPayouts": "Services and payouts in {currency}",
+    "applyToOperate": "Apply to operate",
+    "adminTitle": "Provider market applications",
+    "adminBody": "Review providers requesting permission to publish and receive payouts in your assigned country.",
+    "rejectionReasonRequired": "Enter a rejection reason",
+    "providerApproved": "Provider approved",
+    "applicationRejected": "Application rejected",
+    "noCountryAssigned": "No country is assigned to this admin account.",
+    "queueClear": "Queue is clear",
+    "noPendingApplications": "There are no pending market applications.",
+    "approve": "Approve",
+    "rejectionReasonPlaceholder": "Reason required for rejection",
+    "rejectionReasonLabel": "Reason for rejecting {name}",
+    "reject": "Reject",
+    "searchMarketApplications": "Search by provider name or email",
+    "sortApplications": "Sort market applications",
+    "oldestFirst": "Oldest first",
+    "newestFirst": "Newest first",
+    "loadingApplications": "Loading market applications…",
+    "applicationsCount": "{count, plural, =0 {No applications} one {# application} other {# applications}}",
+    "applicationsLoadFailed": "Market applications could not be loaded",
+    "applicationsLoadFailedBody": "Check your connection and try again.",
+    "noMatchingApplications": "No matching applications",
+    "noMatchingApplicationsBody": "Try a different provider name or email address.",
+    "unknownProvider": "Unknown provider",
+    "submittedOn": "Submitted {date}",
+    "verifiedProvider": "Provider verified",
+    "verificationRequired": "Verification required",
+    "viewProviderApplication": "View provider application",
+    "verifyBeforeApproval": "Approve the main provider application before granting access to this market.",
+    "applicationsPagination": "Market applications pagination",
+    "pageOf": "Page {page} of {totalPages}",
+    "saveMarketFailed": "Could not save your market",
+    "chooseMarketplaceCountry": "Choose marketplace country",
+    "global": "Global",
+    "marketplace": "Marketplace",
+    "selectorBody": "Prices and checkout use each service's listed currency.",
+    "checkoutPaused": "Checkout paused",
+    "globalBrowse": "Browse globally available services",
+    "globalAdministration": "Global administration",
+    "assignedMarket": "Assigned market",
+    "marketsTitle": "Markets",
+    "marketsBody": "See each country at a glance, spot operational gaps, and open a market when detailed changes are needed.",
+    "manageAdministrators": "Manage administrators",
+    "searchMarkets": "Search markets",
+    "filterByStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "noMarketsFound": "No markets found",
+    "adjustMarketFilters": "Try changing your search or status filter.",
+    "market": "Market",
+    "status": "Status",
+    "administrators": "Administrators",
+    "providers": "Providers",
+    "orders": "Orders",
+    "operations": "Operations",
+    "payment": "Payment",
+    "manage": "Manage",
+    "operationsEnabled": "{count} of 3 enabled",
+    "marketNotFound": "Market not found",
+    "backToMarkets": "Back to markets",
+    "marketStatusLabel": "Market status",
+    "overview": "Overview",
+    "payments": "Payments",
+    "marketOverview": "Market overview",
+    "services": "Services",
+    "paymentReady": "Payments are configured",
+    "paymentReadyBody": "An active Paystack credential is available for this market.",
+    "paymentNeedsAttention": "Payment setup needs attention",
+    "paymentNeedsAttentionBody": "Add and activate a Paystack credential before accepting payments.",
+    "operationalControls": "Operational controls",
+    "operationalControlsBody": "Pause individual activities without changing the market's overall status.",
+    "paymentSecurityBody": "Stage, verify, and activate credentials without exposing stored secret values.",
+    "noPaymentIntegration": "No payment integration is configured for this market.",
+    "stageNewKey": "Stage new key",
+    "marketAdministrators": "Market administrators",
+    "marketAdministratorsBody": "People currently allowed to operate this country.",
+    "noMarketAdministrators": "No administrator assigned",
+    "noMarketAdministratorsBody": "Assign an administrator so this market has an operational owner.",
+    "adminStatus": { "ACTIVE": "Active", "SUSPENDED": "Suspended" },
+    "countryAdministratorsTitle": "Country administrators",
+    "countryAdministratorsBody": "Manage who can operate each country, their account status, and their market assignment.",
+    "addAdministrator": "Add administrator",
+    "searchAdministrators": "Search by name or email",
+    "filterByMarket": "Filter by market",
+    "allMarkets": "All markets",
+    "noAdministratorsFound": "No administrators found",
+    "noAdministratorsFoundBody": "Try changing the filters or add a country administrator.",
+    "administratorUpdated": "Country administrator updated",
+    "administratorAccessRemoved": "Administrator access removed",
+    "adminMarketAria": "Assigned market for {name}",
+    "accountStatus": "Account status",
+    "adminStatusAria": "Account status for {name}",
+    "lastActive": "Last active",
+    "removeAccess": "Remove access",
+    "addAdministratorBody": "Find an active client account and assign it to one country.",
+    "findUser": "Find a user",
+    "searchUserPlaceholder": "Search by name or email",
+    "assignAdministrator": "Assign administrator",
+    "removeAdministratorTitle": "Remove administrator access?",
+    "removeAdministratorBody": "{name} will no longer be able to operate this country.",
+    "removeAdministratorNote": "The user account will remain active. Only administrator privileges and the country assignment will be removed.",
+    "cancel": "Cancel",
+    "loadFailed": "We couldn't load this information.",
+    "partialLoadFailed": "Some market details could not be loaded.",
+    "tryAgain": "Try again",
+    "administrator": "Administrator"
   },
   "Errors": {
     "title": "Something went wrong",
@@ -1148,11 +1401,11 @@
     "legal": "Legal",
     "trustSafety": "Trust & safety",
     "footerDescription": "Find trusted services, manage the work, and keep every important update in one place.",
-    "noCategories": "No categories available"
-    ,"policies": "Pavodah policies",
+    "noCategories": "No categories available",
+    "policies": "Pavodah policies",
     "contents": "Contents",
-    "policyContents": "Policy contents"
-    ,"privacyDescription": "How Pavodah collects, uses, shares, and protects personal information.",
+    "policyContents": "Policy contents",
+    "privacyDescription": "How Pavodah collects, uses, shares, and protects personal information.",
     "termsDescription": "The terms that apply when clients, service providers, and administrators use Pavodah.",
     "trustDescription": "Guidance for safer accounts, payments, orders, conversations, and reporting on Pavodah.",
     "helpTitle": "Help center",
@@ -1367,8 +1620,11 @@
     "yourResponse": "Your response",
     "respond": "Respond to review",
     "responsePlaceholder": "Write your response…",
-    "showMore": "Show more"
-    ,"selectRating": "Select a rating.",
+    "showMore": "Show more",
+    "dashboardScope": "Showing reviews and completed-order totals for {market}.",
+    "clearDashboardScope": "Show reviews across all markets",
+    "selectedMarket": "the selected market",
+    "selectRating": "Select a rating.",
     "submitFailed": "We couldn't submit your review.",
     "alreadyReviewed": "Already reviewed",
     "alreadyReviewedBody": "You've already submitted a review for this order.",
@@ -1419,29 +1675,165 @@
     "title": "Privacy policy",
     "summary": "This policy explains what information Pavodah uses to operate the marketplace, complete transactions, communicate with users, and protect the service.",
     "sections": [
-      {"id":"information-collected","title":"Information we collect","paragraphs":["Pavodah collects information you provide, information created through marketplace activity, and technical information needed to operate and protect the service."],"bullets":["Account and profile details, such as name, email address, phone number, role, profile image, location, and provider information.","Service listings, quote requests, orders, delivery details, reviews, disputes, messages, support conversations, and files you choose to submit.","Payment, refund, settlement, and payout references and statuses. Payment providers process sensitive payment credentials according to their own services; Pavodah receives the records needed to verify and administer transactions.","Device, browser, network, authentication, and security-event information used to maintain sessions, diagnose problems, and prevent misuse."]},
-      {"id":"how-used","title":"How information is used","bullets":["Create and secure accounts, complete onboarding, and provide role-appropriate marketplace features.","Publish services, connect clients and providers, process quotes and orders, and maintain transaction records.","Verify payment events, administer refunds, settlements, and payouts, and investigate mismatches or fraud.","Deliver messages, transactional notifications, support, dispute handling, and safety responses.","Monitor reliability, diagnose errors, enforce policies, comply with legal obligations, and improve the service."]},
-      {"id":"sharing","title":"When information is shared","paragraphs":["Pavodah shares information only when needed to provide the marketplace, carry out a requested transaction, protect the service, or meet a legal obligation."],"bullets":["Clients and providers receive the profile, order, quote, delivery, review, and conversation information needed for their marketplace relationship.","Payment, communication, file-storage, analytics, and infrastructure providers receive information needed to perform services for Pavodah.","Authorized administrators may access information needed for support, disputes, payments, payouts, security, and platform operations.","Information may be disclosed when required by law or reasonably necessary to protect rights, safety, users, or the integrity of Pavodah."]},
-      {"id":"notifications","title":"Notifications and communications","paragraphs":["Pavodah sends transactional communications about account security, messages, orders, payments, refunds, disputes, reviews, support, settlements, and payouts. Available in-app, email, and SMS preferences can be managed from Profile and settings, although certain service or security communications may still be necessary to operate the account.","Marketing communication, when offered, is handled separately from transactional notification preferences."]},
-      {"id":"retention-security","title":"Retention and security","paragraphs":["Pavodah retains information for as long as needed to provide the service, maintain marketplace and financial records, resolve disputes, protect users, and meet legal obligations. Different record types may require different retention periods.","Administrative, technical, and organizational safeguards are used to reduce unauthorized access, alteration, disclosure, or loss. No internet service can guarantee absolute security, so report suspected account compromise promptly."]},
-      {"id":"choices","title":"Your choices","bullets":["Review and update available profile and notification settings from your account.","Use the password-reset or password-change flow when account credentials need to be updated.","Contact support to ask about access, correction, deletion, restriction, or another privacy request. Some information may need to be retained for transactions, safety, disputes, or legal compliance."]},
-      {"id":"children","title":"Children's privacy","paragraphs":["Pavodah is not intended for children who cannot legally agree to marketplace transactions or these terms. If you believe a child submitted personal information without appropriate authorization, contact support for review."]},
-      {"id":"changes-contact","title":"Changes and contact","paragraphs":["This policy may be updated as Pavodah's features, service providers, or legal obligations change. Material changes will be communicated through an appropriate platform or account channel when required.","Privacy questions and requests can be sent to support@pavodah.com."]}
+      {
+        "id": "information-collected",
+        "title": "Information we collect",
+        "paragraphs": [
+          "Pavodah collects information you provide, information created through marketplace activity, and technical information needed to operate and protect the service."
+        ],
+        "bullets": [
+          "Account and profile details, such as name, email address, phone number, role, profile image, location, and provider information.",
+          "Service listings, quote requests, orders, delivery details, reviews, disputes, messages, support conversations, and files you choose to submit.",
+          "Payment, refund, settlement, and payout references and statuses. Payment providers process sensitive payment credentials according to their own services; Pavodah receives the records needed to verify and administer transactions.",
+          "Device, browser, network, authentication, and security-event information used to maintain sessions, diagnose problems, and prevent misuse."
+        ]
+      },
+      {
+        "id": "how-used",
+        "title": "How information is used",
+        "bullets": [
+          "Create and secure accounts, complete onboarding, and provide role-appropriate marketplace features.",
+          "Publish services, connect clients and providers, process quotes and orders, and maintain transaction records.",
+          "Verify payment events, administer refunds, settlements, and payouts, and investigate mismatches or fraud.",
+          "Deliver messages, transactional notifications, support, dispute handling, and safety responses.",
+          "Monitor reliability, diagnose errors, enforce policies, comply with legal obligations, and improve the service."
+        ]
+      },
+      {
+        "id": "sharing",
+        "title": "When information is shared",
+        "paragraphs": [
+          "Pavodah shares information only when needed to provide the marketplace, carry out a requested transaction, protect the service, or meet a legal obligation."
+        ],
+        "bullets": [
+          "Clients and providers receive the profile, order, quote, delivery, review, and conversation information needed for their marketplace relationship.",
+          "Payment, communication, file-storage, analytics, and infrastructure providers receive information needed to perform services for Pavodah.",
+          "Authorized administrators may access information needed for support, disputes, payments, payouts, security, and platform operations.",
+          "Information may be disclosed when required by law or reasonably necessary to protect rights, safety, users, or the integrity of Pavodah."
+        ]
+      },
+      {
+        "id": "notifications",
+        "title": "Notifications and communications",
+        "paragraphs": [
+          "Pavodah sends transactional communications about account security, messages, orders, payments, refunds, disputes, reviews, support, settlements, and payouts. Available in-app, email, and SMS preferences can be managed from Profile and settings, although certain service or security communications may still be necessary to operate the account.",
+          "Marketing communication, when offered, is handled separately from transactional notification preferences."
+        ]
+      },
+      {
+        "id": "retention-security",
+        "title": "Retention and security",
+        "paragraphs": [
+          "Pavodah retains information for as long as needed to provide the service, maintain marketplace and financial records, resolve disputes, protect users, and meet legal obligations. Different record types may require different retention periods.",
+          "Administrative, technical, and organizational safeguards are used to reduce unauthorized access, alteration, disclosure, or loss. No internet service can guarantee absolute security, so report suspected account compromise promptly."
+        ]
+      },
+      {
+        "id": "choices",
+        "title": "Your choices",
+        "bullets": [
+          "Review and update available profile and notification settings from your account.",
+          "Use the password-reset or password-change flow when account credentials need to be updated.",
+          "Contact support to ask about access, correction, deletion, restriction, or another privacy request. Some information may need to be retained for transactions, safety, disputes, or legal compliance."
+        ]
+      },
+      {
+        "id": "children",
+        "title": "Children's privacy",
+        "paragraphs": [
+          "Pavodah is not intended for children who cannot legally agree to marketplace transactions or these terms. If you believe a child submitted personal information without appropriate authorization, contact support for review."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Changes and contact",
+        "paragraphs": [
+          "This policy may be updated as Pavodah's features, service providers, or legal obligations change. Material changes will be communicated through an appropriate platform or account channel when required.",
+          "Privacy questions and requests can be sent to support@pavodah.com."
+        ]
+      }
     ]
   },
   "TermsDocument": {
-    "title":"Terms of service",
-    "summary":"These terms explain the responsibilities that keep marketplace work, payment, communication, and dispute handling clear for everyone using Pavodah.",
-    "sections":[
-      {"id":"using-pavodah","title":"Using Pavodah","paragraphs":["These Terms govern access to and use of the Pavodah service marketplace. By creating an account or using the platform, you agree to follow these Terms and the policies linked from them.","You must provide accurate account information, keep your login details secure, and use Pavodah only for lawful marketplace activity. You are responsible for actions taken through your account unless you promptly report unauthorized access."]},
-      {"id":"marketplace-roles","title":"Marketplace roles","paragraphs":["Pavodah provides tools that help clients discover services and providers offer and deliver them. Providers are responsible for the accuracy, legality, quality, and delivery of their services. Clients are responsible for accurate requirements and timely review.","An order, quote, message, review, or profile does not create employment, partnership, or agency between Pavodah and a marketplace user."]},
-      {"id":"orders-payments","title":"Orders and payments","paragraphs":["Use Pavodah checkout and the order workflow for marketplace payments. The amount, currency, fees, and available actions are shown before or during checkout and on the order record.","Payment verification, refunds, settlement, and payouts may depend on payment providers and financial institutions. A pending state does not confirm that money completed every processing stage."],"bullets":["Do not ask another user to move payment outside Pavodah for work arranged through Pavodah.","Do not misrepresent a payment, delivery, refund, or payout state.","Review order details before accepting delivery or taking another final action."]},
-      {"id":"provider-obligations","title":"Provider obligations","paragraphs":["Providers must describe services honestly, use pricing and delivery terms they can honor, possess any authorization required for the work, and communicate material changes before delivery.","Providers may not publish deceptive, unlawful, infringing, unsafe, or prohibited services. Pavodah may review, limit, or remove services that create risk."]},
-      {"id":"user-content","title":"Messages, reviews, and content","paragraphs":["You remain responsible for profile information, service listings, files, messages, reviews, and dispute evidence you submit. You permit Pavodah to host, display, process, and transmit that content as needed to operate and protect the marketplace.","Content must not be fraudulent, abusive, discriminatory, unlawfully threatening, privacy-invasive, or infringing. Reviews must reflect a genuine marketplace experience and must not be manipulated for a benefit."]},
-      {"id":"disputes-refunds","title":"Disputes and refunds","paragraphs":["Eligible orders may provide an in-platform dispute action. Each party should provide accurate information and cooperate. Pavodah may consider order state, messages, delivery records, payment information, and submitted evidence.","Refund availability and amount depend on payment and order circumstances. A refund may require additional processing time after Pavodah records it as initiated or processed."]},
-      {"id":"enforcement","title":"Restriction and enforcement","paragraphs":["Pavodah may restrict content, transactions, features, or accounts when reasonably necessary to investigate misuse, comply with law, protect users, address security risk, or enforce these Terms. Pavodah may request more information before restoring access."]},
-      {"id":"availability-liability","title":"Availability and responsibility","paragraphs":["Pavodah works to provide a reliable marketplace, but uninterrupted or error-free availability is not guaranteed. To the extent permitted by law, Pavodah is not responsible for indirect losses or for a user's independent acts, services, representations, or off-platform arrangements.","Nothing in these Terms excludes a right or responsibility that cannot lawfully be excluded."]},
-      {"id":"changes-contact","title":"Changes and contact","paragraphs":["Pavodah may update these Terms when the service, legal requirements, or marketplace risks change. Material updates will be communicated through an appropriate channel before they take effect when required.","Questions about these Terms can be sent to support@pavodah.com."]}
+    "title": "Terms of service",
+    "summary": "These terms explain the responsibilities that keep marketplace work, payment, communication, and dispute handling clear for everyone using Pavodah.",
+    "sections": [
+      {
+        "id": "using-pavodah",
+        "title": "Using Pavodah",
+        "paragraphs": [
+          "These Terms govern access to and use of the Pavodah service marketplace. By creating an account or using the platform, you agree to follow these Terms and the policies linked from them.",
+          "You must provide accurate account information, keep your login details secure, and use Pavodah only for lawful marketplace activity. You are responsible for actions taken through your account unless you promptly report unauthorized access."
+        ]
+      },
+      {
+        "id": "marketplace-roles",
+        "title": "Marketplace roles",
+        "paragraphs": [
+          "Pavodah provides tools that help clients discover services and providers offer and deliver them. Providers are responsible for the accuracy, legality, quality, and delivery of their services. Clients are responsible for accurate requirements and timely review.",
+          "An order, quote, message, review, or profile does not create employment, partnership, or agency between Pavodah and a marketplace user."
+        ]
+      },
+      {
+        "id": "orders-payments",
+        "title": "Orders and payments",
+        "paragraphs": [
+          "Use Pavodah checkout and the order workflow for marketplace payments. The amount, currency, fees, and available actions are shown before or during checkout and on the order record.",
+          "Payment verification, refunds, settlement, and payouts may depend on payment providers and financial institutions. A pending state does not confirm that money completed every processing stage."
+        ],
+        "bullets": [
+          "Do not ask another user to move payment outside Pavodah for work arranged through Pavodah.",
+          "Do not misrepresent a payment, delivery, refund, or payout state.",
+          "Review order details before accepting delivery or taking another final action."
+        ]
+      },
+      {
+        "id": "provider-obligations",
+        "title": "Provider obligations",
+        "paragraphs": [
+          "Providers must describe services honestly, use pricing and delivery terms they can honor, possess any authorization required for the work, and communicate material changes before delivery.",
+          "Providers may not publish deceptive, unlawful, infringing, unsafe, or prohibited services. Pavodah may review, limit, or remove services that create risk."
+        ]
+      },
+      {
+        "id": "user-content",
+        "title": "Messages, reviews, and content",
+        "paragraphs": [
+          "You remain responsible for profile information, service listings, files, messages, reviews, and dispute evidence you submit. You permit Pavodah to host, display, process, and transmit that content as needed to operate and protect the marketplace.",
+          "Content must not be fraudulent, abusive, discriminatory, unlawfully threatening, privacy-invasive, or infringing. Reviews must reflect a genuine marketplace experience and must not be manipulated for a benefit."
+        ]
+      },
+      {
+        "id": "disputes-refunds",
+        "title": "Disputes and refunds",
+        "paragraphs": [
+          "Eligible orders may provide an in-platform dispute action. Each party should provide accurate information and cooperate. Pavodah may consider order state, messages, delivery records, payment information, and submitted evidence.",
+          "Refund availability and amount depend on payment and order circumstances. A refund may require additional processing time after Pavodah records it as initiated or processed."
+        ]
+      },
+      {
+        "id": "enforcement",
+        "title": "Restriction and enforcement",
+        "paragraphs": [
+          "Pavodah may restrict content, transactions, features, or accounts when reasonably necessary to investigate misuse, comply with law, protect users, address security risk, or enforce these Terms. Pavodah may request more information before restoring access."
+        ]
+      },
+      {
+        "id": "availability-liability",
+        "title": "Availability and responsibility",
+        "paragraphs": [
+          "Pavodah works to provide a reliable marketplace, but uninterrupted or error-free availability is not guaranteed. To the extent permitted by law, Pavodah is not responsible for indirect losses or for a user's independent acts, services, representations, or off-platform arrangements.",
+          "Nothing in these Terms excludes a right or responsibility that cannot lawfully be excluded."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Changes and contact",
+        "paragraphs": [
+          "Pavodah may update these Terms when the service, legal requirements, or marketplace risks change. Material updates will be communicated through an appropriate channel before they take effect when required.",
+          "Questions about these Terms can be sent to support@pavodah.com."
+        ]
+      }
     ]
   }
 }

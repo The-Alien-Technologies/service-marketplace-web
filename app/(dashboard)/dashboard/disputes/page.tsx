@@ -75,14 +75,22 @@ function StatusBadge({ status }: { status: Dispute["status"] }) {
   );
 }
 
-function HeaderLabel({ message, common = false }: { message: string; common?: boolean }) {
+function HeaderLabel({
+  message,
+  common = false,
+}: {
+  message: string;
+  common?: boolean;
+}) {
   const t = useTranslations(common ? "Common" : "Disputes");
   return <>{t(message as never)}</>;
 }
 
 function PriorityLabel({ value }: { value: Dispute["priority"] }) {
   const t = useTranslations("Disputes");
-  return <>{t(value === "LOW" ? "low" : value === "MEDIUM" ? "medium" : "high")}</>;
+  return (
+    <>{t(value === "LOW" ? "low" : value === "MEDIUM" ? "medium" : "high")}</>
+  );
 }
 
 function IssueLabel({ value }: { value: Dispute["issueType"] }) {
@@ -234,7 +242,7 @@ export default function DisputesPage() {
     setIsLoading(true);
     try {
       const data =
-        user?.role === "ADMIN"
+        user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
           ? await apiService.getAdminDisputes()
           : await apiService.getMyDisputes();
       setDisputes(data ?? []);
@@ -267,7 +275,7 @@ export default function DisputesPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
-          {user?.role === "ADMIN"
+          {user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
             ? t("adminSubtitle")
             : t("participantSubtitle")}
         </p>
@@ -305,82 +313,86 @@ export default function DisputesPage() {
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <div className="overflow-x-auto overscroll-x-contain">
-        <table className="min-w-[820px] w-full text-sm text-left">
-          <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className={cn(
-                      "px-6 py-4 font-medium",
-                      (header.column.columnDef.meta as any)?.align === "right"
-                        ? "text-right"
-                        : "",
-                    )}
-                    onClick={header.column.getToggleSortingHandler()}
-                    style={{
-                      cursor: header.column.getCanSort()
-                        ? "pointer"
-                        : "default",
-                    }}
-                  >
-                    <div
+          <table className="min-w-[820px] w-full text-sm text-left">
+            <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
                       className={cn(
-                        "flex items-center gap-1",
+                        "px-6 py-4 font-medium",
                         (header.column.columnDef.meta as any)?.align === "right"
-                          ? "justify-end"
+                          ? "text-right"
                           : "",
                       )}
+                      onClick={header.column.getToggleSortingHandler()}
+                      style={{
+                        cursor: header.column.getCanSort()
+                          ? "pointer"
+                          : "default",
+                      }}
                     >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
-                </td>
-              </tr>
-            ) : table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    window.location.href = `/dashboard/disputes/${row.original.id}`;
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-6 py-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </td>
+                      <div
+                        className={cn(
+                          "flex items-center gap-1",
+                          (header.column.columnDef.meta as any)?.align ===
+                            "right"
+                            ? "justify-end"
+                            : "",
+                        )}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                      </div>
+                    </th>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-6 py-8 text-center text-gray-500"
-                >
-                  {t("noDisputes")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {isLoading ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-6 py-12 text-center"
+                  >
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
+                  </td>
+                </tr>
+              ) : table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      window.location.href = `/dashboard/disputes/${row.original.id}`;
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-6 py-4">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    {t("noDisputes")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination */}

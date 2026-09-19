@@ -18,12 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
 
 export default function ServiceDetailsPage() {
   const t = useTranslations("Services");
   const common = useTranslations("Common");
-  const format = useFormatter();
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
@@ -109,13 +109,14 @@ export default function ServiceDetailsPage() {
                 )}
               >
                 {service.status === "PUBLISHED"
-                    ? t("published")
-                    : service.status === "DRAFT"
-                      ? t("draft")
-                      : t("inactive")}
+                  ? t("published")
+                  : service.status === "DRAFT"
+                    ? t("draft")
+                    : t("inactive")}
               </span>
               <span className="text-sm text-gray-500">
-                {common("category")}: {service.category?.name || t("uncategorized")}
+                {common("category")}:{" "}
+                {service.category?.name || t("uncategorized")}
               </span>
             </div>
           </div>
@@ -139,9 +140,7 @@ export default function ServiceDetailsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{t("deleteTitle")}</DialogTitle>
-                  <DialogDescription>
-                    {t("deleteBody")}
-                  </DialogDescription>
+                  <DialogDescription>{t("deleteBody")}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                   <Button
@@ -177,7 +176,9 @@ export default function ServiceDetailsPage() {
         <div className="lg:col-span-7 space-y-8">
           {/* Cover Image */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t("coverImage")}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("coverImage")}
+            </h2>
             <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
               {service.coverImage ? (
                 <Image
@@ -196,7 +197,9 @@ export default function ServiceDetailsPage() {
 
           {/* Overview */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t("overview")}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("overview")}
+            </h2>
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {service.overview}
@@ -226,7 +229,9 @@ export default function ServiceDetailsPage() {
           {/* Gallery - If exists */}
           {service.images && service.images.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">{t("gallery")}</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t("gallery")}
+              </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                 {service.images.map((img) => (
                   <div
@@ -276,7 +281,7 @@ export default function ServiceDetailsPage() {
                         </div>
                       </div>
                       <span className="font-semibold text-gray-900">
-                        {format.number(Number(plan.price), "currency")}
+                        {formatMoney(plan.price, service.currency)}
                       </span>
                     </div>
                     <div className="p-4">
@@ -308,7 +313,9 @@ export default function ServiceDetailsPage() {
           {/* Addons */}
           {service.addons && service.addons.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">{t("addOns")}</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t("addOns")}
+              </h2>
               <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
                 {service.addons.map((addon) => (
                   <div
@@ -326,7 +333,7 @@ export default function ServiceDetailsPage() {
                       )}
                     </div>
                     <span className="text-sm font-semibold text-gray-900">
-                      + {format.number(Number(addon.price), "currency")}
+                      + {formatMoney(addon.price, service.currency)}
                     </span>
                   </div>
                 ))}

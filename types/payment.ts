@@ -80,6 +80,8 @@ export interface ExternalPaymentDispute {
   order: {
     id: string;
     orderNumber: string;
+    marketId: string;
+    currency: string;
     planTitle: string;
     total: number | string;
     client: {
@@ -127,6 +129,8 @@ export interface AdminRefund {
   order: {
     id: string;
     orderNumber: string;
+    marketId: string;
+    currency: string;
     paymentStatus: OrderPaymentStatus;
     client: {
       id: string;

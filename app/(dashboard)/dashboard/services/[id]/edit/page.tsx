@@ -62,6 +62,9 @@ export default function EditServicePage() {
         // Populate form fields
         setTitle(service.title);
         setCategoryId(service.categoryId);
+        setServiceCurrency(service.currency);
+        setServiceMarketName(service.market?.name ?? "Service market");
+        setAvailability(service.availability);
         setOverview(service.overview);
         setTags(service.tags || []);
 
@@ -116,6 +119,11 @@ export default function EditServicePage() {
   // Service data state
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [serviceCurrency, setServiceCurrency] = useState("");
+  const [serviceMarketName, setServiceMarketName] = useState("");
+  const [availability, setAvailability] = useState<"MARKET" | "GLOBAL">(
+    "MARKET",
+  );
   const [overview, setOverview] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
@@ -237,9 +245,7 @@ export default function EditServicePage() {
     const filesToAdd = files.slice(0, remainingSlots);
 
     if (files.length > remainingSlots) {
-      toast.warning(
-        t("maxImages", { count: remainingSlots }),
-      );
+      toast.warning(t("maxImages", { count: remainingSlots }));
     }
 
     setPortfolioImages([...portfolioImages, ...filesToAdd]);
@@ -323,6 +329,7 @@ export default function EditServicePage() {
 
       // Prepare data
       const serviceData = {
+        availability,
         title,
         categoryId,
         overview,
@@ -363,14 +370,10 @@ export default function EditServicePage() {
       if (portfolioImages.length > 0) {
         try {
           await apiService.uploadServiceImages(service.id, portfolioImages);
-          toast.success(
-            t("imagesUploaded", { count: portfolioImages.length }),
-          );
+          toast.success(t("imagesUploaded", { count: portfolioImages.length }));
         } catch (error) {
           console.error("Failed to upload portfolio images:", error);
-          toast.warning(
-            t("imagesUploadPartial"),
-          );
+          toast.warning(t("imagesUploadPartial"));
         }
       }
 
@@ -410,10 +413,10 @@ export default function EditServicePage() {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t("editTitle")}</h1>
-            <p className="text-gray-500 mt-1">
-              {t("editSubtitle")}
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {t("editTitle")}
+            </h1>
+            <p className="text-gray-500 mt-1">{t("editSubtitle")}</p>
           </div>
         </div>
       </div>
@@ -478,6 +481,40 @@ export default function EditServicePage() {
               {t("generalDetails")}
             </h2>
 
+            <div className="rounded-xl border border-green-200 bg-green-50/70 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {serviceMarketName}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Prices and payments use {serviceCurrency}. Create a separate
+                    offer for another market.
+                  </p>
+                </div>
+                <span className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-green-800 shadow-sm">
+                  {serviceCurrency}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-4 border-t border-green-200 pt-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Global discovery
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Visibility changes; the listed currency stays the same.
+                  </p>
+                </div>
+                <Switch
+                  checked={availability === "GLOBAL"}
+                  onCheckedChange={(checked) =>
+                    setAvailability(checked ? "GLOBAL" : "MARKET")
+                  }
+                  aria-label="Make service globally discoverable"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label
                 htmlFor="title"
@@ -512,9 +549,7 @@ export default function EditServicePage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                {t("categoryHelp")}
-              </p>
+              <p className="text-xs text-gray-500">{t("categoryHelp")}</p>
             </div>
 
             <div className="space-y-2">
@@ -539,7 +574,9 @@ export default function EditServicePage() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">{services("tags")}</span>
+              <span className="text-sm font-medium text-gray-700">
+                {services("tags")}
+              </span>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
                   <div
@@ -581,10 +618,10 @@ export default function EditServicePage() {
 
           {/* Catalogue */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t("catalogue")}</h2>
-            <p className="text-sm text-gray-500 -mt-2">
-              {t("catalogueHelp")}
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("catalogue")}
+            </h2>
+            <p className="text-sm text-gray-500 -mt-2">{t("catalogueHelp")}</p>
 
             <input
               type="file"
@@ -649,9 +686,7 @@ export default function EditServicePage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 {services("pricingPlans")}
               </h2>
-              <p className="text-sm text-gray-500">
-                {t("pricingHelp")}
-              </p>
+              <p className="text-sm text-gray-500">{t("pricingHelp")}</p>
             </div>
 
             {/* Suggested Examples */}
@@ -712,7 +747,7 @@ export default function EditServicePage() {
                         </h3>
                         {!plan.isExpanded && plan.price && (
                           <p className="text-xs text-gray-500">
-                            GHS {plan.price}
+                            {serviceCurrency} {plan.price}
                           </p>
                         )}
                       </div>
@@ -791,7 +826,7 @@ export default function EditServicePage() {
                         <div className="relative">
                           <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
                             <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
-                              GHS
+                              {serviceCurrency}
                             </span>
                           </div>
                           <Input
@@ -870,9 +905,7 @@ export default function EditServicePage() {
                 )}
               >
                 <Plus className="w-4 h-4" />
-                {plans.length >= 5
-                  ? t("maximumPlans")
-                  : t("addPlan")}
+                {plans.length >= 5 ? t("maximumPlans") : t("addPlan")}
               </button>
             </div>
           </div>
@@ -883,11 +916,11 @@ export default function EditServicePage() {
               <div>
                 <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                   {services("addOns")}{" "}
-                  <span className="text-gray-400 font-normal">({common("optional")})</span>
+                  <span className="text-gray-400 font-normal">
+                    ({common("optional")})
+                  </span>
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t("addOnsBody")}
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{t("addOnsBody")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">{t("show")}</span>
@@ -924,7 +957,7 @@ export default function EditServicePage() {
                             </h3>
                             {addon.price && (
                               <p className="text-xs text-gray-500">
-                                GHS {addon.price}
+                                {serviceCurrency} {addon.price}
                               </p>
                             )}
                           </div>
@@ -993,7 +1026,7 @@ export default function EditServicePage() {
                           <div className="relative">
                             <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
                               <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
-                                GHS
+                                {serviceCurrency}
                               </span>
                             </div>
                             <Input

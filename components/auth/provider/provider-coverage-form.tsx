@@ -5,6 +5,7 @@ import { Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { useAuthStore } from "@/store/auth-store";
+import { useMarketStore } from "@/store/market-store";
 import { apiService } from "@/lib/api";
 import { LocationResult } from "@/lib/geocoding";
 import { toast } from "react-toastify";
@@ -18,6 +19,7 @@ export function ProviderCoverageForm() {
     useState<LocationResult | null>(null);
   const [validationError, setValidationError] = useState<string | undefined>();
   const { nextProviderStep, previousProviderStep } = useAuthStore();
+  const selectMarket = useMarketStore((state) => state.select);
 
   const handleLocationChange = (location: LocationResult | null) => {
     setSelectedLocation(location);
@@ -37,6 +39,9 @@ export function ProviderCoverageForm() {
         ...selectedLocation,
         isPrimary: true,
       });
+      if (selectedLocation.countryIso2) {
+        selectMarket(selectedLocation.countryIso2.toUpperCase());
+      }
       toast.success(t("coverageSaved"));
       nextProviderStep();
     } catch (error) {

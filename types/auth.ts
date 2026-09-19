@@ -7,6 +7,7 @@ export interface Address {
   administrativeAreaLevel1?: string; // state/region
   administrativeAreaLevel2?: string; // county
   country?: string;
+  countryIso2?: string;
   postalCode?: string;
   latitude?: number;
   longitude?: number;
@@ -72,7 +73,10 @@ export interface User {
   displayName?: string;
   username?: string;
   avatar?: string;
-  role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
+  role: "USER" | "SERVICE_PROVIDER" | "ADMIN" | "SUPER_ADMIN";
+  homeMarketId?: string | null;
+  selectedMarketId?: string | null;
+  adminMarketId?: string | null;
   status?: UserStatus;
   phoneVerified?: boolean;
   phoneNumber?: string;
@@ -206,7 +210,7 @@ export const PROVIDER_AUTH_STEPS: ProviderAuthStep[] = [
 // Mapping function to convert backend onboarding steps to frontend steps
 export function mapBackendStepToFrontendStep(
   backendStep: string,
-  userRole: "USER" | "SERVICE_PROVIDER" | "ADMIN",
+  userRole: "USER" | "SERVICE_PROVIDER" | "ADMIN" | "SUPER_ADMIN",
 ): UserAuthStep | ProviderAuthStep {
   if (userRole === "SERVICE_PROVIDER") {
     const providerStepMap: Record<string, ProviderAuthStep> = {
@@ -253,7 +257,8 @@ export interface OnboardingLocationData {
 }
 
 export interface OnboardingProfileData {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   phoneNumber: string;
   language: string;
   avatar?: File;

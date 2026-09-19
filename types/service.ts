@@ -23,6 +23,7 @@ export interface ServiceImage {
 }
 
 export type ServiceStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SUSPENDED";
+export type ServiceAvailability = "MARKET" | "GLOBAL";
 
 export interface Service {
   id: string;
@@ -36,6 +37,9 @@ export interface Service {
   status: ServiceStatus;
   providerId: string;
   categoryId: string;
+  marketId: string;
+  currency: string;
+  availability: ServiceAvailability;
 
   // Relations
   plans: ServicePlan[];
@@ -45,6 +49,15 @@ export interface Service {
     id: string;
     name: string;
     imageUrl?: string;
+  };
+  market?: {
+    id: string;
+    code: string;
+    name: string;
+    currency: string;
+    locale: string;
+    status: "ACTIVE" | "PAUSED" | "INACTIVE";
+    checkoutEnabled: boolean;
   };
   provider?: {
     id: string;
@@ -56,6 +69,8 @@ export interface Service {
 }
 
 export interface CreateServiceData {
+  marketId: string;
+  availability?: ServiceAvailability;
   title: string;
   categoryId: string;
   overview: string;

@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {useTranslations} from "next-intl";
+import { useTranslations } from "next-intl";
 
 export function HeroSection() {
   const t = useTranslations("Home");
   const router = useRouter();
   const { isAuthenticated, user, startUserFlow } = useAuthStore();
   const hasDashboard =
-    user?.role === "SERVICE_PROVIDER" || user?.role === "ADMIN";
+    user?.role === "SERVICE_PROVIDER" ||
+    user?.role === "ADMIN" ||
+    user?.role === "SUPER_ADMIN";
 
   const handlePrimaryAction = () => {
     if (!isAuthenticated) {
@@ -51,7 +53,7 @@ export function HeroSection() {
               {t.rich("heroTitle", {
                 Pavodah: (chunks) => (
                   <span className="text-brand-400 relative">{chunks}</span>
-                )
+                ),
               })}
             </h1>
 

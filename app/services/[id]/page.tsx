@@ -23,7 +23,7 @@ import {
 } from "@/types/order";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 export default function ServiceDetailPage({
   params,
@@ -32,7 +32,6 @@ export default function ServiceDetailPage({
 }) {
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
-  const format = useFormatter();
   const { id: serviceId } = use(params);
 
   const [service, setService] = useState<Service | null>(null);
@@ -87,9 +86,7 @@ export default function ServiceDetailPage({
           <h2 className="text-xl font-semibold text-gray-900">
             {t("serviceNotFound")}
           </h2>
-          <p className="text-gray-500 mt-2">
-            {t("serviceNotFoundBody")}
-          </p>
+          <p className="text-gray-500 mt-2">{t("serviceNotFoundBody")}</p>
         </div>
       </div>
     );
@@ -149,7 +146,7 @@ export default function ServiceDetailPage({
         common("provider"),
       avatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
       title: t("serviceProviderTitle"), // TODO: Add title to provider profile
-      location: "Accra, Ghana", // TODO: Add location to provider profile
+      location: service.market?.name || service.currency,
       rating: 0, // TODO: Implement rating
       isPro: false, // TODO: Implement pro status
     },
@@ -158,7 +155,7 @@ export default function ServiceDetailPage({
         id: plan.id || "",
         name: plan.title,
         icon: "layers" as const, // Default icon
-        price: format.number(plan.price, "currency"),
+        price: Number(plan.price),
         features: plan.inclusions.split("\n").map((text) => ({ text })),
         isPopular: plan.isPopular || false,
       })) || [],
@@ -230,6 +227,8 @@ export default function ServiceDetailPage({
               providerAvatar={serviceData.provider.avatar}
               service={service}
               serviceId={serviceId}
+              currency={service.currency}
+              locale={service.market?.locale}
             />
           </div>
         </div>

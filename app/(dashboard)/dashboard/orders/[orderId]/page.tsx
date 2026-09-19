@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
 import { remainingRefundAmount } from "@/lib/payment-state";
+import { formatMoney } from "@/lib/money";
 import { Order, OrderStatus } from "@/types/order";
 import { useState, useEffect, use } from "react";
 import { toast } from "react-toastify";
@@ -91,7 +92,7 @@ function OrderDetailsView({
   role,
 }: {
   orderId: string;
-  role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
+  role: "USER" | "SERVICE_PROVIDER" | "ADMIN" | "SUPER_ADMIN";
 }) {
   const t = useTranslations("Orders");
   const common = useTranslations("Common");
@@ -164,7 +165,8 @@ function OrderDetailsView({
 
   const handleClientCancel = async () => {
     if (!order) return;
-    if (!window.confirm(t("cancelConfirm", { number: order.orderNumber }))) return;
+    if (!window.confirm(t("cancelConfirm", { number: order.orderNumber })))
+      return;
     setActionLoading("DECLINED");
     try {
       const updated = await apiService.updateOrderStatus(order.id, "DECLINED");
@@ -242,7 +244,7 @@ function OrderDetailsView({
   if (!order) {
     return (
       <div className="py-20 text-center text-gray-500">
-        {t("notFound")} {" "}
+        {t("notFound")}{" "}
         <Link href="/dashboard/orders" className="text-green-600 underline">
           {common("back")}
         </Link>
@@ -269,15 +271,11 @@ function OrderDetailsView({
   const processedRefundAmount =
     order.refunds
       ?.filter(
-        (refund) =>
-          refund.affectsOrderBalance && refund.status === "PROCESSED",
+        (refund) => refund.affectsOrderBalance && refund.status === "PROCESSED",
       )
       .reduce((sum, refund) => sum + Number(refund.amount), 0) ??
     Number(order.settlement?.refundedAmount ?? 0);
-  const refundableAmount = remainingRefundAmount(
-    total,
-    processedRefundAmount,
-  );
+  const refundableAmount = remainingRefundAmount(total, processedRefundAmount);
   const settlementHeld =
     order.status === "COMPLETED" &&
     (!order.settlement ||
@@ -298,7 +296,9 @@ function OrderDetailsView({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("myOrders")}</h1>
           <p className="text-gray-500 mt-1">
-            {role === "SERVICE_PROVIDER" ? t("providerSubtitle") : t("clientSubtitle")}
+            {role === "SERVICE_PROVIDER"
+              ? t("providerSubtitle")
+              : t("clientSubtitle")}
           </p>
         </div>
 
@@ -348,7 +348,9 @@ function OrderDetailsView({
                   : t("declined")}
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-400">{t("orderId", { id: order.orderNumber })}</span>
+          <span className="text-gray-400">
+            {t("orderId", { id: order.orderNumber })}
+          </span>
         </div>
       </div>
 
@@ -413,7 +415,9 @@ function OrderDetailsView({
                       : "bg-gray-100 text-gray-700",
                 )}
               >
-                {t("paymentStatus", { status: order.paymentStatus.replace("_", " ") })}
+                {t("paymentStatus", {
+                  status: order.paymentStatus.replace("_", " "),
+                })}
               </span>
             </div>
           </div>
@@ -521,7 +525,7 @@ function OrderDetailsView({
                   </Button>
                 )}
 
-                {role === "ADMIN" &&
+                {(role === "ADMIN" || role === "SUPER_ADMIN") &&
                   (order.paymentStatus === "PAID" ||
                     order.paymentStatus === "PARTIALLY_REFUNDED") &&
                   refundableAmount > 0 &&
@@ -534,10 +538,10 @@ function OrderDetailsView({
                     >
                       {actionLoading === "REFUND" ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : order.paymentStatus === "PARTIALLY_REFUNDED" ? (
+                        t("refundRemaining")
                       ) : (
-                        order.paymentStatus === "PARTIALLY_REFUNDED"
-                          ? t("refundRemaining")
-                          : t("issueFullRefund")
+                        t("issueFullRefund")
                       )}
                     </Button>
                   )}
@@ -612,9 +616,14 @@ function OrderDetailsView({
                 <p className="mt-1 max-w-2xl text-sm opacity-80">
                   {settlementReleased
                     ? role === "USER"
-                      ? t("customerReleasedBody", { amount: format.number(refundableAmount, "currency") })
+                      ? t("customerReleasedBody", {
+                          amount: formatMoney(refundableAmount, order.currency),
+                        })
                       : t("providerReleasedBody", {
-                          amount: format.number(Number(order.settlement?.providerAmount ?? 0), "currency"),
+                          amount: formatMoney(
+                            order.settlement?.providerAmount ?? 0,
+                            order.currency,
+                          ),
                           status: order.settlement?.status.toLowerCase() ?? "",
                         })
                     : settlementAcceptedButHeld
@@ -633,7 +642,9 @@ function OrderDetailsView({
           {/* Left: Order Summary */}
           <div className="space-y-6 rounded-xl bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-lg font-bold text-gray-900">{t("orderSummary")}</h3>
+              <h3 className="text-lg font-bold text-gray-900">
+                {t("orderSummary")}
+              </h3>
               <span className="text-sm text-gray-400">
                 {t("orderId", { id: order.orderNumber })}
               </span>
@@ -645,7 +656,7 @@ function OrderDetailsView({
                   {t("planSubtotal", { plan: order.planTitle ?? t("plan") })}
                 </span>
                 <span className="font-bold text-gray-900">
-                  {format.number(subtotal, "currency")}
+                  {formatMoney(subtotal, order.currency)}
                 </span>
               </div>
 
@@ -653,7 +664,7 @@ function OrderDetailsView({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">{t("addOns")}</span>
                   <span className="font-bold text-gray-900">
-                    {format.number(addOnsTotal, "currency")}
+                    {formatMoney(addOnsTotal, order.currency)}
                   </span>
                 </div>
               )}
@@ -662,15 +673,17 @@ function OrderDetailsView({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">{t("couponDiscount")}</span>
                   <span className="font-bold text-red-600">
-                    -{format.number(couponDiscount, "currency")}
+                    -{formatMoney(couponDiscount, order.currency)}
                   </span>
                 </div>
               )}
 
               <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between items-center">
-                <span className="text-gray-600 font-medium">{common("total")}</span>
+                <span className="text-gray-600 font-medium">
+                  {common("total")}
+                </span>
                 <span className="text-xl font-bold text-gray-900">
-                  {format.number(total, "currency")}
+                  {formatMoney(total, order.currency)}
                 </span>
               </div>
             </div>
@@ -738,7 +751,7 @@ function OrderDetailsView({
                         </p>
                       )}
                       <p className="text-sm font-medium text-gray-700 mt-1">
-                        {format.number(Number(addon.price), "currency")}
+                        {formatMoney(addon.price, order.currency)}
                       </p>
                     </div>
                   </div>
@@ -775,7 +788,9 @@ function OrderDetailsView({
             </div>
             <DialogTitle>{t("acceptCompletedTitle")}</DialogTitle>
             <DialogDescription className="leading-relaxed">
-              {t("acceptCompletedBody", { amount: format.number(refundableAmount, "currency") })}
+              {t("acceptCompletedBody", {
+                amount: formatMoney(refundableAmount, order.currency),
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -810,7 +825,7 @@ function OrderDetailsView({
             </DialogTitle>
             <DialogDescription>
               {t("refundBody", {
-                amount: format.number(refundableAmount, "currency"),
+                amount: formatMoney(refundableAmount, order.currency),
                 number: order.orderNumber,
               })}
             </DialogDescription>
@@ -862,7 +877,7 @@ export default function OrderDetailsPage({
   const role =
     user?.role === "SERVICE_PROVIDER"
       ? "SERVICE_PROVIDER"
-      : user?.role === "ADMIN"
+      : user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
         ? "ADMIN"
         : "USER";
 

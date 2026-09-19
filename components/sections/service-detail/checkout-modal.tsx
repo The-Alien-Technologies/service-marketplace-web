@@ -4,7 +4,8 @@ import { X, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOrderStore } from "@/store/order-store";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
 
 interface AddOn {
   id: string;
@@ -19,7 +20,7 @@ interface CheckoutModalProps {
   selectedPlan: {
     id: string;
     name: string;
-    price: string;
+    price: number;
     features: { text: string }[];
   };
   service: {
@@ -34,6 +35,8 @@ interface CheckoutModalProps {
     }[];
   };
   serviceId: string;
+  currency: string;
+  locale?: string;
 }
 
 export function CheckoutModal({
@@ -42,10 +45,11 @@ export function CheckoutModal({
   selectedPlan,
   service,
   serviceId,
+  currency,
+  locale,
 }: CheckoutModalProps) {
   const t = useTranslations("Checkout");
   const common = useTranslations("Common");
-  const format = useFormatter();
   const router = useRouter();
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const [isAddOnsExpanded, setIsAddOnsExpanded] = useState(true);
@@ -69,8 +73,7 @@ export function CheckoutModal({
 
   if (!isOpen) return null;
 
-  // Extract price number from plan price string (e.g., "GHS 250" -> 250)
-  const planPrice = parseFloat(selectedPlan.price.replace(/[^0-9.]/g, ""));
+  const planPrice = selectedPlan.price;
 
   // Calculate add-ons total
   const addOnsTotal = Array.from(selectedAddOns).reduce((total, addOnId) => {
@@ -119,6 +122,7 @@ export function CheckoutModal({
       addOns: selectedAddOnsData,
       addOnsTotal,
       subtotal,
+      currency,
     };
 
     // Store in Zustand
@@ -193,7 +197,7 @@ export function CheckoutModal({
               {/* Plan Price */}
               <div className="mb-4">
                 <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {selectedPlan.price}
+                  {formatMoney(selectedPlan.price, currency, locale)}
                 </span>
               </div>
 
@@ -270,7 +274,7 @@ export function CheckoutModal({
                         </div>
                       </div>
                       <div className="font-bold text-gray-900 dark:text-white text-sm ml-4 flex-shrink-0">
-                        {format.number(addOn.price, "currency")}
+                        {formatMoney(addOn.price, currency, locale)}
                       </div>
                     </button>
                   );
@@ -296,7 +300,7 @@ export function CheckoutModal({
                   {t("subtotal")}
                 </span>
                 <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  {format.number(subtotal, "currency")}
+                  {formatMoney(subtotal, currency, locale)}
                 </span>
               </div>
             </div>
@@ -347,7 +351,9 @@ export function CheckoutModal({
               onClick={handleContinue}
               className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
             >
-              {t("continueAmount", { amount: format.number(subtotal, "currency") })}
+              {t("continueAmount", {
+                amount: formatMoney(subtotal, currency, locale),
+              })}
             </button>
           </div>
         </div>

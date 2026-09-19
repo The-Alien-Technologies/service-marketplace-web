@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test --experimental-strip-types lib/payment-state.test.mjs lib/languages.test.mjs lib/i18n-catalogs.test.mjs lib/chat-visibility.test.mjs lib/support-navigation.test.mjs lib/client-session.test.mjs lib/geocoding.test.mjs lib/provider-access.test.mjs lib/auth-entry-state.test.mjs"
+    "test": "node --test --experimental-strip-types lib/payment-state.test.mjs lib/languages.test.mjs lib/i18n-catalogs.test.mjs lib/chat-visibility.test.mjs lib/support-navigation.test.mjs lib/client-session.test.mjs lib/geocoding.test.mjs lib/provider-access.test.mjs lib/auth-entry-state.test.mjs lib/money.test.mjs lib/market-selection.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

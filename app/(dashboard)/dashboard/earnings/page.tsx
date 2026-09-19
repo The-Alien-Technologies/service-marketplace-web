@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDownToLine,
   Banknote,
@@ -45,13 +47,21 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { ProviderMarketMembership } from "@/types/market";
 
-const money = (value: number | string = 0) =>
-  new Intl.NumberFormat("en-GH", {
+const money = (
+  value: number | string = 0,
+  currency = "GHS",
+  locale = "en-GH",
+) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "GHS",
+    currency,
     minimumFractionDigits: 2,
   }).format(Number(value));
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Something went wrong";
 
 type Pagination = { page: number; limit: number; total: number; pages: number };
 
@@ -88,7 +98,15 @@ const payoutMeta: Record<
 export default function EarningsPage() {
   const t = useTranslations("Earnings");
   const common = useTranslations("Common");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dashboardSource = searchParams.get("source") === "dashboard";
+  const requestedMarketId = searchParams.get("marketId") || undefined;
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
+  const [memberships, setMemberships] = useState<ProviderMarketMembership[]>(
+    [],
+  );
+  const [marketId, setMarketId] = useState("");
   const [earnings, setEarnings] = useState<ProviderEarning[]>([]);
   const [payouts, setPayouts] = useState<ProviderPayout[]>([]);
   const [earningsPage, setEarningsPage] = useState(1);
@@ -110,16 +128,46 @@ export default function EarningsPage() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const selectedMarket = memberships.find(
+    (membership) => membership.marketId === marketId,
+  )?.market;
+  const currency = selectedMarket?.currency ?? summary?.currency ?? "GHS";
+  const locale = selectedMarket?.locale ?? "en-GH";
+
+  useEffect(() => {
+    void apiService
+      .getProviderMarketMemberships()
+      .then((data) => {
+        const active = data.filter(
+          (membership) => membership.status === "ACTIVE",
+        );
+        setMemberships(active);
+        setMarketId(
+          active.find(
+            (membership) => membership.marketId === requestedMarketId,
+          )?.marketId ??
+            active.find((membership) => membership.isPrimary)?.marketId ??
+            active[0]?.marketId ??
+            "",
+        );
+        if (active.length === 0) setIsLoading(false);
+      })
+      .catch((error) => {
+        toast.error(errorMessage(error));
+        setIsLoading(false);
+      });
+  }, [requestedMarketId]);
 
   const loadData = useCallback(
     async (quiet = false) => {
       if (quiet) setIsRefreshing(true);
       else setIsLoading(true);
+      if (!marketId) return;
       try {
         const [summaryData, earningsData, payoutsData] = await Promise.all([
-          apiService.getEarningsSummary(),
-          apiService.getProviderEarnings(earningsPage, 20),
-          apiService.getProviderPayouts(payoutPage, 20),
+          apiService.getEarningsSummary(marketId),
+          apiService.getProviderEarnings(marketId, earningsPage, 20),
+          apiService.getProviderPayouts(marketId, payoutPage, 20),
         ]);
         setSummary(summaryData);
         setEarnings(earningsData.data);
@@ -127,15 +175,13 @@ export default function EarningsPage() {
         setEarningsPagination(earningsData.pagination);
         setPayoutPagination(payoutsData.pagination);
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : t("loadFailed"),
-        );
+        toast.error(error instanceof Error ? error.message : t("loadFailed"));
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [earningsPage, payoutPage, t],
+    [earningsPage, marketId, payoutPage, t],
   );
 
   useEffect(() => {
@@ -145,14 +191,12 @@ export default function EarningsPage() {
   const handleWithdraw = async () => {
     setActionLoading(true);
     try {
-      await apiService.requestPayout();
+      await apiService.requestPayout(marketId);
       toast.success(t("requestSent"));
       setWithdrawOpen(false);
       await loadData(true);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("requestFailed"),
-      );
+      toast.error(error instanceof Error ? error.message : t("requestFailed"));
     } finally {
       setActionLoading(false);
     }
@@ -195,18 +239,63 @@ export default function EarningsPage() {
             {t("subtitle")}
           </p>
         </div>
-        <Button
-          variant="outline"
-          className="self-start border-gray-200 bg-white sm:self-auto"
-          onClick={() => loadData(true)}
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            className={cn("h-4 w-4", isRefreshing && "animate-spin")}
-          />
-          {t("refresh")}
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Select
+            value={marketId}
+            onValueChange={(value) => {
+              setMarketId(value);
+              setEarningsPage(1);
+              setPayoutPage(1);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("marketId", value);
+              router.replace(`/dashboard/earnings?${params.toString()}`, {
+                scroll: false,
+              });
+            }}
+          >
+            <SelectTrigger
+              className="w-full bg-white sm:w-56"
+              aria-label="Payout market"
+            >
+              <SelectValue placeholder="Choose payout market" />
+            </SelectTrigger>
+            <SelectContent>
+              {memberships.map(({ market }) => (
+                <SelectItem key={market.id} value={market.id}>
+                  {market.name} · {market.currency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            className="border-gray-200 bg-white"
+            onClick={() => loadData(true)}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+            />
+            {t("refresh")}
+          </Button>
+        </div>
       </header>
+
+      {dashboardSource && selectedMarket && (
+        <div className="flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {t("dashboardScope", {
+              market: selectedMarket.name,
+            })}
+          </p>
+          <Link
+            href="/dashboard/earnings"
+            className="shrink-0 font-semibold text-green-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          >
+            {t("clearDashboardScope")}
+          </Link>
+        </div>
+      )}
 
       <section className="overflow-hidden rounded-2xl bg-[#103c25] text-white shadow-[0_14px_32px_-20px_rgba(6,78,45,0.75)]">
         <div className="grid gap-8 px-6 py-7 md:grid-cols-[1.15fr_1fr] md:px-8 md:py-9">
@@ -216,7 +305,7 @@ export default function EarningsPage() {
               {t("available")}
             </div>
             <p className="mt-3 text-4xl font-bold tracking-[-0.03em] sm:text-5xl">
-              {money(summary.available)}
+              {money(summary.available, currency, locale)}
             </p>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-green-100/85">
               {t("balanceBody")}
@@ -243,13 +332,30 @@ export default function EarningsPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-x-7 gap-y-6 border-green-200/20 md:border-l md:pl-8">
-            <BalanceStat label={t("awaitingAcceptance")} value={summary.held} />
-            <BalanceStat label={t("inPayout")} value={summary.reserved} />
-            <BalanceStat label={t("paidToDate")} value={summary.paid} />
+            <BalanceStat
+              label={t("awaitingAcceptance")}
+              value={summary.held}
+              currency={currency}
+              locale={locale}
+            />
+            <BalanceStat
+              label={t("inPayout")}
+              value={summary.reserved}
+              currency={currency}
+              locale={locale}
+            />
+            <BalanceStat
+              label={t("paidToDate")}
+              value={summary.paid}
+              currency={currency}
+              locale={locale}
+            />
             <BalanceStat
               label={t("adjustments")}
               value={summary.adjustmentBalance}
               warning={Number(summary.adjustmentBalance) > 0}
+              currency={currency}
+              locale={locale}
             />
           </div>
         </div>
@@ -317,7 +423,7 @@ export default function EarningsPage() {
                             <span aria-hidden>·</span>
                             <span>
                               {new Date(earning.createdAt).toLocaleDateString(
-                                "en-GH",
+                                locale,
                                 {
                                   day: "numeric",
                                   month: "short",
@@ -329,10 +435,10 @@ export default function EarningsPage() {
                         </div>
                         <div className="flex items-end justify-between gap-5 sm:block sm:text-right">
                           <p className="text-sm font-bold text-gray-950">
-                            {money(earning.providerAmount)}
+                            {money(earning.providerAmount, currency, locale)}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
-                            from {money(earning.grossAmount)}
+                            from {money(earning.grossAmount, currency, locale)}
                           </p>
                         </div>
                       </div>
@@ -388,7 +494,7 @@ export default function EarningsPage() {
                             <p className="mt-1 text-xs text-gray-500">
                               Requested{" "}
                               {new Date(payout.requestedAt).toLocaleString(
-                                "en-GH",
+                                locale,
                               )}
                               {payout.items?.length
                                 ? ` · ${payout.items.length} orders`
@@ -396,7 +502,7 @@ export default function EarningsPage() {
                             </p>
                           </div>
                           <p className="text-base font-bold text-gray-950">
-                            {money(payout.amount)}
+                            {money(payout.amount, currency, locale)}
                           </p>
                         </div>
                         {(payout.failureMessage || payout.rejectionReason) && (
@@ -424,16 +530,14 @@ export default function EarningsPage() {
                 <h2 className="text-sm font-bold text-gray-950">
                   {t("payoutDestination")}
                 </h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  {t("protected")}
-                </p>
+                <p className="mt-1 text-xs text-gray-500">{t("protected")}</p>
               </div>
               <ShieldCheck className="h-5 w-5 text-green-700" />
             </div>
             {summary.account ? (
               <div className="mt-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50 text-green-800">
-                  {summary.account.type === "GHIPSS" ? (
+                  {summary.account.type !== "MOBILE_MONEY" ? (
                     <Landmark className="h-5 w-5" />
                   ) : (
                     <Phone className="h-5 w-5" />
@@ -465,8 +569,8 @@ export default function EarningsPage() {
             ) : (
               <div className="mt-5">
                 <p className="text-sm leading-relaxed text-gray-600">
-                  Add a Ghana bank or mobile-money account before requesting
-                  your first withdrawal.
+                  Add a {selectedMarket?.name ?? "market"} payout account before
+                  requesting your first withdrawal.
                 </p>
                 <Button
                   className="mt-5 w-full bg-green-700 text-white hover:bg-green-800"
@@ -505,6 +609,8 @@ export default function EarningsPage() {
         open={accountOpen}
         onOpenChange={setAccountOpen}
         onSaved={() => loadData(true)}
+        marketId={marketId}
+        marketCode={selectedMarket?.code ?? "GH"}
       />
 
       <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
@@ -515,8 +621,9 @@ export default function EarningsPage() {
             </div>
             <DialogTitle>{t("withdrawTitle")}</DialogTitle>
             <DialogDescription className="leading-relaxed">
-              {money(summary.available)} will be reserved across all eligible
-              orders and sent to {summary.account?.institutionName} ••••{" "}
+              {money(summary.available, currency, locale)} will be reserved
+              across all eligible orders and sent to{" "}
+              {summary.account?.institutionName} ••••{" "}
               {summary.account?.accountNumberLast4} after admin approval.
             </DialogDescription>
           </DialogHeader>
@@ -547,16 +654,20 @@ function BalanceStat({
   label,
   value,
   warning = false,
+  currency,
+  locale,
 }: {
   label: string;
   value: number | string;
   warning?: boolean;
+  currency: string;
+  locale: string;
 }) {
   return (
     <div>
       <p className="text-xs font-medium text-green-100/75">{label}</p>
       <p className={cn("mt-1 text-lg font-bold", warning && "text-amber-200")}>
-        {money(value)}
+        {money(value, currency, locale)}
       </p>
     </div>
   );
@@ -595,7 +706,10 @@ function ListPagination({
   return (
     <nav
       className="mt-4 flex items-center justify-between gap-4"
-      aria-label={common("pageOf", { page: pagination.page, total: pagination.pages })}
+      aria-label={common("pageOf", {
+        page: pagination.page,
+        total: pagination.pages,
+      })}
     >
       <Button
         type="button"
@@ -628,14 +742,20 @@ function PayoutAccountDialog({
   open,
   onOpenChange,
   onSaved,
+  marketId,
+  marketCode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  marketId: string;
+  marketCode: string;
 }) {
   const t = useTranslations("Earnings");
   const common = useTranslations("Common");
-  const [type, setType] = useState<PayoutDestinationType>("MOBILE_MONEY");
+  const [type, setType] = useState<PayoutDestinationType>(
+    marketCode === "ZA" ? "BASA" : "MOBILE_MONEY",
+  );
   const [institutions, setInstitutions] = useState<PayoutInstitution[]>([]);
   const [institutionCode, setInstitutionCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -647,22 +767,43 @@ function PayoutAccountDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    setType(marketCode === "ZA" ? "BASA" : "MOBILE_MONEY");
+    setInstitutionCode("");
+    setAccountNumber("");
+    setAccountName("");
+    setOtpCode("");
+    setOtpSentTo("");
+  }, [marketCode]);
+
+  useEffect(() => {
+    const requiredType =
+      marketCode === "ZA" ? "BASA" : type === "BASA" ? "MOBILE_MONEY" : type;
+    if (!open || !marketId || requiredType !== type) return;
+    let cancelled = false;
     setInstitutionCode("");
     setInstitutions([]);
     setIsLoadingInstitutions(true);
     apiService
-      .getPayoutInstitutions(type)
-      .then(setInstitutions)
-      .catch((error) =>
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not load institutions",
-        ),
-      )
-      .finally(() => setIsLoadingInstitutions(false));
-  }, [open, type]);
+      .getPayoutInstitutions(type, marketId)
+      .then((items) => {
+        if (!cancelled) setInstitutions(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not load institutions",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingInstitutions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [marketCode, marketId, open, type]);
 
   const selectedInstitution = useMemo(
     () => institutions.find((item) => item.code === institutionCode),
@@ -699,6 +840,7 @@ function PayoutAccountDialog({
     setIsSaving(true);
     try {
       await apiService.updatePayoutAccount({
+        marketId,
         type,
         institutionCode,
         accountNumber,
@@ -728,36 +870,36 @@ function PayoutAccountDialog({
             <WalletCards className="h-5 w-5" />
           </div>
           <DialogTitle>{t("setDestination")}</DialogTitle>
-          <DialogDescription>
-            {t("destinationBody")}
-          </DialogDescription>
+          <DialogDescription>{t("destinationBody")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
-            {(["MOBILE_MONEY", "GHIPSS"] as PayoutDestinationType[]).map(
-              (value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={type === value}
-                  onClick={() => setType(value)}
-                  className={cn(
-                    "flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700",
-                    type === value
-                      ? "bg-white text-gray-950 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900",
-                  )}
-                >
-                  {value === "MOBILE_MONEY" ? (
-                    <Phone className="h-4 w-4" />
-                  ) : (
-                    <Building2 className="h-4 w-4" />
-                  )}
-                  {value === "MOBILE_MONEY" ? t("mobileMoney") : t("bankAccount")}
-                </button>
-              ),
-            )}
+            {(
+              (marketCode === "ZA"
+                ? ["BASA"]
+                : ["MOBILE_MONEY", "GHIPSS"]) as PayoutDestinationType[]
+            ).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={type === value}
+                onClick={() => setType(value)}
+                className={cn(
+                  "flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700",
+                  type === value
+                    ? "bg-white text-gray-950 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900",
+                )}
+              >
+                {value === "MOBILE_MONEY" ? (
+                  <Phone className="h-4 w-4" />
+                ) : (
+                  <Building2 className="h-4 w-4" />
+                )}
+                {value === "MOBILE_MONEY" ? t("mobileMoney") : t("bankAccount")}
+              </button>
+            ))}
           </div>
 
           <div className="space-y-2">
@@ -775,7 +917,9 @@ function PayoutAccountDialog({
               <SelectTrigger id="payout-institution" className="h-11 bg-white">
                 <SelectValue
                   placeholder={
-                    isLoadingInstitutions ? common("loading") : t("selectInstitution")
+                    isLoadingInstitutions
+                      ? common("loading")
+                      : t("selectInstitution")
                   }
                 />
               </SelectTrigger>

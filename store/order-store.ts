@@ -27,6 +27,7 @@ export interface PendingOrder {
   addOns: OrderAddOn[];
   addOnsTotal: number;
   subtotal: number;
+  currency: string;
   checkoutKey: string;
   createdOrderId?: string;
   createdAt: number; // timestamp for cache invalidation
@@ -102,7 +103,7 @@ export const useOrderStore = create<OrderStore>()(
     }),
     {
       name: "order-storage",
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<OrderStore>;
         if (!state.pendingOrder) return state as OrderStore;
@@ -111,6 +112,7 @@ export const useOrderStore = create<OrderStore>()(
           ...state,
           pendingOrder: {
             ...state.pendingOrder,
+            currency: state.pendingOrder.currency || "GHS",
             checkoutKey: state.pendingOrder.checkoutKey || crypto.randomUUID(),
             plan: {
               ...state.pendingOrder.plan,

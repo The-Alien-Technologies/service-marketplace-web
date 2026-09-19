@@ -2,8 +2,9 @@
 
 import { Menu } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import {LanguageSwitcher} from "@/components/i18n/language-switcher";
-import {useTranslations} from "next-intl";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { useTranslations } from "next-intl";
+import { DashboardMarketContext } from "@/components/market/dashboard-market-context";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -26,6 +27,7 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        <DashboardMarketContext />
         <NotificationBell className="text-gray-500 hover:text-gray-700" />
 
         <LanguageSwitcher variant="dashboard" />

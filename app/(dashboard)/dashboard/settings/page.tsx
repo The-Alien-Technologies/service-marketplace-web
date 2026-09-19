@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { apiService } from "@/lib/api";
+import { useAuthStore } from "@/store/auth-store";
+import { Market } from "@/types/market";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,15 +22,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const money = (value: number) =>
-  new Intl.NumberFormat("en-GH", {
+const money = (value: number, currency: string, locale: string) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "GHS",
+    currency,
     minimumFractionDigits: 2,
   }).format(value);
 
 export default function SystemSettingsPage() {
+  const user = useAuthStore((state) => state.user);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const [commissionRate, setCommissionRate] = useState("10");
   const [savedRate, setSavedRate] = useState(10);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
@@ -36,17 +47,25 @@ export default function SystemSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [selectedMarketId, setSelectedMarketId] = useState("");
+  const [marketName, setMarketName] = useState("your country");
+  const [currency, setCurrency] = useState("GHS");
+  const [locale, setLocale] = useState("en-GH");
 
-  const loadSettings = useCallback(() => {
+  const loadSettings = useCallback((marketId?: string) => {
     setIsLoading(true);
     setLoadError(null);
     apiService
-      .getPaymentSettings()
+      .getPaymentSettings(marketId)
       .then((settings) => {
         const rate = Number(settings.commissionRate);
         setCommissionRate(String(rate));
         setSavedRate(rate);
         setUpdatedAt(settings.updatedAt);
+        setMarketName(settings.market.name);
+        setCurrency(settings.market.currency);
+        setLocale(settings.market.locale);
       })
       .catch((error) => {
         const message =
@@ -60,8 +79,32 @@ export default function SystemSettingsPage() {
   }, []);
 
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    if (!isSuperAdmin) {
+      loadSettings();
+      return;
+    }
+    setIsLoading(true);
+    apiService
+      .getAllMarkets()
+      .then((result) => {
+        setMarkets(result);
+        setSelectedMarketId((current) => current || result[0]?.id || "");
+        if (result.length === 0) {
+          setLoadError("No country markets have been configured");
+          setIsLoading(false);
+        }
+      })
+      .catch((error) => {
+        setLoadError(
+          error instanceof Error ? error.message : "Could not load markets",
+        );
+        setIsLoading(false);
+      });
+  }, [isSuperAdmin, loadSettings]);
+
+  useEffect(() => {
+    if (isSuperAdmin && selectedMarketId) loadSettings(selectedMarketId);
+  }, [isSuperAdmin, loadSettings, selectedMarketId]);
 
   const parsedRate = Number(commissionRate);
   const isValid =
@@ -82,11 +125,17 @@ export default function SystemSettingsPage() {
     }
     setIsSaving(true);
     try {
-      const settings = await apiService.updatePaymentSettings(parsedRate);
+      const settings = await apiService.updatePaymentSettings(
+        parsedRate,
+        isSuperAdmin ? selectedMarketId : undefined,
+      );
       const rate = Number(settings.commissionRate);
       setSavedRate(rate);
       setCommissionRate(String(rate));
       setUpdatedAt(settings.updatedAt);
+      setMarketName(settings.market.name);
+      setCurrency(settings.market.currency);
+      setLocale(settings.market.locale);
       setConfirmOpen(false);
       toast.success("Commission updated for future orders");
     } catch (error) {
@@ -100,14 +149,30 @@ export default function SystemSettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-14 dark:[&_.bg-white]:bg-gray-900 dark:[&_.bg-gray-100]:bg-gray-800 dark:[&_.border-gray-200]:border-gray-700 dark:[&_.text-gray-950]:text-white dark:[&_.text-gray-900]:text-gray-100 dark:[&_.text-gray-800]:text-gray-200 dark:[&_.text-gray-700]:text-gray-300 dark:[&_.text-gray-600]:text-gray-300 dark:[&_.text-gray-500]:text-gray-400">
-      <header>
-        <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
-          System settings
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-600">
-          Control the marketplace financial policy while preserving the exact
-          rate promised on every existing order.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
+            Payment settings
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-600">
+            Control each country&apos;s financial policy while preserving the
+            exact rate promised on every existing order.
+          </p>
+        </div>
+        {isSuperAdmin && markets.length > 0 && (
+          <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+            <SelectTrigger className="w-full bg-white sm:w-56">
+              <SelectValue placeholder="Choose a country" />
+            </SelectTrigger>
+            <SelectContent>
+              {markets.map((market) => (
+                <SelectItem key={market.id} value={market.id}>
+                  {market.name} · {market.currency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </header>
 
       {isLoading ? (
@@ -123,7 +188,13 @@ export default function SystemSettingsPage() {
             {loadError}. Editing is disabled so an unknown commission is never
             replaced by the displayed fallback.
           </p>
-          <Button variant="outline" className="mt-5" onClick={loadSettings}>
+          <Button
+            variant="outline"
+            className="mt-5"
+            onClick={() =>
+              loadSettings(isSuperAdmin ? selectedMarketId : undefined)
+            }
+          >
             Try again
           </Button>
         </div>
@@ -182,7 +253,7 @@ export default function SystemSettingsPage() {
                     Pavodah receives
                   </p>
                   <p className="mt-1 text-xl font-bold text-gray-950">
-                    {money(example.commission)}
+                    {money(example.commission, currency, locale)}
                   </p>
                 </div>
                 <div className="p-5">
@@ -190,19 +261,20 @@ export default function SystemSettingsPage() {
                     Provider receives
                   </p>
                   <p className="mt-1 text-xl font-bold text-green-800">
-                    {money(example.provider)}
+                    {money(example.provider, currency, locale)}
                   </p>
                 </div>
               </div>
               <p className="border-t border-gray-200 px-5 py-3 text-xs text-gray-600">
-                Example split for a retained order amount of GHS 100.00.
+                Example split for a retained order amount of{" "}
+                {money(100, currency, locale)} in {marketName}.
               </p>
             </div>
 
             <div className="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
                 {updatedAt
-                  ? `Last updated ${new Date(updatedAt).toLocaleString("en-GH")}`
+                  ? `Last updated ${new Date(updatedAt).toLocaleString(locale)}`
                   : "No recorded changes"}
               </p>
               <Button
@@ -257,9 +329,9 @@ export default function SystemSettingsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-            On a retained GHS 100.00 order, Pavodah receives{" "}
-            {money(example.commission)} and the provider receives{" "}
-            {money(example.provider)}.
+            On a retained {money(100, currency, locale)} order in {marketName},
+            Pavodah receives {money(example.commission, currency, locale)} and
+            the provider receives {money(example.provider, currency, locale)}.
           </div>
           <DialogFooter>
             <Button

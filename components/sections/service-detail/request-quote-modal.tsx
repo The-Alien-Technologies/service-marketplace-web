@@ -19,6 +19,7 @@ interface RequestQuoteModalProps {
   onClose: () => void;
   providerId: string;
   serviceId?: string;
+  currency: string;
 }
 
 export function RequestQuoteModal({
@@ -26,6 +27,7 @@ export function RequestQuoteModal({
   onClose,
   providerId,
   serviceId,
+  currency,
 }: RequestQuoteModalProps) {
   const [projectTitle, setProjectTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -65,7 +67,6 @@ export function RequestQuoteModal({
           description,
           deliveryTime,
           budget: parseFloat(budget),
-          currency: "GHS",
         },
         attachments,
       );
@@ -211,7 +212,7 @@ export function RequestQuoteModal({
               </label>
               <div className="flex gap-2">
                 <div className="flex items-center gap-1 px-3 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600 font-medium shrink-0">
-                  🇬🇭 GHS
+                  {currency}
                 </div>
                 <Input
                   type="number"

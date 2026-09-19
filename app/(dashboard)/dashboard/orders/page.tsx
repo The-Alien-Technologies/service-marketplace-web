@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -26,6 +26,7 @@ import {
   ArrowRight,
   Loader2,
   AlertTriangle,
+  ShoppingBag,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,10 @@ import { ChatBox } from "@/components/sections/service-detail/chat-box";
 import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
 import { AdminPaymentTransaction } from "@/types/payment";
 import { isSessionExpiredError } from "@/lib/client-session";
-import { useFormatter, useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { marketDisplayName } from "@/lib/market-display";
+import { useMarketStore } from "@/store/market-store";
 
 // --- Types ---
 
@@ -56,6 +60,7 @@ type CashoutRequest = {
     avatar: string;
   };
   amount: number;
+  currency: string;
   method: string;
   status: "Completed" | "Pending" | "Failed";
   date: string;
@@ -72,11 +77,14 @@ const cashoutRequests: CashoutRequest[] = [
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
     },
     amount: 1000.0,
+    currency: "GHS",
     method: "Paystack",
     status: "Completed",
     date: "15 Mar, 2025",
   },
 ];
+
+const ADMIN_ORDER_TABS = ["Orders", "Revenue", "Transactions"];
 
 // --- Column Helpers ---
 const orderColumnHelper = createColumnHelper<Order>();
@@ -137,7 +145,7 @@ const orderColumns = [
     header: "Amount",
     cell: (info) => (
       <span className="text-gray-900 font-medium">
-        GHS {Number(info.getValue() || 0).toFixed(2)}
+        {formatMoney(info.getValue(), info.row.original.currency)}
       </span>
     ),
   }),
@@ -201,6 +209,65 @@ const orderColumns = [
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+    ),
+  }),
+];
+
+const createRevenueColumns = (labels: {
+  orderId: string;
+  service: string;
+  gross: string;
+  refunded: string;
+  commission: string;
+  netRevenue: string;
+  action: string;
+  viewOrder: string;
+}) => [
+  orderColumnHelper.accessor("orderNumber", {
+    header: labels.orderId,
+    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
+  }),
+  orderColumnHelper.accessor("service.title", {
+    header: labels.service,
+    cell: (info) => (
+      <span className="block max-w-[220px] truncate text-gray-700">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  orderColumnHelper.accessor("settlement.grossAmount", {
+    header: labels.gross,
+    cell: (info) =>
+      formatMoney(info.getValue() || 0, info.row.original.currency),
+  }),
+  orderColumnHelper.accessor("settlement.refundedAmount", {
+    header: labels.refunded,
+    cell: (info) =>
+      formatMoney(info.getValue() || 0, info.row.original.currency),
+  }),
+  orderColumnHelper.accessor("settlement.commissionAmount", {
+    header: labels.commission,
+    cell: (info) =>
+      formatMoney(info.getValue() || 0, info.row.original.currency),
+  }),
+  orderColumnHelper.accessor("settlement.retainedAmount", {
+    header: labels.netRevenue,
+    cell: (info) => (
+      <span className="font-semibold text-green-800">
+        {formatMoney(info.getValue() || 0, info.row.original.currency)}
+      </span>
+    ),
+  }),
+  orderColumnHelper.display({
+    id: "revenue-actions",
+    header: labels.action,
+    cell: (info) => (
+      <Link
+        href={`/dashboard/orders/${info.row.original.id}`}
+        className="font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+      >
+        {labels.viewOrder}
+      </Link>
     ),
   }),
 ];
@@ -307,7 +374,7 @@ const cashoutRequestColumns = [
     header: "Amount",
     cell: (info) => (
       <span className="text-gray-900">
-        GHS {Number(info.getValue() || 0).toFixed(2)}
+        {formatMoney(info.getValue(), info.row.original.currency)}
       </span>
     ),
   }),
@@ -326,10 +393,22 @@ const cashoutRequestColumns = [
 function AdminOrders() {
   const t = useTranslations("Orders");
   const common = useTranslations("Common");
-  const tabs = ["Orders", "Transactions"];
+  const locale = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dashboardSource = searchParams.get("source") === "dashboard";
+  const marketId = searchParams.get("marketId") || undefined;
+  const dashboardStatus = searchParams.get("status") || undefined;
+  const paidOnly = searchParams.get("paidOnly") === "true";
+  const markets = useMarketStore((state) => state.markets);
+  const scopedMarket = markets.find((market) => market.id === marketId);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [activeTab, setActiveTab] = useState("Orders");
+  const [activeTab, setActiveTab] = useState(() =>
+    ADMIN_ORDER_TABS.includes(searchParams.get("tab") || "")
+      ? searchParams.get("tab")!
+      : "Orders",
+  );
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -343,16 +422,25 @@ function AdminOrders() {
   });
   const [pageCount, setPageCount] = useState(0);
 
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    setActiveTab(tab && ADMIN_ORDER_TABS.includes(tab) ? tab : "Orders");
+  }, [searchParams]);
+
   // Fetch Orders
   useEffect(() => {
-    if (activeTab === "Orders") {
+    if (activeTab === "Orders" || activeTab === "Revenue") {
       const fetchOrders = async () => {
         setIsLoading(true);
         try {
           const result = await apiService.getAdminOrders({
+            status: dashboardStatus,
+            paidOnly,
+            settledOnly: activeTab === "Revenue",
             page: pagination.pageIndex + 1,
             limit: pagination.pageSize,
             search: globalFilter,
+            marketId,
           });
           setOrders(result.data);
           setPageCount(result.pagination.pages);
@@ -371,7 +459,16 @@ function AdminOrders() {
 
       return () => clearTimeout(timer);
     }
-  }, [activeTab, pagination.pageIndex, pagination.pageSize, globalFilter]);
+  }, [
+    activeTab,
+    dashboardStatus,
+    globalFilter,
+    marketId,
+    paidOnly,
+    pagination.pageIndex,
+    pagination.pageSize,
+    t,
+  ]);
 
   useEffect(() => {
     if (activeTab !== "Transactions") return;
@@ -383,6 +480,7 @@ function AdminOrders() {
           page: pagination.pageIndex + 1,
           limit: pagination.pageSize,
           search: globalFilter,
+          marketId,
         });
         setTransactions(result.data);
         setPageCount(result.pagination.pages);
@@ -395,7 +493,14 @@ function AdminOrders() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [activeTab, pagination.pageIndex, pagination.pageSize, globalFilter]);
+  }, [
+    activeTab,
+    globalFilter,
+    marketId,
+    pagination.pageIndex,
+    pagination.pageSize,
+    t,
+  ]);
 
   const currentData = useMemo(() => {
     if (activeTab === "Cashout Request") return cashoutRequests;
@@ -406,13 +511,26 @@ function AdminOrders() {
   const currentColumns = useMemo(() => {
     if (activeTab === "Cashout Request") return cashoutRequestColumns;
     if (activeTab === "Transactions") return transactionColumns;
+    if (activeTab === "Revenue") {
+      return createRevenueColumns({
+        orderId: t("orderIdHeader"),
+        service: t("serviceHeader"),
+        gross: t("grossPaid"),
+        refunded: t("processedRefunds"),
+        commission: t("commission"),
+        netRevenue: t("netRevenue"),
+        action: t("actionHeader"),
+        viewOrder: t("viewOrder"),
+      });
+    }
     return orderColumns;
-  }, [activeTab]);
+  }, [activeTab, t]);
 
   const getSearchPlaceholder = () => {
     if (activeTab === "Cashout Request") return "search by provider...";
     if (activeTab === "Orders")
       return "search by order ID, customer or provider...";
+    if (activeTab === "Revenue") return "search by order ID or service...";
     return "search by transaction ID, user...";
   };
 
@@ -447,20 +565,27 @@ function AdminOrders() {
           <h1 className="text-2xl font-bold text-gray-900">
             {t("adminTitle")}
           </h1>
-          <p className="text-gray-500 mt-1">
-            {t("adminSubtitle")}
-          </p>
+          <p className="text-gray-500 mt-1">{t("adminSubtitle")}</p>
         </div>
 
         {/* Tabs */}
         <div className="flex w-full items-center gap-2 overflow-x-auto rounded-lg bg-gray-100/50 p-1 sm:w-fit">
-          {tabs.map((tab) => (
+          {ADMIN_ORDER_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => {
                 setActiveTab(tab);
                 setGlobalFilter("");
                 setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("tab", tab);
+                if (tab !== "Orders") {
+                  params.delete("status");
+                  params.delete("paidOnly");
+                }
+                router.replace(`/dashboard/orders?${params.toString()}`, {
+                  scroll: false,
+                });
               }}
               className={cn(
                 "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
@@ -469,11 +594,40 @@ function AdminOrders() {
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50",
               )}
             >
-              {tab === "Orders" ? t("title") : t("transactions")}
+              {tab === "Orders"
+                ? t("title")
+                : tab === "Revenue"
+                  ? t("revenueLedger")
+                  : t("transactions")}
             </button>
           ))}
         </div>
       </div>
+
+      {dashboardSource && (
+        <div className="flex flex-col gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {t(
+              activeTab === "Revenue" || activeTab === "Transactions"
+                ? "dashboardAdminRevenueScope"
+                : dashboardStatus
+                  ? "dashboardAdminActiveScope"
+                  : "dashboardAdminOrdersScope",
+              {
+                market: scopedMarket
+                  ? marketDisplayName(locale, scopedMarket)
+                  : t("allMarkets"),
+              },
+            )}
+          </p>
+          <Link
+            href="/dashboard/orders"
+            className="shrink-0 font-semibold text-green-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          >
+            {t("clearDashboardScope")}
+          </Link>
+        </div>
+      )}
 
       {/* Search and Actions */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
@@ -622,12 +776,22 @@ function AdminOrders() {
 // --- User Orders Component (Client + Provider) ---
 
 // Map backend statuses to frontend tabs
-const ORDER_TABS = ["Awaiting", "In-progress", "Completed", "Declined"];
+const ORDER_TABS = [
+  "All",
+  "Spending",
+  "Active",
+  "Awaiting",
+  "In-progress",
+  "Completed",
+  "Declined",
+];
 
 // Helper to map tab name to backend status for API call
 // Returns undefined (no filter) or a comma-separated status string
 const getStatusFromTab = (tab: string): string | undefined => {
   switch (tab) {
+    case "Active":
+      return "PENDING,AWAITING,IN_PROGRESS";
     case "Awaiting":
       return "PENDING,AWAITING"; // New orders start as PENDING, then move to AWAITING
     case "In-progress":
@@ -644,14 +808,65 @@ const getStatusFromTab = (tab: string): string | undefined => {
 function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
   const t = useTranslations("Orders");
   const format = useFormatter();
+  const locale = useLocale();
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const dashboardSource = searchParams.get("source") === "dashboard";
+  const marketId = searchParams.get("marketId") || undefined;
+  const paidOnly = searchParams.get("paidOnly") === "true";
+  const spendingOnly = searchParams.get("spendingOnly") === "true";
+  const completedHistory = searchParams.get("completedHistory") === "true";
+  const createdMonth = searchParams.get("createdMonth") || undefined;
+  const requestedPage = Math.max(
+    1,
+    Number.parseInt(searchParams.get("page") || "1", 10) || 1,
+  );
+  const isDashboardScope =
+    dashboardSource ||
+    paidOnly ||
+    spendingOnly ||
+    completedHistory ||
+    Boolean(createdMonth);
+  const markets = useMarketStore((state) => state.markets);
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const currentUser = useAuthStore((state) => state.user);
+  const dashboardSpendingMarketId =
+    selectedMarketCode === "GLOBAL"
+      ? currentUser?.selectedMarketId ||
+        currentUser?.homeMarketId ||
+        markets[0]?.id
+      : markets.find((market) => market.code === selectedMarketCode)?.id;
+  const effectiveMarketId =
+    role === "SERVICE_PROVIDER"
+      ? marketId
+      : isDashboardScope
+        ? spendingOnly
+          ? marketId || dashboardSpendingMarketId
+          : undefined
+        : marketId;
+  const scopedMarket = markets.find(
+    (market) => market.id === effectiveMarketId,
+  );
+  const availableTabs = useMemo(
+    () =>
+      role === "USER"
+        ? ORDER_TABS
+        : ORDER_TABS.filter((tab) => tab !== "Spending"),
+    [role],
+  );
   const initialTab = searchParams.get("tab");
-  const defaultTab = ORDER_TABS.includes(initialTab || "")
+  const defaultTab = availableTabs.includes(initialTab || "")
     ? initialTab!
     : "Awaiting";
 
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersPagination, setOrdersPagination] = useState({
+    page: requestedPage,
+    limit: 20,
+    total: 0,
+    pages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<
     Record<string, string | null>
@@ -668,26 +883,55 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ORDER_TABS.includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+    setActiveTab(tab && availableTabs.includes(tab) ? tab : "Awaiting");
+  }, [availableTabs, searchParams]);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setIsLoading(true);
         // Map tab to status. Special handling for "Awaiting" to include PENDING if needed
-        const status = getStatusFromTab(activeTab);
+        const status =
+          activeTab === "Completed" && completedHistory
+            ? undefined
+            : getStatusFromTab(activeTab);
 
         let response;
         if (role === "SERVICE_PROVIDER") {
-          response = await apiService.getProviderOrders({ status, limit: 50 });
+          response = await apiService.getProviderOrders({
+            status,
+            page: requestedPage,
+            limit: 20,
+            marketId: effectiveMarketId,
+            completedHistory,
+            createdMonth,
+          });
         } else {
-          response = await apiService.getMyOrders({ status, limit: 50 });
+          response = await apiService.getMyOrders({
+            status,
+            page: requestedPage,
+            limit: 20,
+            marketId: effectiveMarketId,
+            paidOnly,
+            spendingOnly,
+            completedHistory,
+          });
+        }
+
+        if (
+          response.pagination.total > 0 &&
+          requestedPage > response.pagination.pages
+        ) {
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("page", String(response.pagination.pages));
+          router.replace(`/dashboard/orders?${params.toString()}`, {
+            scroll: false,
+          });
+          return;
         }
 
         setOrders(response.data);
+        setOrdersPagination(response.pagination);
       } catch (error) {
         if (isSessionExpiredError(error)) return;
         console.error("Failed to fetch orders:", error);
@@ -698,7 +942,25 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     };
 
     fetchOrders();
-  }, [activeTab, role]);
+  }, [
+    activeTab,
+    completedHistory,
+    createdMonth,
+    effectiveMarketId,
+    paidOnly,
+    requestedPage,
+    role,
+    router,
+    searchParams,
+    spendingOnly,
+    t,
+  ]);
+
+  const navigateToPage = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(page));
+    router.replace(`/dashboard/orders?${params.toString()}`, { scroll: false });
+  };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -721,10 +983,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
     orderId: string,
     newStatus: "IN_PROGRESS" | "COMPLETED" | "DECLINED",
   ) => {
-    if (
-      newStatus === "DECLINED" &&
-      !window.confirm(t("cancelUnpaidConfirm"))
-    ) {
+    if (newStatus === "DECLINED" && !window.confirm(t("cancelUnpaidConfirm"))) {
       return;
     }
     setActionLoading((prev) => ({ ...prev, [orderId]: newStatus }));
@@ -751,16 +1010,106 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("myOrders")}</h1>
         <p className="text-gray-500 mt-1">
-          {role === "SERVICE_PROVIDER" ? t("providerSubtitle") : t("clientSubtitle")}
+          {role === "SERVICE_PROVIDER"
+            ? t("providerSubtitle")
+            : t("clientSubtitle")}
         </p>
       </div>
 
+      {isDashboardScope && (
+        <div className="flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {role === "SERVICE_PROVIDER"
+              ? createdMonth
+                ? t("dashboardProviderMonthScope", {
+                    market: scopedMarket
+                      ? marketDisplayName(locale, scopedMarket)
+                      : t("selectedMarket"),
+                    month: format.dateTime(
+                      new Date(`${createdMonth}-01T00:00:00Z`),
+                      { month: "short", year: "numeric", timeZone: "UTC" },
+                    ),
+                  })
+                : completedHistory
+                  ? t("dashboardProviderCompletedScope", {
+                      market: scopedMarket
+                        ? marketDisplayName(locale, scopedMarket)
+                        : t("selectedMarket"),
+                    })
+                  : activeTab === "Active"
+                    ? t("dashboardProviderActiveScope", {
+                        market: scopedMarket
+                          ? marketDisplayName(locale, scopedMarket)
+                          : t("selectedMarket"),
+                      })
+                    : t("dashboardProviderOrdersScope", {
+                        market: scopedMarket
+                          ? marketDisplayName(locale, scopedMarket)
+                          : t("selectedMarket"),
+                      })
+              : spendingOnly && effectiveMarketId
+              ? t("dashboardOrderScope", {
+                  market: scopedMarket
+                    ? marketDisplayName(locale, scopedMarket)
+                    : t("selectedMarket"),
+                })
+              : completedHistory
+                ? t("dashboardGlobalCompletedScope")
+                : activeTab === "Active"
+                  ? t("dashboardGlobalActiveScope")
+                  : t("dashboardGlobalOrderScope")}
+          </p>
+          <Link
+            href="/dashboard/orders"
+            className="shrink-0 font-semibold text-green-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          >
+            {t("clearDashboardScope")}
+          </Link>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {ORDER_TABS.map((tab) => (
+        {availableTabs.map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("tab", tab);
+              params.set("page", "1");
+              if (isDashboardScope) {
+                if (role === "SERVICE_PROVIDER") {
+                  params.delete("createdMonth");
+                  params.delete("completedHistory");
+                  if (effectiveMarketId) {
+                    params.set("marketId", effectiveMarketId);
+                  }
+                  if (tab === "Completed") {
+                    params.set("completedHistory", "true");
+                  }
+                } else {
+                  params.delete("spendingOnly");
+                  params.delete("completedHistory");
+                  params.delete("marketId");
+                  if (tab === "Completed") {
+                    params.delete("paidOnly");
+                    params.set("completedHistory", "true");
+                  } else {
+                    params.set("paidOnly", "true");
+                    if (tab === "Spending") {
+                      params.set("spendingOnly", "true");
+                      if (dashboardSpendingMarketId) {
+                        params.set("marketId", dashboardSpendingMarketId);
+                      }
+                    }
+                  }
+                }
+              }
+              router.replace(`/dashboard/orders?${params.toString()}`, {
+                scroll: false,
+              });
+            }}
             className={cn(
               "flex-none px-4 py-1.5 text-sm font-bold rounded-full transition-all whitespace-nowrap",
               activeTab === tab
@@ -768,13 +1117,19 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
             )}
           >
-            {tab === "Awaiting"
-              ? t("awaiting")
-              : tab === "In-progress"
-                ? t("inProgress")
-                : tab === "Completed"
-                  ? t("completed")
-                  : t("declined")}
+            {tab === "All"
+              ? t("all")
+              : tab === "Spending"
+                ? t("spending")
+                : tab === "Active"
+                  ? t("active")
+                  : tab === "Awaiting"
+                    ? t("awaiting")
+                    : tab === "In-progress"
+                      ? t("inProgress")
+                      : tab === "Completed"
+                        ? t("completed")
+                        : t("declined")}
           </button>
         ))}
       </div>
@@ -788,6 +1143,9 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
         ) : orders.length > 0 ? (
           orders.map((order) => {
             const statusStyles = getStatusStyles(order.status);
+            const grossPaid = Number(order.settlement?.grossAmount || 0);
+            const refunded = Number(order.settlement?.refundedAmount || 0);
+            const netSpend = Math.max(0, grossPaid - refunded);
             // Determine who to show: if I am provider, show client. If I am client, show provider.
             const otherParty =
               role === "SERVICE_PROVIDER"
@@ -829,6 +1187,35 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                     {format.dateTime(new Date(order.createdAt), "long")}
                   </span>
                 </div>
+
+                {activeTab === "Spending" && order.settlement && (
+                  <dl className="grid grid-cols-1 gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4 sm:grid-cols-3">
+                    <div>
+                      <dt className="text-xs font-medium text-gray-500">
+                        {t("grossPaid")}
+                      </dt>
+                      <dd className="mt-1 font-semibold text-gray-900">
+                        {formatMoney(grossPaid, order.currency)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-gray-500">
+                        {t("processedRefunds")}
+                      </dt>
+                      <dd className="mt-1 font-semibold text-red-700">
+                        {formatMoney(refunded, order.currency)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-gray-500">
+                        {t("netSpend")}
+                      </dt>
+                      <dd className="mt-1 font-semibold text-green-700">
+                        {formatMoney(netSpend, order.currency)}
+                      </dd>
+                    </div>
+                  </dl>
+                )}
 
                 {/* Row 2: Details & Actions */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -998,12 +1385,84 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
               </div>
             );
           })
+        ) : isDashboardScope && ordersPagination.total === 0 ? (
+          <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-700">
+              <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-gray-900">
+              {t("dashboardEmptyTitle")}
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-6 text-gray-600">
+              {spendingOnly && effectiveMarketId
+                ? t("dashboardEmptyBody", {
+                    market: scopedMarket
+                      ? marketDisplayName(locale, scopedMarket)
+                      : t("selectedMarket"),
+                  })
+                : t("dashboardGlobalEmptyBody")}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/dashboard"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
+              >
+                {t("backToDashboard")}
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
+              >
+                {t("browseServices")}
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="p-12 text-center text-gray-500">
             {t("noOrdersCategory")}
           </div>
         )}
       </div>
+
+      {!isLoading && ordersPagination.total > 0 && (
+        <nav
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          aria-label={t("paginationLabel")}
+        >
+          <p className="text-sm text-gray-600">
+            {t("showingOrders", {
+              start: (ordersPagination.page - 1) * ordersPagination.limit + 1,
+              end: Math.min(
+                ordersPagination.page * ordersPagination.limit,
+                ordersPagination.total,
+              ),
+              total: ordersPagination.total,
+            })}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigateToPage(ordersPagination.page - 1)}
+              disabled={ordersPagination.page <= 1}
+              className="gap-1.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {t("previousPage")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigateToPage(ordersPagination.page + 1)}
+              disabled={ordersPagination.page >= ordersPagination.pages}
+              className="gap-1.5"
+            >
+              {t("nextPage")}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </nav>
+      )}
 
       {/* Chat Box */}
       {chatTarget && (
@@ -1033,11 +1492,13 @@ export default function OrdersPage() {
 
   // Ensure we have a role, default to user if not
   const role =
-    user?.role === "SERVICE_PROVIDER" || user?.role === "ADMIN"
-      ? (user.role as "SERVICE_PROVIDER" | "ADMIN")
+    user?.role === "SERVICE_PROVIDER" ||
+    user?.role === "ADMIN" ||
+    user?.role === "SUPER_ADMIN"
+      ? (user.role as "SERVICE_PROVIDER" | "ADMIN" | "SUPER_ADMIN")
       : "USER";
 
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "SUPER_ADMIN") {
     return <AdminOrders />;
   }
 

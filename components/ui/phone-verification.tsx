@@ -17,6 +17,7 @@ interface PhoneVerificationProps {
   disabled?: boolean;
   required?: boolean;
   error?: string;
+  initiallyVerified?: boolean;
 }
 
 const OTP_LENGTH = 6;
@@ -29,6 +30,7 @@ export function PhoneVerification({
   disabled = false,
   required = false,
   error,
+  initiallyVerified = false,
 }: PhoneVerificationProps) {
   const t = useTranslations('Auth');
   const initialCountry =
@@ -39,8 +41,12 @@ export function PhoneVerification({
       ? value.slice(initialCountry.dialCode.length)
       : value.replace(/\D/g, ''),
   );
-  const [verificationPhoneNumber, setVerificationPhoneNumber] = useState('');
-  const [verificationStep, setVerificationStep] = useState<PhoneVerificationStep>('input');
+  const [verificationPhoneNumber, setVerificationPhoneNumber] = useState(
+    initiallyVerified ? value : '',
+  );
+  const [verificationStep, setVerificationStep] = useState<PhoneVerificationStep>(
+    initiallyVerified ? 'verified' : 'input',
+  );
   const [verificationCode, setVerificationCode] = useState<string[]>(
     Array(OTP_LENGTH).fill(''),
   );
@@ -109,6 +115,12 @@ export function PhoneVerification({
       const result = await apiService.sendPhoneVerification(getRequestedPhoneNumber());
       setVerificationPhoneNumber(result.phoneNumber);
       onChange(result.phoneNumber);
+      if (result.alreadyVerified) {
+        setVerificationStep('verified');
+        setResendTimer(0);
+        toast.success(t('phoneVerified'));
+        return;
+      }
       setVerificationStep('verify');
       setResendTimer(RESEND_COOLDOWN_SECONDS);
       toast.success(t('phoneCodeSent'));
@@ -195,6 +207,12 @@ export function PhoneVerification({
       const result = await apiService.resendPhoneVerification(verificationPhoneNumber);
       setVerificationPhoneNumber(result.phoneNumber);
       onChange(result.phoneNumber);
+      if (result.alreadyVerified) {
+        setVerificationStep('verified');
+        setResendTimer(0);
+        toast.success(t('phoneVerified'));
+        return;
+      }
       setVerificationCode(Array(OTP_LENGTH).fill(''));
       setResendTimer(RESEND_COOLDOWN_SECONDS);
       toast.success(t('phoneCodeResent'));

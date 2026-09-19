@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { SupportConversation, SupportMessage } from "@/types/support";
 
@@ -90,16 +90,22 @@ export function useSupportSocket(
     };
   }, [enabled]);
 
-  return {
-    joinConversation: (conversationId: string) =>
-      socketRef.current?.emit("support:join", conversationId),
-    joinAsAdmin: (conversationId: string) =>
-      socketRef.current?.emit("support:join_as_admin", conversationId),
-    sendMessage: (conversationId: string, content: string) =>
-      socketRef.current?.emit("support:send_message", { conversationId, content }),
-    escalate: (conversationId: string) =>
-      socketRef.current?.emit("support:escalate", conversationId),
-    close: (conversationId: string) =>
-      socketRef.current?.emit("support:close", conversationId),
-  };
+  return useMemo(
+    () => ({
+      joinConversation: (conversationId: string) =>
+        socketRef.current?.emit("support:join", conversationId),
+      joinAsAdmin: (conversationId: string) =>
+        socketRef.current?.emit("support:join_as_admin", conversationId),
+      sendMessage: (conversationId: string, content: string) =>
+        socketRef.current?.emit("support:send_message", {
+          conversationId,
+          content,
+        }),
+      escalate: (conversationId: string) =>
+        socketRef.current?.emit("support:escalate", conversationId),
+      close: (conversationId: string) =>
+        socketRef.current?.emit("support:close", conversationId),
+    }),
+    [],
+  );
 }

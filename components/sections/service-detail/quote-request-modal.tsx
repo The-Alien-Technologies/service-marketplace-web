@@ -11,6 +11,7 @@ interface QuoteRequestModalProps {
   onClose: () => void;
   providerId?: string;
   serviceId?: string;
+  currency: string;
 }
 
 interface AttachedFile {
@@ -25,6 +26,7 @@ export function QuoteRequestModal({
   onClose,
   providerId,
   serviceId,
+  currency,
 }: QuoteRequestModalProps) {
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
@@ -32,7 +34,6 @@ export function QuoteRequestModal({
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
-  const [currency, setCurrency] = useState("GHS");
   const [budget, setBudget] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +73,6 @@ export function QuoteRequestModal({
           description: projectDescription,
           deliveryTime,
           budget: parseFloat(budget),
-          currency,
         },
         attachedFiles.map((f) => f.file),
       );
@@ -85,9 +85,7 @@ export function QuoteRequestModal({
       setAttachedFiles([]);
       onClose();
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : t("quoteSubmitFailed"),
-      );
+      toast.error(err instanceof Error ? err.message : t("quoteSubmitFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -184,7 +182,8 @@ export function QuoteRequestModal({
                 {/* Attach Files */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("attachFiles")} <Paperclip className="w-4 h-4 inline ml-1" />
+                    {t("attachFiles")}{" "}
+                    <Paperclip className="w-4 h-4 inline ml-1" />
                   </label>
 
                   <button
@@ -264,20 +263,9 @@ export function QuoteRequestModal({
                     {t("budget")}
                   </label>
                   <div className="flex gap-2">
-                    {/* Currency Selector */}
-                    <div className="relative w-32">
-                      <select
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-900 focus:border-transparent appearance-none cursor-pointer"
-                      >
-                        <option value="GHS">🇬🇭 GHS</option>
-                        <option value="USD">🇺🇸 USD</option>
-                        <option value="EUR">🇪🇺 EUR</option>
-                        <option value="GBP">🇬🇧 GBP</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
+                    <span className="inline-flex w-24 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      {currency}
+                    </span>
 
                     {/* Budget Input */}
                     <input

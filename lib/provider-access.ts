@@ -5,6 +5,12 @@ type ProviderAccessUser = Pick<
   "role" | "status" | "hasCompletedOnboarding"
 >;
 
+export function canCreateService(
+  user: Pick<User, "role"> | null | undefined,
+): boolean {
+  return user?.role === "SERVICE_PROVIDER";
+}
+
 export function isProviderAccessRestricted(
   user: Pick<ProviderAccessUser, "role" | "status"> | null | undefined,
 ): boolean {

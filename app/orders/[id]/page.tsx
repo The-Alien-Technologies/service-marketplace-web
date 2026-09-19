@@ -14,11 +14,6 @@ interface OrderDetailsPageProps {
   params: Promise<{ id: string }>;
 }
 
-function getStatusLabel(status: OrderWithSummary["status"]) {
-  if (status === "in-progress") return "In-progress";
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
 export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   const t = useTranslations("Orders");
   const common = useTranslations("Common");
@@ -160,7 +155,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                     {t("basicPlanSubtotal")}
                   </span>
                   <span className="text-gray-900 dark:text-white">
-                    {format.number(order.orderSummary.subtotal, {style: "currency", currency: "GHS"})}
+                    {format.number(order.orderSummary.subtotal, {style: "currency", currency: order.currency})}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5">
@@ -168,7 +163,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                     {t("addOns")}
                   </span>
                   <span className="text-gray-900 dark:text-white">
-                    {format.number(order.orderSummary.addOns, {style: "currency", currency: "GHS"})}
+                    {format.number(order.orderSummary.addOns, {style: "currency", currency: order.currency})}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5">
@@ -176,13 +171,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                     {t("couponDiscount")}
                   </span>
                   <span className="text-red-600 dark:text-red-400">
-                    -{format.number(order.orderSummary.couponDiscount, {style: "currency", currency: "GHS"})}
+                    -{format.number(order.orderSummary.couponDiscount, {style: "currency", currency: order.currency})}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3 flex justify-between font-semibold">
                   <span className="text-gray-900 dark:text-white">{common("total")}</span>
                   <span className="text-gray-900 dark:text-white">
-                    {format.number(order.orderSummary.total, {style: "currency", currency: "GHS"})}
+                    {format.number(order.orderSummary.total, {style: "currency", currency: order.currency})}
                   </span>
                 </div>
               </div>

@@ -6,6 +6,10 @@ import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
 import { useTranslations } from 'next-intl';
+import {
+  mapBackendStepToFrontendStep,
+  type ProviderAuthStep,
+} from '@/types/auth';
 
 export function ProviderSubmittedForm() {
   const t = useTranslations('Onboarding');
@@ -14,7 +18,22 @@ export function ProviderSubmittedForm() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const submissionInFlight = useRef(false);
-  const { hideAuth, setUser } = useAuthStore();
+  const { hideAuth, setProviderAuthStep, setUser } = useAuthStore();
+
+  const returnToMissingStep = useCallback(async () => {
+    const status = await apiService.getOnboardingStatus();
+    if (status.isComplete) return false;
+
+    const { user: freshUser } = await apiService.getProfile();
+    setUser(freshUser);
+    const nextStep = mapBackendStepToFrontendStep(
+      status.nextRequiredStep || 'basic_profile',
+      'SERVICE_PROVIDER',
+    ) as ProviderAuthStep;
+    setProviderAuthStep(nextStep);
+    toast.info(t('completeRequiredFields'));
+    return true;
+  }, [setProviderAuthStep, setUser, t]);
 
   const completeApplication = useCallback(async () => {
     if (submissionInFlight.current) return;
@@ -23,6 +42,8 @@ export function ProviderSubmittedForm() {
     setIsCompleting(true);
     setSubmissionError(null);
     try {
+      if (await returnToMissingStep()) return;
+
       const result = await apiService.completeOnboarding();
 
       if (result.user) {
@@ -33,17 +54,20 @@ export function ProviderSubmittedForm() {
       toast.success(t('applicationSubmitted'));
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('applicationSubmitFailed');
+      try {
+        if (await returnToMissingStep()) return;
+      } catch (statusError) {
+        console.error('Failed to recover onboarding step:', statusError);
+      }
+
+      const message = t('applicationSubmitFailed');
       setSubmissionError(message);
       toast.error(message);
     } finally {
       submissionInFlight.current = false;
       setIsCompleting(false);
     }
-  }, [setUser, t]);
+  }, [returnToMissingStep, setUser, t]);
 
   // Complete onboarding when component mounts
   useEffect(() => {

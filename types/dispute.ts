@@ -26,6 +26,8 @@ export interface DisputeParty {
 
 export interface DisputeOrder {
   orderNumber: string;
+  marketId: string;
+  currency: string;
   planTitle: string;
   planPrice?: string;
   total: string;

@@ -1,7 +1,14 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { Modal } from '@/components/ui/modal';
+import { apiService } from '@/lib/api';
+import {
+  mapBackendStepToFrontendStep,
+  type ProviderAuthStep,
+} from '@/types/auth';
 import { SignInForm } from './sign-in-form';
 import { SignUpForm } from './sign-up-form';
 import { VerifyEmailForm } from './verify-email-form';
@@ -26,7 +33,69 @@ import {
 } from './provider';
 
 export function AuthModal() {
-  const { showAuthModal, authStep, userAuthStep, providerAuthStep, authFlow, hideAuth } = useAuthStore();
+  const pathname = usePathname();
+  const resumeStarted = useRef(false);
+  const {
+    showAuthModal,
+    authStep,
+    userAuthStep,
+    providerAuthStep,
+    authFlow,
+    hideAuth,
+    hasHydrated,
+    isAuthenticated,
+    user,
+    setProviderAuthStep,
+    setUser,
+  } = useAuthStore();
+
+  useEffect(() => {
+    if (
+      resumeStarted.current ||
+      !hasHydrated ||
+      showAuthModal ||
+      pathname !== '/' ||
+      !isAuthenticated ||
+      user?.role !== 'SERVICE_PROVIDER' ||
+      user.hasCompletedOnboarding
+    ) {
+      return;
+    }
+
+    resumeStarted.current = true;
+    let cancelled = false;
+    void Promise.all([
+      apiService.getProfile(),
+      apiService.getOnboardingStatus(),
+    ])
+      .then(([profile, status]) => {
+        if (cancelled) return;
+        setUser(profile.user);
+        if (status.isComplete) return;
+
+        setProviderAuthStep(
+          mapBackendStepToFrontendStep(
+            status.nextRequiredStep || 'basic_profile',
+            'SERVICE_PROVIDER',
+          ) as ProviderAuthStep,
+        );
+      })
+      .catch((error) => {
+        console.error('Failed to resume provider onboarding:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hasHydrated,
+    isAuthenticated,
+    pathname,
+    setProviderAuthStep,
+    setUser,
+    showAuthModal,
+    user,
+  ]);
 
   const renderAuthStep = () => {
     // Handle common auth steps (signin, forgot password, etc.) - but NOT verify-email

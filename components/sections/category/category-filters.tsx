@@ -17,6 +17,8 @@ import { useFormatter, useTranslations } from "next-intl";
 interface CategoryFiltersProps {
   categoryName: string;
   resultCount: number;
+  currency?: string;
+  isGlobal?: boolean;
   onFilterChange?: (filters: {
     search?: string;
     minPrice?: number;
@@ -29,6 +31,8 @@ interface CategoryFiltersProps {
 export function CategoryFilters({
   categoryName,
   resultCount,
+  currency = "GHS",
+  isGlobal = false,
   onFilterChange,
 }: CategoryFiltersProps) {
   const t = useTranslations("Marketplace");
@@ -38,8 +42,12 @@ export function CategoryFilters({
     { label: t("bestMatch"), value: "best_match" },
     { label: t("mostPopular"), value: "popular" },
     { label: t("highestRated"), value: "rating" },
-    { label: t("lowestPrice"), value: "price_asc" },
-    { label: t("highestPrice"), value: "price_desc" },
+    ...(!isGlobal
+      ? [
+          { label: t("lowestPrice"), value: "price_asc" },
+          { label: t("highestPrice"), value: "price_desc" },
+        ]
+      : []),
   ];
   const [searchQuery, setSearchQuery] = useState<string>("");
   // const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
@@ -80,7 +88,7 @@ export function CategoryFilters({
     }
     const currencyOptions = {
       style: "currency" as const,
-      currency: "GHS",
+      currency,
       maximumFractionDigits: 0,
     };
     return `${format.number(priceRange.min, currencyOptions)}–${format.number(priceRange.max, currencyOptions)}`;
@@ -125,8 +133,9 @@ export function CategoryFilters({
 
     onFilterChange?.({
       search: searchValue || undefined,
-      minPrice: priceValue.min > 0 ? priceValue.min : undefined,
-      maxPrice: priceValue.max < 50000 ? priceValue.max : undefined,
+      minPrice: !isGlobal && priceValue.min > 0 ? priceValue.min : undefined,
+      maxPrice:
+        !isGlobal && priceValue.max < 50000 ? priceValue.max : undefined,
       minRating,
       sortBy: sortValue,
     });
@@ -259,21 +268,23 @@ export function CategoryFilters({
         /> */}
 
         {/* Price Range Filter */}
-        <PriceRangeDropdown
-          selectedRange={priceRange}
-          onApply={handlePriceRangeApply}
-          trigger={
-            <button
-              type="button"
-              className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:w-auto sm:min-w-[180px] sm:px-5"
-            >
-              <span className="min-w-0 truncate text-sm text-gray-700">
-                {getPriceRangeDisplay()}
-              </span>
-              <ChevronDown className="w-4 h-4 text-gray-600" />
-            </button>
-          }
-        />
+        {!isGlobal && (
+          <PriceRangeDropdown
+            selectedRange={priceRange}
+            onApply={handlePriceRangeApply}
+            trigger={
+              <button
+                type="button"
+                className="flex min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 transition-colors hover:border-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:w-auto sm:min-w-[180px] sm:px-5"
+              >
+                <span className="min-w-0 truncate text-sm text-gray-700">
+                  {getPriceRangeDisplay()}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              </button>
+            }
+          />
+        )}
 
         {/* Rating Filter */}
         <RatingDropdown

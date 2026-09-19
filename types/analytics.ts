@@ -1,6 +1,7 @@
 // ─── Analytics Types ──────────────────────────────────────────────────────────
 
 export type ProviderAnalytics = {
+  market: AnalyticsMarket;
   currency: string;
   generatedAt: string;
   stats: {
@@ -48,8 +49,24 @@ export type AnalyticsTrend = {
   changePercent: number | null;
 };
 
+export type AnalyticsMarket = {
+  id: string;
+  code: string;
+  name: string;
+  currency: string;
+};
+
 export type AdminAnalytics = {
   currency: string;
+  marketRevenueBreakdown: {
+    id: string;
+    code: string;
+    name: string;
+    currency: string;
+    total: number;
+    currentMonth: number;
+    previousMonth: number;
+  }[];
   generatedAt: string;
   stats: {
     totalUsers: number;
@@ -88,6 +105,7 @@ export type AdminAnalytics = {
 };
 
 export type UserAnalytics = {
+  market: AnalyticsMarket;
   currency: string;
   generatedAt: string;
   stats: {

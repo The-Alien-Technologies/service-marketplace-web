@@ -91,6 +91,7 @@
     "contactSupport": "Contacter l’assistance",
     "supportHistory": "Historique d’assistance",
     "dashboard": "Tableau de bord",
+    "myDashboard": "Mon tableau de bord",
     "messages": "Messages",
     "orders": "Commandes",
     "myOrders": "Mes commandes",
@@ -278,7 +279,6 @@
     "getStarted": "Commencer",
     "finishSetup": "Terminons la configuration de votre compte",
     "basicProfile": "Informations de base du profil",
-    "fullName": "Nom complet",
     "basicProfileBody": "Quelques informations pour personnaliser votre expérience et instaurer la confiance.",
     "avatarPreview": "Aperçu de la photo de profil",
     "removePicture": "Supprimer la photo de profil",
@@ -479,8 +479,8 @@
     "goodService": "Bon service (3,5+)",
     "allRatings": "Toutes",
     "selectedCount": "{count} sélectionnés",
-    "ratingHint": "Choisissez les notes que vous souhaitez afficher."
-    ,"categoryLoadFailed": "Impossible de charger les informations de la catégorie.",
+    "ratingHint": "Choisissez les notes que vous souhaitez afficher.",
+    "categoryLoadFailed": "Impossible de charger les informations de la catégorie.",
     "servicesLoadFailed": "Impossible de charger les services.",
     "noServicesCategory": "Aucun service n’a été trouvé dans cette catégorie.",
     "youMayLike": "Vous aimerez peut-être aussi",
@@ -492,8 +492,8 @@
     "uncategorized": "Sans catégorie",
     "anonymous": "Anonyme",
     "serviceProviderTitle": "Prestataire de services",
-    "popularService": "Services populaires"
-    ,"overview": "Présentation",
+    "popularService": "Services populaires",
+    "overview": "Présentation",
     "showLess": "Afficher moins",
     "readMore": "Lire la suite",
     "catalogue": "Catalogue",
@@ -506,8 +506,8 @@
     "choosePlan": "Choisissez votre formule",
     "flexiblePricing": "Des tarifs flexibles adaptés à vos besoins.",
     "popular": "Populaire",
-    "contactMe": "Me contacter"
-    ,"online": "En ligne",
+    "contactMe": "Me contacter",
+    "online": "En ligne",
     "connectPrompt": "Comment souhaitez-vous nous contacter ?",
     "getQuote": "Obtenir un devis",
     "startChat": "Démarrer une discussion",
@@ -553,6 +553,36 @@
     "refunded": "Remboursée",
     "disputed": "Contestée",
     "awaiting": "En attente",
+    "all": "Toutes",
+    "spending": "Dépenses",
+    "active": "Actives",
+    "dashboardOrderScope": "Affichage des commandes payées et remboursées pour {market}, conformément aux totaux du tableau de bord.",
+    "dashboardCompletedScope": "Affichage de toutes les commandes terminées sur {market}, y compris celles remboursées ou modifiées par la suite.",
+    "dashboardGlobalOrderScope": "Affichage des commandes payées et remboursées sur tous les marchés, conformément au total du tableau de bord.",
+    "dashboardGlobalActiveScope": "Affichage des commandes actives payées sur tous les marchés, conformément au total du tableau de bord.",
+    "dashboardGlobalCompletedScope": "Affichage de toutes les commandes terminées sur tous les marchés, y compris celles remboursées ou modifiées par la suite.",
+    "dashboardEmptyTitle": "Aucune commande correspondante pour le moment",
+    "dashboardEmptyBody": "Ce total du tableau de bord est actuellement nul pour {market}. Les nouvelles commandes correspondantes apparaîtront ici.",
+    "dashboardGlobalEmptyBody": "Ce total global du compte est actuellement nul. Les nouvelles commandes correspondantes de tous les marchés apparaîtront ici.",
+    "backToDashboard": "Retour au tableau de bord",
+    "browseServices": "Parcourir les services",
+    "clearDashboardScope": "Afficher toutes les commandes",
+    "selectedMarket": "le marché sélectionné",
+    "allMarkets": "tous les marchés",
+    "dashboardAdminOrdersScope": "Affichage des commandes du tableau de bord pour {market}.",
+    "dashboardAdminActiveScope": "Affichage des commandes actives du tableau de bord pour {market}.",
+    "dashboardAdminRevenueScope": "Affichage des transactions de revenus pour {market}.",
+    "dashboardProviderOrdersScope": "Affichage des commandes payées et remboursées pour {market}.",
+    "dashboardProviderActiveScope": "Affichage des commandes payées actives pour {market}, correspondant au total du tableau de bord.",
+    "dashboardProviderCompletedScope": "Affichage de toutes les commandes terminées dans {market}, y compris celles remboursées ou modifiées ensuite.",
+    "dashboardProviderMonthScope": "Affichage des commandes payées passées dans {market} en {month}.",
+    "grossPaid": "Montant brut payé",
+    "processedRefunds": "Remboursements traités",
+    "netSpend": "Dépenses nettes",
+    "paginationLabel": "Pagination des commandes",
+    "showingOrders": "Affichage de {start} à {end} sur {total} commandes",
+    "previousPage": "Précédent",
+    "nextPage": "Suivant",
     "declined": "Refusée",
     "viewProfile": "Voir le profil",
     "orderId": "Commande n° {id}",
@@ -569,8 +599,8 @@
     "notFound": "Commande introuvable.",
     "stagePlaced": "Commande passée",
     "stageProgress": "En cours",
-    "stageDelivered": "Livrée"
-    ,"myOrders": "Mes commandes",
+    "stageDelivered": "Livrée",
+    "myOrders": "Mes commandes",
     "providerSubtitle": "Gardez le contrôle de vos commandes pour fournir un excellent service.",
     "clientSubtitle": "Suivez vos réservations et veillez au bon déroulement de chaque service.",
     "acceptOrder": "Accepter la commande",
@@ -587,10 +617,17 @@
     "adminTitle": "Commandes et transactions",
     "adminSubtitle": "Surveillez les commandes, suivez les paiements et gérez les transactions de services.",
     "transactions": "Transactions",
+    "revenueLedger": "Registre des revenus",
+    "orderIdHeader": "N° de commande",
+    "serviceHeader": "Service",
+    "commission": "Commission",
+    "netRevenue": "Revenu net",
+    "actionHeader": "Action",
+    "viewOrder": "Voir la commande",
     "filters": "Filtres",
     "exportData": "Exporter les données",
-    "noData": "Aucune donnée disponible."
-    ,"orderAcceptedSuccessfully": "Commande acceptée",
+    "noData": "Aucune donnée disponible.",
+    "orderAcceptedSuccessfully": "Commande acceptée",
     "cancelConfirm": "Annuler la commande n° {number} ?",
     "cancelledSuccess": "Commande annulée",
     "cancelFailed": "Impossible d’annuler la commande.",
@@ -652,6 +689,7 @@
     "savedRetry": "Votre commande est enregistrée ; vous pouvez réessayer sans risque.",
     "opening": "Ouverture du paiement sécurisé…",
     "viewStatus": "Voir le statut de la commande",
+    "signInToPay": "Se connecter pour payer {amount}",
     "pay": "Payer {amount}",
     "returnService": "Retourner au service",
     "paymentPrivacy": "Les informations de paiement sont saisies sur Paystack et ne sont jamais enregistrées par Pavodah.",
@@ -721,8 +759,8 @@
     "replyPlaceholder": "Écrivez votre message ici…",
     "proposedBudget": "Budget proposé",
     "offerAccepted": "Offre acceptée",
-    "offerExpired": "Devis expiré"
-    ,"notFound": "Demande de devis introuvable.",
+    "offerExpired": "Devis expiré",
+    "notFound": "Demande de devis introuvable.",
     "requestDescription": "Description du projet",
     "attachments": "Pièces jointes",
     "preview": "Aperçu",
@@ -741,8 +779,8 @@
     "expertiseMismatch": "Ne correspond pas à mon expertise",
     "other": "Autre",
     "messageClientLabel": "Message au client",
-    "submitDecline": "Envoyer et refuser"
-    ,"detailsSubtitle": "Consultez votre demande de devis et répondez aux offres des prestataires.",
+    "submitDecline": "Envoyer et refuser",
+    "detailsSubtitle": "Consultez votre demande de devis et répondez aux offres des prestataires.",
     "quoteNotFound": "Devis introuvable.",
     "yourBudget": "Votre budget",
     "yourAttachments": "Vos pièces jointes",
@@ -772,8 +810,8 @@
     "issueQuality": "Problème de qualité",
     "issuePayment": "Problème de paiement",
     "issueCommunication": "Problème de communication",
-    "issueOther": "Autre problème"
-    ,"adminSubtitle": "Examinez et résolvez les conflits entre clients et prestataires.",
+    "issueOther": "Autre problème",
+    "adminSubtitle": "Examinez et résolvez les conflits entre clients et prestataires.",
     "participantSubtitle": "Suivez les litiges liés aux commandes auxquelles vous participez.",
     "detailSubtitle": "Consultez le statut et la résolution du litige lié à cette commande.",
     "search": "Rechercher par commande, litige ou type de problème…",
@@ -846,6 +884,7 @@
     "deleted": "Service supprimé.",
     "deleteFailed": "Impossible de supprimer le service.",
     "noServices": "Aucun service trouvé. Créez votre premier service pour commencer !",
+    "noMarketplaceServices": "Aucun service de la place de marché n’a été trouvé.",
     "resultsRange": "Affichage de {start} à {end} sur {total} résultats",
     "viewDetails": "Voir les détails",
     "deleteTitle": "Supprimer le service",
@@ -933,8 +972,11 @@
   "DashboardAnalytics": {
     "title": "Tableau de bord",
     "adminSubtitle": "Surveillez les performances de la plateforme et accédez aux actions rapides.",
+    "adminMarketScope": "Affichage des opérations de {market}",
+    "adminGlobalScope": "Affichage des opérations sur tous les marchés",
     "providerSubtitle": "Gérez vos services, suivez vos revenus et développez votre activité.",
     "userSubtitle": "Suivez vos commandes et vos dépenses.",
+    "userScopeSummary": "Commandes sur tous les marchés · Dépenses affichées pour {market} ({currency})",
     "loadingAdmin": "Chargement des données du tableau de bord…",
     "loadingProvider": "Chargement des données du prestataire…",
     "loadingUser": "Chargement de votre tableau de bord…",
@@ -966,8 +1008,11 @@
     "recentOrders": "Commandes récentes",
     "recentRequests": "Demandes de commande récentes",
     "viewAllOrders": "Voir toutes les commandes",
+    "viewOrders": "Voir les commandes",
     "viewReport": "Voir le rapport détaillé",
+    "viewDetails": "Voir les détails",
     "topCategories": "Catégories principales",
+    "topCategoriesDefinition": "Classées selon les services créés pendant le mois sélectionné.",
     "noFinancialActivity": "Aucune activité financière enregistrée pour {year}.",
     "noEarnings": "Aucun revenu enregistré pour {year} ou {previous}.",
     "noSpending": "Aucune dépense enregistrée pour {year} ou {previous}.",
@@ -981,7 +1026,32 @@
     "inYear": "en {year}",
     "bestMonth": "Meilleur mois : {month} ({amount})",
     "highestMonth": "Mois le plus élevé : {month} ({amount})",
-    "noOrders": "Aucune commande"
+    "noOrders": "Aucune commande",
+    "providerLoadFallback": "Les données du tableau de bord n’ont pas pu être chargées.",
+    "providerNoData": "L’API d’analyse n’a renvoyé aucune donnée de tableau de bord.",
+    "providerStaleSnapshot": "Impossible de charger les revenus de {requestedYear} et les commandes de {requestedMonth}. Affichage du dernier instantané réussi pour {snapshotYear} et {snapshotMonth}.",
+    "providerEarningsDetail": "Part de règlement du prestataire avant ajustements de solde.",
+    "providerEarningsTrendDetail": "{current} gagnés ce mois-ci ; {previous} le mois dernier",
+    "providerActiveTrendNew": "commandes payées ce mois-ci",
+    "providerActiveTrendCompare": "nouvelles commandes payées par rapport au mois dernier",
+    "providerActiveTrendDetail": "{current} nouvelles commandes payées ce mois-ci ; {previous} le mois dernier",
+    "providerCompletedTrendNew": "terminées ce mois-ci",
+    "providerCompletedTrendCompare": "terminées par rapport au mois dernier",
+    "providerCompletedTrendDetail": "{current} commandes terminées ce mois-ci ; {previous} le mois dernier",
+    "providerReviewCount": "{count, plural, =1 {1 avis} other {# avis}}",
+    "providerChartAria": "Revenus mensuels du prestataire pour {year} comparés à {previous}",
+    "providerEarningsCaption": "Part de règlement du prestataire pour {year} et {previous}, avant ajustements de solde",
+    "providerEarningsExplanation": "Les revenus indiquent votre part de règlement avant ajustements de solde. Consultez Revenus et versements pour connaître votre solde retirable.",
+    "providerOrderTrendTitle": "{current} commandes en {currentMonth} ; {previous} le mois précédent",
+    "vsPreviousMonth": "par rapport au mois dernier",
+    "paidOrdersPlacedIn": "Commandes payées passées en {month}",
+    "providerOrderSummaryAria": "Résumé des statuts des commandes payées pour {month} : {total} au total",
+    "statusCompleted": "Terminée",
+    "statusPending": "En attente",
+    "statusAwaiting": "En attente",
+    "statusInProgress": "En cours",
+    "statusDeclined": "Refusée",
+    "statusRefunded": "Remboursée"
   },
   "Earnings": {
     "title": "Revenus et versements",
@@ -1023,7 +1093,9 @@
     "sendCode": "Envoyer le code",
     "resend": "Renvoyer",
     "codeSent": "Code de vérification envoyé.",
-    "destinationVerified": "Destination de versement vérifiée."
+    "destinationVerified": "Destination de versement vérifiée.",
+    "dashboardScope": "Affichage des revenus et versements pour {market}, correspondant au total du tableau de bord.",
+    "clearDashboardScope": "Afficher tous les revenus"
   },
   "AdminOps": {
     "categoryTitle": "Gestion des catégories",
@@ -1033,6 +1105,10 @@
     "featured": "À la une",
     "usersTitle": "Utilisateurs",
     "usersSubtitle": "Gérez les comptes clients, prestataires et administrateurs.",
+    "dashboardUsersScope": "Affichage des utilisateurs inclus dans le total du tableau de bord pour {market}.",
+    "dashboardActiveProvidersScope": "Affichage des prestataires actifs inclus dans le total du tableau de bord pour {market}.",
+    "clearDashboardScope": "Effacer le filtre du tableau de bord",
+    "allMarkets": "tous les marchés",
     "searchUsers": "Rechercher par nom ou e-mail…",
     "usersLoadFailed": "Impossible de charger les utilisateurs.",
     "userDeleted": "Utilisateur supprimé.",
@@ -1058,8 +1134,8 @@
     "approveProvider": "Approuver le prestataire",
     "requiredChanges": "Modifications requises",
     "changesPlaceholder": "Exemple : importez une pièce d’identité lisible et valide.",
-    "sendRequest": "Envoyer la demande"
-    ,"filters": "Filtres",
+    "sendRequest": "Envoyer la demande",
+    "filters": "Filtres",
     "noUsers": "Aucun utilisateur trouvé",
     "deleteUser": "Supprimer l’utilisateur",
     "deleteUserBody": "Voulez-vous vraiment supprimer cet utilisateur ? Cette action est irréversible.",
@@ -1068,8 +1144,8 @@
     "suspendBody": "Cet utilisateur sera suspendu et ne pourra plus accéder à la plateforme.",
     "activateBody": "Cet utilisateur sera réactivé et pourra de nouveau accéder à la plateforme.",
     "suspend": "Suspendre",
-    "activate": "Activer"
-    ,"categories": "Catégories",
+    "activate": "Activer",
+    "categories": "Catégories",
     "addFeatured": "Ajouter un élément à la une",
     "editCategory": "Modifier la catégorie",
     "addCategoryTitle": "Ajouter une catégorie",
@@ -1081,15 +1157,15 @@
     "parentCategory": "Catégorie parente",
     "selectOption": "Sélectionner une option",
     "categoryRequired": "Le nom de la catégorie est obligatoire.",
-    "categoryDeleted": "Catégorie supprimée !"
-    ,"payoutRequests": "Demandes de versement",
+    "categoryDeleted": "Catégorie supprimée !",
+    "payoutRequests": "Demandes de versement",
     "releaseReviews": "Examens de déblocage",
     "refunds": "Remboursements",
     "paystackDisputes": "Litiges Paystack",
     "reconcileTransfers": "Rapprocher les transferts",
     "reconcileRefunds": "Rapprocher les remboursements",
-    "refreshQueues": "Actualiser les files"
-    ,"pendingReview": "En attente d’examen",
+    "refreshQueues": "Actualiser les files",
+    "pendingReview": "En attente d’examen",
     "changesRequested": "Modifications demandées",
     "approved": "Approuvée"
   },
@@ -1123,11 +1199,188 @@
     "earningsPayouts": "Revenus et versements",
     "customerChat": "Discussion client",
     "quoteRequest": "Demande de devis",
+    "marketsPayments": "Marchés et paiements",
+    "markets": "Marchés",
+    "countryAdministrators": "Administrateurs de pays",
+    "serviceMarkets": "Marchés de services",
+    "marketApplications": "Candidatures par marché",
+    "superAdmin": "Super administrateur",
     "expand": "Développer la barre latérale",
     "collapse": "Réduire la barre latérale",
     "logout": "Se déconnecter",
     "logoutTitle": "Voulez-vous vraiment vous déconnecter ?",
     "logoutBody": "Vous serez déconnecté de votre compte et devrez vous reconnecter pour continuer."
+  },
+  "Markets": {
+    "countryOperations": "Opérations par pays",
+    "somethingWentWrong": "Un problème est survenu",
+    "superAdminTitle": "Marchés et comptes de paiement",
+    "superAdminBody": "Gérez la disponibilité par pays et renouvelez les clés Paystack de chaque marché. Les valeurs secrètes sont chiffrées au repos et ne sont jamais renvoyées par l’API.",
+    "assignAdminTitle": "Affecter un administrateur de pays",
+    "assignAdminBody": "Cette action transforme le compte sélectionné en administrateur et limite définitivement son accès opérationnel à un seul pays.",
+    "userId": "Identifiant utilisateur",
+    "userIdAria": "Identifiant de l’utilisateur pour l’administrateur de pays",
+    "adminCountryAria": "Pays de l’administrateur",
+    "chooseCountry": "Choisir un pays",
+    "assign": "Affecter",
+    "assignValidation": "Saisissez un identifiant utilisateur et choisissez un pays",
+    "adminAssigned": "Administrateur de pays affecté",
+    "marketUpdated": "{market} a été mis à jour",
+    "marketCounts": "{services, plural, =0 {0 service} one {# service} other {# services}} · {orders, plural, =0 {0 commande} one {# commande} other {# commandes}} · {providers, plural, =0 {0 prestataire} one {# prestataire} other {# prestataires}}",
+    "marketStatus": {
+      "ACTIVE": "Actif",
+      "PAUSED": "En pause",
+      "INACTIVE": "Inactif"
+    },
+    "checkout": "Paiement",
+    "checkoutHelp": "Accepter de nouveaux paiements clients",
+    "providerOnboarding": "Inscription des prestataires",
+    "providerOnboardingHelp": "Accepter les candidatures sur ce marché",
+    "publishing": "Publication",
+    "publishingHelp": "Autoriser la publication de nouveaux services",
+    "paystackCredentials": "Identifiants Paystack",
+    "paystackAccount": "Compte Paystack",
+    "integrationSummary": "{status} · utilisez la clé de ce déploiement",
+    "integrationStatus": {
+      "ACTIVE": "Actif",
+      "PAUSED": "En pause",
+      "RETIRED": "Retiré"
+    },
+    "configured": "Configuré",
+    "needsKey": "Clé requise",
+    "paystackSecretKey": "Clé secrète Paystack",
+    "paystackSecretKeyAria": "Clé secrète Paystack pour {market}",
+    "secretRequired": "Saisissez la nouvelle clé secrète Paystack",
+    "stage": "Préparer",
+    "credentialStaged": "Identifiant validé et préparé. Activez-le lorsque vous êtes prêt.",
+    "credentialActivated": "Identifiant activé. Les prestataires doivent vérifier à nouveau leurs destinations de versement.",
+    "credentialRevoked": "Identifiant révoqué",
+    "credentialStatus": {
+      "STAGED": "Préparé",
+      "ACTIVE": "Actif",
+      "RETIRING": "En cours de retrait",
+      "REVOKED": "Révoqué"
+    },
+    "activate": "Activer",
+    "revoke": "Révoquer",
+    "webhookCopied": "URL du webhook copiée",
+    "copyWebhookUrl": "Copier l’URL du webhook",
+    "providerTitle": "Mes marchés de services",
+    "providerBody": "Demandez à exercer dans d’autres pays. L’approbation et les informations de versement sont gérées séparément pour chaque marché.",
+    "applicationSent": "Candidature envoyée pour {market}",
+    "membershipStatus": {
+      "PENDING": "En attente",
+      "ACTIVE": "Actif",
+      "REJECTED": "Refusé",
+      "SUSPENDED": "Suspendu",
+      "NOT_JOINED": "Non rejoint"
+    },
+    "servicesAndPayouts": "Services et versements en {currency}",
+    "applyToOperate": "Demander à exercer",
+    "adminTitle": "Candidatures des prestataires par marché",
+    "adminBody": "Examinez les prestataires qui demandent l’autorisation de publier et de recevoir des versements dans le pays qui vous est attribué.",
+    "rejectionReasonRequired": "Saisissez un motif de refus",
+    "providerApproved": "Prestataire approuvé",
+    "applicationRejected": "Candidature refusée",
+    "noCountryAssigned": "Aucun pays n’est attribué à ce compte administrateur.",
+    "queueClear": "La file est vide",
+    "noPendingApplications": "Aucune candidature de marché n’est en attente.",
+    "approve": "Approuver",
+    "rejectionReasonPlaceholder": "Motif obligatoire en cas de refus",
+    "rejectionReasonLabel": "Motif du refus de {name}",
+    "reject": "Refuser",
+    "searchMarketApplications": "Rechercher par nom ou adresse e-mail",
+    "sortApplications": "Trier les candidatures de marché",
+    "oldestFirst": "Plus anciennes d’abord",
+    "newestFirst": "Plus récentes d’abord",
+    "loadingApplications": "Chargement des candidatures de marché…",
+    "applicationsCount": "{count, plural, =0 {Aucune candidature} one {# candidature} other {# candidatures}}",
+    "applicationsLoadFailed": "Impossible de charger les candidatures de marché",
+    "applicationsLoadFailedBody": "Vérifiez votre connexion, puis réessayez.",
+    "noMatchingApplications": "Aucune candidature correspondante",
+    "noMatchingApplicationsBody": "Essayez un autre nom de prestataire ou une autre adresse e-mail.",
+    "unknownProvider": "Prestataire inconnu",
+    "submittedOn": "Envoyée le {date}",
+    "verifiedProvider": "Prestataire vérifié",
+    "verificationRequired": "Vérification requise",
+    "viewProviderApplication": "Voir la candidature du prestataire",
+    "verifyBeforeApproval": "Approuvez d’abord la candidature principale du prestataire avant d’accorder l’accès à ce marché.",
+    "applicationsPagination": "Pagination des candidatures de marché",
+    "pageOf": "Page {page} sur {totalPages}",
+    "saveMarketFailed": "Impossible d’enregistrer votre marché",
+    "chooseMarketplaceCountry": "Choisir le pays du marché",
+    "global": "International",
+    "marketplace": "Place de marché",
+    "selectorBody": "Les prix et le paiement utilisent la devise indiquée pour chaque service.",
+    "checkoutPaused": "Paiement suspendu",
+    "globalBrowse": "Parcourir les services disponibles à l’international",
+    "globalAdministration": "Administration internationale",
+    "assignedMarket": "Marché attribué",
+    "marketsTitle": "Marchés",
+    "marketsBody": "Consultez chaque pays en un coup d’œil, repérez les écarts opérationnels et ouvrez un marché pour effectuer des modifications détaillées.",
+    "manageAdministrators": "Gérer les administrateurs",
+    "searchMarkets": "Rechercher des marchés",
+    "filterByStatus": "Filtrer par statut",
+    "allStatuses": "Tous les statuts",
+    "noMarketsFound": "Aucun marché trouvé",
+    "adjustMarketFilters": "Modifiez votre recherche ou le filtre de statut.",
+    "market": "Marché",
+    "status": "Statut",
+    "administrators": "Administrateurs",
+    "providers": "Prestataires",
+    "orders": "Commandes",
+    "operations": "Opérations",
+    "payment": "Paiement",
+    "manage": "Gérer",
+    "operationsEnabled": "{count} sur 3 activées",
+    "marketNotFound": "Marché introuvable",
+    "backToMarkets": "Retour aux marchés",
+    "marketStatusLabel": "Statut du marché",
+    "overview": "Vue d’ensemble",
+    "payments": "Paiements",
+    "marketOverview": "Vue d’ensemble du marché",
+    "services": "Services",
+    "paymentReady": "Les paiements sont configurés",
+    "paymentReadyBody": "Un identifiant Paystack actif est disponible pour ce marché.",
+    "paymentNeedsAttention": "La configuration du paiement nécessite votre attention",
+    "paymentNeedsAttentionBody": "Ajoutez et activez un identifiant Paystack avant d’accepter des paiements.",
+    "operationalControls": "Contrôles opérationnels",
+    "operationalControlsBody": "Suspendez des activités individuelles sans modifier le statut général du marché.",
+    "paymentSecurityBody": "Préparez, vérifiez et activez les identifiants sans exposer les valeurs secrètes stockées.",
+    "noPaymentIntegration": "Aucune intégration de paiement n’est configurée pour ce marché.",
+    "stageNewKey": "Préparer une nouvelle clé",
+    "marketAdministrators": "Administrateurs du marché",
+    "marketAdministratorsBody": "Personnes actuellement autorisées à gérer ce pays.",
+    "noMarketAdministrators": "Aucun administrateur affecté",
+    "noMarketAdministratorsBody": "Affectez un administrateur afin que ce marché ait un responsable opérationnel.",
+    "adminStatus": { "ACTIVE": "Actif", "SUSPENDED": "Suspendu" },
+    "countryAdministratorsTitle": "Administrateurs de pays",
+    "countryAdministratorsBody": "Gérez les personnes autorisées à opérer chaque pays, le statut de leur compte et leur affectation.",
+    "addAdministrator": "Ajouter un administrateur",
+    "searchAdministrators": "Rechercher par nom ou e-mail",
+    "filterByMarket": "Filtrer par marché",
+    "allMarkets": "Tous les marchés",
+    "noAdministratorsFound": "Aucun administrateur trouvé",
+    "noAdministratorsFoundBody": "Modifiez les filtres ou ajoutez un administrateur de pays.",
+    "administratorUpdated": "Administrateur de pays mis à jour",
+    "administratorAccessRemoved": "Accès administrateur supprimé",
+    "adminMarketAria": "Marché affecté à {name}",
+    "accountStatus": "Statut du compte",
+    "adminStatusAria": "Statut du compte de {name}",
+    "lastActive": "Dernière activité",
+    "removeAccess": "Supprimer l’accès",
+    "addAdministratorBody": "Recherchez un compte client actif et affectez-le à un pays.",
+    "findUser": "Rechercher un utilisateur",
+    "searchUserPlaceholder": "Rechercher par nom ou e-mail",
+    "assignAdministrator": "Affecter l’administrateur",
+    "removeAdministratorTitle": "Supprimer l’accès administrateur ?",
+    "removeAdministratorBody": "{name} ne pourra plus gérer ce pays.",
+    "removeAdministratorNote": "Le compte utilisateur restera actif. Seuls les privilèges d’administrateur et l’affectation au pays seront supprimés.",
+    "cancel": "Annuler",
+    "loadFailed": "Impossible de charger ces informations.",
+    "partialLoadFailed": "Certaines informations du marché n’ont pas pu être chargées.",
+    "tryAgain": "Réessayer",
+    "administrator": "Administrateur"
   },
   "Errors": {
     "title": "Un problème est survenu",
@@ -1148,11 +1401,11 @@
     "legal": "Informations légales",
     "trustSafety": "Confiance et sécurité",
     "footerDescription": "Trouvez des services de confiance, gérez le travail et centralisez toutes les informations importantes.",
-    "noCategories": "Aucune catégorie disponible"
-    ,"policies": "Politiques de Pavodah",
+    "noCategories": "Aucune catégorie disponible",
+    "policies": "Politiques de Pavodah",
     "contents": "Sommaire",
-    "policyContents": "Sommaire de la politique"
-    ,"privacyDescription": "Découvrez comment Pavodah recueille, utilise, partage et protège les informations personnelles.",
+    "policyContents": "Sommaire de la politique",
+    "privacyDescription": "Découvrez comment Pavodah recueille, utilise, partage et protège les informations personnelles.",
     "termsDescription": "Les conditions applicables aux clients, prestataires et administrateurs qui utilisent Pavodah.",
     "trustDescription": "Conseils pour sécuriser les comptes, paiements, commandes, conversations et signalements sur Pavodah.",
     "helpTitle": "Centre d’aide",
@@ -1367,8 +1620,11 @@
     "yourResponse": "Votre réponse",
     "respond": "Répondre à l’avis",
     "responsePlaceholder": "Écrivez votre réponse…",
-    "showMore": "Afficher plus"
-    ,"selectRating": "Sélectionnez une note.",
+    "showMore": "Afficher plus",
+    "dashboardScope": "Affichage des avis et du total des commandes terminées pour {market}.",
+    "clearDashboardScope": "Afficher les avis de tous les marchés",
+    "selectedMarket": "le marché sélectionné",
+    "selectRating": "Sélectionnez une note.",
     "submitFailed": "Impossible d’envoyer votre avis.",
     "alreadyReviewed": "Avis déjà envoyé",
     "alreadyReviewedBody": "Vous avez déjà envoyé un avis pour cette commande.",
@@ -1419,29 +1675,165 @@
     "title": "Politique de confidentialité",
     "summary": "Cette politique explique quelles informations Pavodah utilise pour exploiter la place de marché, réaliser les transactions, communiquer avec les utilisateurs et protéger le service.",
     "sections": [
-      {"id":"information-collected","title":"Informations recueillies","paragraphs":["Pavodah recueille les informations que vous fournissez, celles créées par votre activité sur la place de marché et les données techniques nécessaires au fonctionnement et à la protection du service."],"bullets":["Données du compte et du profil : nom, adresse e-mail, numéro de téléphone, rôle, photo de profil, localisation et informations du prestataire.","Annonces de services, demandes de devis, commandes, livraisons, avis, litiges, messages, conversations d’assistance et fichiers transmis.","Références et statuts des paiements, remboursements, règlements et versements. Les prestataires de paiement traitent les données de paiement sensibles selon leurs propres services ; Pavodah reçoit les éléments nécessaires à la vérification et à la gestion des transactions.","Informations sur l’appareil, le navigateur, le réseau, l’authentification et les événements de sécurité utilisées pour maintenir les sessions, diagnostiquer les problèmes et prévenir les abus."]},
-      {"id":"how-used","title":"Utilisation des informations","bullets":["Créer et sécuriser les comptes, terminer l’intégration et fournir les fonctionnalités adaptées au rôle.","Publier des services, mettre en relation clients et prestataires, traiter les devis et commandes et conserver les registres de transaction.","Vérifier les paiements, gérer les remboursements, règlements et versements et enquêter sur les incohérences ou fraudes.","Fournir les messages, notifications transactionnelles, l’assistance, la gestion des litiges et les réponses de sécurité.","Surveiller la fiabilité, diagnostiquer les erreurs, appliquer les politiques, respecter les obligations légales et améliorer le service."]},
-      {"id":"sharing","title":"Partage des informations","paragraphs":["Pavodah partage des informations uniquement lorsque cela est nécessaire pour fournir la place de marché, exécuter une transaction demandée, protéger le service ou respecter une obligation légale."],"bullets":["Clients et prestataires reçoivent les informations de profil, commande, devis, livraison, avis et conversation nécessaires à leur relation commerciale.","Les prestataires de paiement, communication, stockage, analyse et infrastructure reçoivent les informations nécessaires à leurs services pour Pavodah.","Les administrateurs autorisés peuvent accéder aux informations nécessaires à l’assistance, aux litiges, paiements, versements, à la sécurité et aux opérations.","Des informations peuvent être communiquées lorsque la loi l’exige ou lorsque cela est raisonnablement nécessaire pour protéger les droits, la sécurité, les utilisateurs ou l’intégrité de Pavodah."]},
-      {"id":"notifications","title":"Notifications et communications","paragraphs":["Pavodah envoie des communications transactionnelles sur la sécurité du compte, les messages, commandes, paiements, remboursements, litiges, avis, l’assistance, les règlements et versements. Les préférences disponibles dans l’application, par e-mail et SMS se gèrent dans Profil et paramètres, mais certaines communications de service ou de sécurité peuvent rester nécessaires.","Les communications marketing, lorsqu’elles sont proposées, sont gérées séparément des préférences de notification transactionnelle."]},
-      {"id":"retention-security","title":"Conservation et sécurité","paragraphs":["Pavodah conserve les informations aussi longtemps que nécessaire pour fournir le service, tenir les registres commerciaux et financiers, résoudre les litiges, protéger les utilisateurs et respecter les obligations légales. Les durées varient selon les données.","Des mesures administratives, techniques et organisationnelles réduisent les risques d’accès, de modification, de divulgation ou de perte non autorisés. Aucun service internet ne garantit une sécurité absolue ; signalez rapidement toute compromission présumée."]},
-      {"id":"choices","title":"Vos choix","bullets":["Consultez et modifiez les paramètres de profil et de notification disponibles depuis votre compte.","Utilisez la réinitialisation ou la modification du mot de passe lorsque vos identifiants doivent être mis à jour.","Contactez l’assistance pour demander l’accès, la rectification, la suppression, la restriction ou exercer un autre droit relatif à la vie privée. Certaines informations peuvent devoir être conservées pour les transactions, la sécurité, les litiges ou la conformité légale."]},
-      {"id":"children","title":"Vie privée des enfants","paragraphs":["Pavodah n’est pas destiné aux enfants qui ne peuvent pas légalement accepter des transactions ou ces conditions. Si vous pensez qu’un enfant a fourni des données personnelles sans autorisation appropriée, contactez l’assistance."]},
-      {"id":"changes-contact","title":"Modifications et contact","paragraphs":["Cette politique peut évoluer avec les fonctionnalités, prestataires ou obligations légales de Pavodah. Les changements importants seront communiqués par un canal approprié lorsque cela est requis.","Les questions et demandes relatives à la confidentialité peuvent être envoyées à support@pavodah.com."]}
+      {
+        "id": "information-collected",
+        "title": "Informations recueillies",
+        "paragraphs": [
+          "Pavodah recueille les informations que vous fournissez, celles créées par votre activité sur la place de marché et les données techniques nécessaires au fonctionnement et à la protection du service."
+        ],
+        "bullets": [
+          "Données du compte et du profil : nom, adresse e-mail, numéro de téléphone, rôle, photo de profil, localisation et informations du prestataire.",
+          "Annonces de services, demandes de devis, commandes, livraisons, avis, litiges, messages, conversations d’assistance et fichiers transmis.",
+          "Références et statuts des paiements, remboursements, règlements et versements. Les prestataires de paiement traitent les données de paiement sensibles selon leurs propres services ; Pavodah reçoit les éléments nécessaires à la vérification et à la gestion des transactions.",
+          "Informations sur l’appareil, le navigateur, le réseau, l’authentification et les événements de sécurité utilisées pour maintenir les sessions, diagnostiquer les problèmes et prévenir les abus."
+        ]
+      },
+      {
+        "id": "how-used",
+        "title": "Utilisation des informations",
+        "bullets": [
+          "Créer et sécuriser les comptes, terminer l’intégration et fournir les fonctionnalités adaptées au rôle.",
+          "Publier des services, mettre en relation clients et prestataires, traiter les devis et commandes et conserver les registres de transaction.",
+          "Vérifier les paiements, gérer les remboursements, règlements et versements et enquêter sur les incohérences ou fraudes.",
+          "Fournir les messages, notifications transactionnelles, l’assistance, la gestion des litiges et les réponses de sécurité.",
+          "Surveiller la fiabilité, diagnostiquer les erreurs, appliquer les politiques, respecter les obligations légales et améliorer le service."
+        ]
+      },
+      {
+        "id": "sharing",
+        "title": "Partage des informations",
+        "paragraphs": [
+          "Pavodah partage des informations uniquement lorsque cela est nécessaire pour fournir la place de marché, exécuter une transaction demandée, protéger le service ou respecter une obligation légale."
+        ],
+        "bullets": [
+          "Clients et prestataires reçoivent les informations de profil, commande, devis, livraison, avis et conversation nécessaires à leur relation commerciale.",
+          "Les prestataires de paiement, communication, stockage, analyse et infrastructure reçoivent les informations nécessaires à leurs services pour Pavodah.",
+          "Les administrateurs autorisés peuvent accéder aux informations nécessaires à l’assistance, aux litiges, paiements, versements, à la sécurité et aux opérations.",
+          "Des informations peuvent être communiquées lorsque la loi l’exige ou lorsque cela est raisonnablement nécessaire pour protéger les droits, la sécurité, les utilisateurs ou l’intégrité de Pavodah."
+        ]
+      },
+      {
+        "id": "notifications",
+        "title": "Notifications et communications",
+        "paragraphs": [
+          "Pavodah envoie des communications transactionnelles sur la sécurité du compte, les messages, commandes, paiements, remboursements, litiges, avis, l’assistance, les règlements et versements. Les préférences disponibles dans l’application, par e-mail et SMS se gèrent dans Profil et paramètres, mais certaines communications de service ou de sécurité peuvent rester nécessaires.",
+          "Les communications marketing, lorsqu’elles sont proposées, sont gérées séparément des préférences de notification transactionnelle."
+        ]
+      },
+      {
+        "id": "retention-security",
+        "title": "Conservation et sécurité",
+        "paragraphs": [
+          "Pavodah conserve les informations aussi longtemps que nécessaire pour fournir le service, tenir les registres commerciaux et financiers, résoudre les litiges, protéger les utilisateurs et respecter les obligations légales. Les durées varient selon les données.",
+          "Des mesures administratives, techniques et organisationnelles réduisent les risques d’accès, de modification, de divulgation ou de perte non autorisés. Aucun service internet ne garantit une sécurité absolue ; signalez rapidement toute compromission présumée."
+        ]
+      },
+      {
+        "id": "choices",
+        "title": "Vos choix",
+        "bullets": [
+          "Consultez et modifiez les paramètres de profil et de notification disponibles depuis votre compte.",
+          "Utilisez la réinitialisation ou la modification du mot de passe lorsque vos identifiants doivent être mis à jour.",
+          "Contactez l’assistance pour demander l’accès, la rectification, la suppression, la restriction ou exercer un autre droit relatif à la vie privée. Certaines informations peuvent devoir être conservées pour les transactions, la sécurité, les litiges ou la conformité légale."
+        ]
+      },
+      {
+        "id": "children",
+        "title": "Vie privée des enfants",
+        "paragraphs": [
+          "Pavodah n’est pas destiné aux enfants qui ne peuvent pas légalement accepter des transactions ou ces conditions. Si vous pensez qu’un enfant a fourni des données personnelles sans autorisation appropriée, contactez l’assistance."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Modifications et contact",
+        "paragraphs": [
+          "Cette politique peut évoluer avec les fonctionnalités, prestataires ou obligations légales de Pavodah. Les changements importants seront communiqués par un canal approprié lorsque cela est requis.",
+          "Les questions et demandes relatives à la confidentialité peuvent être envoyées à support@pavodah.com."
+        ]
+      }
     ]
   },
   "TermsDocument": {
-    "title":"Conditions d’utilisation",
-    "summary":"Ces conditions précisent les responsabilités qui rendent le travail, les paiements, les communications et la gestion des litiges clairs pour tous les utilisateurs de Pavodah.",
-    "sections":[
-      {"id":"using-pavodah","title":"Utilisation de Pavodah","paragraphs":["Ces conditions régissent l’accès à la place de marché Pavodah et son utilisation. En créant un compte ou en utilisant la plateforme, vous acceptez ces conditions et les politiques auxquelles elles renvoient.","Vous devez fournir des informations exactes, protéger vos identifiants et utiliser Pavodah uniquement pour des activités licites. Vous êtes responsable des actions effectuées depuis votre compte sauf si vous signalez rapidement un accès non autorisé."]},
-      {"id":"marketplace-roles","title":"Rôles sur la place de marché","paragraphs":["Pavodah fournit des outils permettant aux clients de trouver des services et aux prestataires de les proposer et les réaliser. Les prestataires répondent de l’exactitude, de la légalité, de la qualité et de la livraison de leurs services. Les clients doivent fournir des besoins exacts et examiner le travail rapidement.","Une commande, un devis, un message, un avis ou un profil ne crée pas de relation d’emploi, de partenariat ou de mandat entre Pavodah et un utilisateur."]},
-      {"id":"orders-payments","title":"Commandes et paiements","paragraphs":["Utilisez le paiement et le suivi de commande Pavodah pour les paiements de la place de marché. Le montant, la devise, les frais et les actions disponibles sont affichés avant ou pendant le paiement et sur la commande.","La vérification du paiement, les remboursements, règlements et versements peuvent dépendre des prestataires de paiement et établissements financiers. Un statut en attente ne confirme pas l’achèvement de toutes les étapes."],"bullets":["Ne demandez pas à un autre utilisateur de payer hors de Pavodah pour un travail organisé sur Pavodah.","Ne présentez pas faussement le statut d’un paiement, d’une livraison, d’un remboursement ou d’un versement.","Vérifiez la commande avant d’accepter une livraison ou d’effectuer une autre action définitive."]},
-      {"id":"provider-obligations","title":"Obligations des prestataires","paragraphs":["Les prestataires doivent décrire leurs services honnêtement, proposer des tarifs et délais réalisables, posséder les autorisations nécessaires et communiquer les changements importants avant livraison.","Ils ne peuvent publier de services trompeurs, illégaux, contrefaisants, dangereux ou interdits. Pavodah peut examiner, limiter ou supprimer les services présentant un risque."]},
-      {"id":"user-content","title":"Messages, avis et contenu","paragraphs":["Vous restez responsable des profils, annonces, fichiers, messages, avis et preuves de litige transmis. Vous autorisez Pavodah à héberger, afficher, traiter et transmettre ce contenu pour exploiter et protéger la place de marché.","Le contenu ne doit pas être frauduleux, abusif, discriminatoire, illégalement menaçant, attentatoire à la vie privée ou contrefaisant. Les avis doivent refléter une expérience réelle et ne pas être manipulés contre un avantage."]},
-      {"id":"disputes-refunds","title":"Litiges et remboursements","paragraphs":["Les commandes admissibles peuvent proposer un litige dans la plateforme. Chaque partie doit fournir des informations exactes et coopérer. Pavodah peut examiner le statut, les messages, livraisons, paiements et preuves transmises.","La possibilité et le montant du remboursement dépendent du paiement et de la commande. Un délai supplémentaire peut s’appliquer après son enregistrement comme initié ou traité."]},
-      {"id":"enforcement","title":"Restrictions et application","paragraphs":["Pavodah peut restreindre des contenus, transactions, fonctionnalités ou comptes lorsque cela est raisonnablement nécessaire pour enquêter, respecter la loi, protéger les utilisateurs, traiter un risque de sécurité ou appliquer ces conditions. Des informations supplémentaires peuvent être demandées avant le rétablissement."]},
-      {"id":"availability-liability","title":"Disponibilité et responsabilité","paragraphs":["Pavodah cherche à fournir une place de marché fiable, sans garantir une disponibilité continue et sans erreur. Dans la mesure permise par la loi, Pavodah ne répond pas des pertes indirectes ni des actes, services, déclarations ou accords hors plateforme indépendants d’un utilisateur.","Aucune disposition n’exclut un droit ou une responsabilité qui ne peut légalement être exclu."]},
-      {"id":"changes-contact","title":"Modifications et contact","paragraphs":["Pavodah peut modifier ces conditions lorsque le service, les exigences légales ou les risques évoluent. Les changements importants seront communiqués par un canal approprié avant leur entrée en vigueur lorsque cela est requis.","Les questions sur ces conditions peuvent être envoyées à support@pavodah.com."]}
+    "title": "Conditions d’utilisation",
+    "summary": "Ces conditions précisent les responsabilités qui rendent le travail, les paiements, les communications et la gestion des litiges clairs pour tous les utilisateurs de Pavodah.",
+    "sections": [
+      {
+        "id": "using-pavodah",
+        "title": "Utilisation de Pavodah",
+        "paragraphs": [
+          "Ces conditions régissent l’accès à la place de marché Pavodah et son utilisation. En créant un compte ou en utilisant la plateforme, vous acceptez ces conditions et les politiques auxquelles elles renvoient.",
+          "Vous devez fournir des informations exactes, protéger vos identifiants et utiliser Pavodah uniquement pour des activités licites. Vous êtes responsable des actions effectuées depuis votre compte sauf si vous signalez rapidement un accès non autorisé."
+        ]
+      },
+      {
+        "id": "marketplace-roles",
+        "title": "Rôles sur la place de marché",
+        "paragraphs": [
+          "Pavodah fournit des outils permettant aux clients de trouver des services et aux prestataires de les proposer et les réaliser. Les prestataires répondent de l’exactitude, de la légalité, de la qualité et de la livraison de leurs services. Les clients doivent fournir des besoins exacts et examiner le travail rapidement.",
+          "Une commande, un devis, un message, un avis ou un profil ne crée pas de relation d’emploi, de partenariat ou de mandat entre Pavodah et un utilisateur."
+        ]
+      },
+      {
+        "id": "orders-payments",
+        "title": "Commandes et paiements",
+        "paragraphs": [
+          "Utilisez le paiement et le suivi de commande Pavodah pour les paiements de la place de marché. Le montant, la devise, les frais et les actions disponibles sont affichés avant ou pendant le paiement et sur la commande.",
+          "La vérification du paiement, les remboursements, règlements et versements peuvent dépendre des prestataires de paiement et établissements financiers. Un statut en attente ne confirme pas l’achèvement de toutes les étapes."
+        ],
+        "bullets": [
+          "Ne demandez pas à un autre utilisateur de payer hors de Pavodah pour un travail organisé sur Pavodah.",
+          "Ne présentez pas faussement le statut d’un paiement, d’une livraison, d’un remboursement ou d’un versement.",
+          "Vérifiez la commande avant d’accepter une livraison ou d’effectuer une autre action définitive."
+        ]
+      },
+      {
+        "id": "provider-obligations",
+        "title": "Obligations des prestataires",
+        "paragraphs": [
+          "Les prestataires doivent décrire leurs services honnêtement, proposer des tarifs et délais réalisables, posséder les autorisations nécessaires et communiquer les changements importants avant livraison.",
+          "Ils ne peuvent publier de services trompeurs, illégaux, contrefaisants, dangereux ou interdits. Pavodah peut examiner, limiter ou supprimer les services présentant un risque."
+        ]
+      },
+      {
+        "id": "user-content",
+        "title": "Messages, avis et contenu",
+        "paragraphs": [
+          "Vous restez responsable des profils, annonces, fichiers, messages, avis et preuves de litige transmis. Vous autorisez Pavodah à héberger, afficher, traiter et transmettre ce contenu pour exploiter et protéger la place de marché.",
+          "Le contenu ne doit pas être frauduleux, abusif, discriminatoire, illégalement menaçant, attentatoire à la vie privée ou contrefaisant. Les avis doivent refléter une expérience réelle et ne pas être manipulés contre un avantage."
+        ]
+      },
+      {
+        "id": "disputes-refunds",
+        "title": "Litiges et remboursements",
+        "paragraphs": [
+          "Les commandes admissibles peuvent proposer un litige dans la plateforme. Chaque partie doit fournir des informations exactes et coopérer. Pavodah peut examiner le statut, les messages, livraisons, paiements et preuves transmises.",
+          "La possibilité et le montant du remboursement dépendent du paiement et de la commande. Un délai supplémentaire peut s’appliquer après son enregistrement comme initié ou traité."
+        ]
+      },
+      {
+        "id": "enforcement",
+        "title": "Restrictions et application",
+        "paragraphs": [
+          "Pavodah peut restreindre des contenus, transactions, fonctionnalités ou comptes lorsque cela est raisonnablement nécessaire pour enquêter, respecter la loi, protéger les utilisateurs, traiter un risque de sécurité ou appliquer ces conditions. Des informations supplémentaires peuvent être demandées avant le rétablissement."
+        ]
+      },
+      {
+        "id": "availability-liability",
+        "title": "Disponibilité et responsabilité",
+        "paragraphs": [
+          "Pavodah cherche à fournir une place de marché fiable, sans garantir une disponibilité continue et sans erreur. Dans la mesure permise par la loi, Pavodah ne répond pas des pertes indirectes ni des actes, services, déclarations ou accords hors plateforme indépendants d’un utilisateur.",
+          "Aucune disposition n’exclut un droit ou une responsabilité qui ne peut légalement être exclu."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Modifications et contact",
+        "paragraphs": [
+          "Pavodah peut modifier ces conditions lorsque le service, les exigences légales ou les risques évoluent. Les changements importants seront communiqués par un canal approprié avant leur entrée en vigueur lorsque cela est requis.",
+          "Les questions sur ces conditions peuvent être envoyées à support@pavodah.com."
+        ]
+      }
     ]
   }
 }

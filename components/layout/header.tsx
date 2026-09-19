@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ChevronDown,
-  Bell,
-  Mail,
-  ShoppingBag,
-  Menu,
-  X,
-} from "lucide-react";
+import { ChevronDown, Bell, Mail, ShoppingBag, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,13 +14,14 @@ import { Logo } from "./logo";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/store/categories-store";
 import { useEffect, useState } from "react";
-import {LanguageSwitcher} from "@/components/i18n/language-switcher";
-import {useTranslations} from "next-intl";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { useTranslations } from "next-intl";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
   HelpSupportDropdownItems,
   HelpSupportMobileLinks,
 } from "./help-support-menu";
+import { MarketSelector } from "@/components/market/market-selector";
 
 export function Header() {
   const t = useTranslations("Navigation");
@@ -116,6 +110,7 @@ export function Header() {
             <div className="h-6 w-px bg-gray-300"></div>
 
             {/* Language Selector */}
+            <MarketSelector />
             <LanguageSwitcher />
 
             {isAuthenticated && (
@@ -168,6 +163,7 @@ export function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   {user?.role === "ADMIN" ||
+                  user?.role === "SUPER_ADMIN" ||
                   user?.role === "SERVICE_PROVIDER" ? (
                     <>
                       <DropdownMenuItem
@@ -181,6 +177,11 @@ export function Header() {
                     </>
                   ) : (
                     <>
+                      <DropdownMenuItem
+                        onClick={() => router.push("/dashboard")}
+                      >
+                        <span>{t("myDashboard")}</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => router.push("/dashboard/orders")}
                       >
@@ -208,14 +209,14 @@ export function Header() {
                   size="sm"
                   className="text-gray-700 hover:text-gray-900"
                 >
-                      {t("signIn")}
+                  {t("signIn")}
                 </Button>
                 <Button
                   onClick={startUserFlow}
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                      {t("signUp")}
+                  {t("signUp")}
                 </Button>
               </div>
             )}
@@ -288,6 +289,7 @@ export function Header() {
                 {/* Dashboard & Profile Links */}
                 <div className="flex flex-col space-y-4 pb-4 border-b border-gray-100">
                   {user?.role === "ADMIN" ||
+                  user?.role === "SUPER_ADMIN" ||
                   user?.role === "SERVICE_PROVIDER" ? (
                     <button
                       onClick={() => {
@@ -300,6 +302,15 @@ export function Header() {
                     </button>
                   ) : (
                     <>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          router.push("/dashboard");
+                        }}
+                        className="text-left font-medium text-lg text-gray-800 cursor-pointer"
+                      >
+                        {t("myDashboard")}
+                      </button>
                       <button
                         onClick={() => {
                           setIsMobileMenuOpen(false);
@@ -332,7 +343,9 @@ export function Header() {
                     className="flex items-center space-x-3 text-gray-800 cursor-pointer"
                   >
                     <Bell className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">{t("notifications")}</span>
+                    <span className="font-medium text-lg">
+                      {t("notifications")}
+                    </span>
                   </button>
                   <button
                     onClick={() => {
@@ -344,16 +357,20 @@ export function Header() {
                     <Mail className="w-5 h-5 text-gray-600" />
                     <span className="font-medium text-lg">{t("messages")}</span>
                   </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      router.push("/dashboard/orders");
-                    }}
-                    className="flex items-center space-x-3 text-gray-800 cursor-pointer"
-                  >
-                    <ShoppingBag className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-lg">{t("orders")}</span>
-                  </button>
+                  {(user?.role === "ADMIN" ||
+                    user?.role === "SUPER_ADMIN" ||
+                    user?.role === "SERVICE_PROVIDER") && (
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        router.push("/dashboard/orders");
+                      }}
+                      className="flex items-center space-x-3 text-gray-800 cursor-pointer"
+                    >
+                      <ShoppingBag className="w-5 h-5 text-gray-600" />
+                      <span className="font-medium text-lg">{t("orders")}</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Navigation Links */}
@@ -365,7 +382,9 @@ export function Header() {
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       {categoriesLoading ? (
-                        <span className="text-gray-400">{common("loading")}</span>
+                        <span className="text-gray-400">
+                          {common("loading")}
+                        </span>
                       ) : (
                         topLevelCategories.slice(0, 10).map((category) => (
                           <button
@@ -393,7 +412,16 @@ export function Header() {
                     />
                   </details>
 
-                  <LanguageSwitcher align="start" className="text-lg text-gray-800" />
+                  <div className="flex min-h-11 items-center justify-between gap-4">
+                    <span className="font-medium text-lg text-gray-800">
+                      Marketplace
+                    </span>
+                    <MarketSelector />
+                  </div>
+                  <LanguageSwitcher
+                    align="start"
+                    className="text-lg text-gray-800"
+                  />
                 </div>
 
                 <button
@@ -417,7 +445,9 @@ export function Header() {
                     </summary>
                     <div className="mt-3 flex flex-col space-y-3 pl-4">
                       {categoriesLoading ? (
-                        <span className="text-gray-400">{common("loading")}</span>
+                        <span className="text-gray-400">
+                          {common("loading")}
+                        </span>
                       ) : (
                         topLevelCategories.slice(0, 10).map((category) => (
                           <button
@@ -444,6 +474,12 @@ export function Header() {
                       onNavigate={() => setIsMobileMenuOpen(false)}
                     />
                   </details>
+                  <div className="flex min-h-11 items-center justify-between gap-4">
+                    <span className="font-medium text-lg text-gray-800">
+                      Marketplace
+                    </span>
+                    <MarketSelector />
+                  </div>
                 </div>
 
                 <div className="pt-2 flex flex-col space-y-4 pb-8">

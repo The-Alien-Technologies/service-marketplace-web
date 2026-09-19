@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
-import {NextIntlClientProvider} from "next-intl";
-import {getLocale, getMessages, getTranslations} from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { SupportChatWidget } from "@/components/supportChat/support-chat-widget";
-import {LocalePreferenceSync} from "@/components/i18n/locale-preference-sync";
+import { LocalePreferenceSync } from "@/components/i18n/locale-preference-sync";
+import { MarketBootstrap } from "@/components/market/market-bootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,7 @@ const dancingScript = Dancing_Script({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata");
-  return {title: t("title"), description: t("description")};
+  return { title: t("title"), description: t("description") };
 }
 
 export const viewport: Viewport = {
@@ -36,10 +37,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
 };
-interface SupportChatProps {
-  isOpenChat: boolean;
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -55,6 +52,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <LocalePreferenceSync />
+          <MarketBootstrap />
           <ThemeProvider
             defaultTheme="light"
             storageKey="service-marketplace-theme"

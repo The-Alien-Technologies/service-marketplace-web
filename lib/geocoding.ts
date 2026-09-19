@@ -1,6 +1,6 @@
 const DEFAULT_GEOCODING_API_URL = "https://photon.komoot.io";
 const SEARCH_RESULT_LIMIT = 5;
-const SUPPORTED_COUNTRY_CODES = new Set(["GH", "GB"]);
+const SUPPORTED_COUNTRY_CODES = new Set(["GH", "ZA"]);
 
 const GEOCODING_API_URL = (
   process.env.NEXT_PUBLIC_GEOCODING_API_URL || DEFAULT_GEOCODING_API_URL
@@ -39,6 +39,7 @@ export interface LocationResult {
   city?: string;
   state?: string;
   country?: string;
+  countryIso2?: string;
   postalCode?: string;
 }
 
@@ -116,6 +117,7 @@ export function mapPhotonFeature(
     city: properties.city || properties.district,
     state: properties.state,
     country: properties.country,
+    countryIso2: properties.countrycode?.toUpperCase(),
     postalCode: properties.postcode,
   };
 }
@@ -165,7 +167,7 @@ export async function searchLocations(
     lon: "-1.0232",
   });
   params.append("countrycode", "GH");
-  params.append("countrycode", "GB");
+  params.append("countrycode", "ZA");
   const features = await fetchPhoton("/api", params, signal);
 
   return features

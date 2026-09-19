@@ -14,6 +14,7 @@ import { ChatBox } from "./chat-box";
 import { QuoteRequestModal } from "./quote-request-modal";
 import { CheckoutModal } from "./checkout-modal";
 import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
 
 interface PricingFeature {
   text: string;
@@ -23,7 +24,7 @@ interface PricingPlan {
   id: string;
   name: string;
   icon: "layers" | "layers-stacked" | "zap";
-  price: string;
+  price: number;
   features: PricingFeature[];
   isPopular?: boolean;
 }
@@ -42,8 +43,11 @@ interface PricingPlansProps {
       description?: string;
       price: number | string;
     }[];
+    currency?: string;
   };
   serviceId: string;
+  currency: string;
+  locale?: string;
 }
 
 export function PricingPlans({
@@ -52,6 +56,8 @@ export function PricingPlans({
   providerAvatar,
   service,
   serviceId,
+  currency,
+  locale,
 }: PricingPlansProps) {
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
@@ -185,7 +191,7 @@ export function PricingPlans({
                     {/* Price */}
                     <div className="mb-4">
                       <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.price}
+                        {formatMoney(plan.price, currency, locale)}
                       </span>
                     </div>
 
@@ -253,6 +259,7 @@ export function PricingPlans({
         onClose={() => setIsQuoteModalOpen(false)}
         providerId={service.providerId}
         serviceId={serviceId}
+        currency={currency}
       />
 
       {/* Checkout Modal */}
@@ -262,6 +269,8 @@ export function PricingPlans({
         selectedPlan={getSelectedPlanData()}
         service={service}
         serviceId={serviceId}
+        currency={currency}
+        locale={locale}
       />
     </>
   );

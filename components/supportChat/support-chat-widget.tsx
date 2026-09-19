@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   X,
   Send,
@@ -21,7 +16,6 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { usePathname } from "next/navigation";
-
 
 import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
@@ -67,15 +61,12 @@ const STATUS_CONFIG: Record<
   },
 };
 
-
 // ─── Message bubble ───────────────────────────────────────
 
 function MessageBubble({
   message,
-  isOwn,
 }: {
   message: SupportMessage;
-  isOwn: boolean;
 }) {
   const t = useTranslations("SupportChat");
   const format = useFormatter();
@@ -212,10 +203,10 @@ function HistoryRow({
           {conv.status === "AWAITING_FOR_ADMIN"
             ? t("waiting")
             : conv.status === "ACTIVE_WITH_ADMIN"
-            ? t("active")
-            : conv.status === "CLOSED"
-            ? t("closed")
-            : t("bot")}
+              ? t("active")
+              : conv.status === "CLOSED"
+                ? t("closed")
+                : t("bot")}
         </span>
         <span className="text-[10px] text-gray-400">{date}</span>
       </div>
@@ -228,7 +219,9 @@ function HistoryRow({
 
       {conv.admin && (
         <p className="text-[10px] text-gray-400 mb-1">
-          {t("agentName", { name: `${conv.admin.firstName} ${conv.admin.lastName}` })}
+          {t("agentName", {
+            name: `${conv.admin.firstName} ${conv.admin.lastName}`,
+          })}
         </p>
       )}
 
@@ -265,7 +258,7 @@ export function SupportChatWidget() {
 
   // Conversation
   const [conversation, setConversation] = useState<SupportConversation | null>(
-    null
+    null,
   );
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -280,9 +273,7 @@ export function SupportChatWidget() {
   const [showAdminBanner, setShowAdminBanner] = useState(false);
 
   // History
-  const [conversations, setConversations] = useState<SupportConversation[]>(
-    []
-  );
+  const [conversations, setConversations] = useState<SupportConversation[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -311,7 +302,7 @@ export function SupportChatWidget() {
   // Socket callbacks (stable refs, no reconnect on re-render)
   const handleSocketMessage = useCallback((msg: SupportMessage) => {
     setMessages((prev) =>
-      prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]
+      prev.find((m) => m.id === msg.id) ? prev : [...prev, msg],
     );
     setIsBotTyping(false);
   }, []);
@@ -341,7 +332,7 @@ export function SupportChatWidget() {
     if (conversation?.id && isAuthenticated) {
       socket.joinConversation(conversation.id);
     }
-  }, [conversation?.id, isAuthenticated]);
+  }, [conversation?.id, isAuthenticated, socket]);
 
   // Start/resume conversation when the widget first opens
   useEffect(() => {
@@ -374,7 +365,8 @@ export function SupportChatWidget() {
   // (calls client.leave instead of client.join), so WebSocket room
   // broadcasts never reach the client socket.
   useEffect(() => {
-    if (!isOpen || !conversation?.id || conversation.status === "CLOSED") return;
+    if (!isOpen || !conversation?.id || conversation.status === "CLOSED")
+      return;
 
     const tick = async () => {
       try {
@@ -384,16 +376,15 @@ export function SupportChatWidget() {
         setMessages((prev) => {
           // const pending = prev.filter((m) => m.id.startsWith("temp-"));
           const pending = prev.filter((m) => {
-          if (!m.id.startsWith("temp-")) return false;
+            if (!m.id.startsWith("temp-")) return false;
 
-          const existsOnServer = (fresh.messages ?? []).some(
-            (sm) =>
-              sm.content === m.content &&
-              sm.senderType === m.senderType
-          );
+            const existsOnServer = (fresh.messages ?? []).some(
+              (sm) =>
+                sm.content === m.content && sm.senderType === m.senderType,
+            );
 
-          return !existsOnServer;
-        });
+            return !existsOnServer;
+          });
           const serverMessages = fresh.messages ?? [];
           // Avoid a re-render when nothing changed
           if (
@@ -409,10 +400,7 @@ export function SupportChatWidget() {
         // Update conversation metadata when status or admin assignment changes
         setConversation((prev) => {
           if (!prev) return fresh;
-          if (
-            prev.status !== fresh.status ||
-            prev.adminId !== fresh.adminId
-          ) {
+          if (prev.status !== fresh.status || prev.adminId !== fresh.adminId) {
             // Show banner when admin just joined
             if (
               prev.status !== "ACTIVE_WITH_ADMIN" &&
@@ -458,7 +446,7 @@ export function SupportChatWidget() {
     try {
       const result = await apiService.sendSupportMessage(
         conversation.id,
-        content
+        content,
       );
       setMessages((prev) => {
         const without = prev.filter((m) => m.id !== tempId);
@@ -478,7 +466,9 @@ export function SupportChatWidget() {
   const escalate = async () => {
     if (!conversation || conversation.status !== "BOT") return;
     try {
-      const conv = await apiService.escalateSupportConversation(conversation.id);
+      const conv = await apiService.escalateSupportConversation(
+        conversation.id,
+      );
       setConversation(conv);
     } catch (e: unknown) {
       setError((e as Error).message);
@@ -530,26 +520,29 @@ export function SupportChatWidget() {
     !hasHydrated ||
     !isAuthenticated ||
     user?.role === "ADMIN" ||
+    user?.role === "SUPER_ADMIN" ||
     isSupportHiddenRoute
   )
     return null;
 
   const status: SupportConversationStatus = conversation?.status ?? "BOT";
   const cfg = STATUS_CONFIG[status];
-  const statusLabel = status === "BOT"
-    ? "KWADWO"
-    : status === "AWAITING_FOR_ADMIN"
-      ? t("waitingAgent")
-      : status === "ACTIVE_WITH_ADMIN"
-        ? t("supportAgent")
-        : t("conversationClosed");
-  const statusSubLabel = status === "BOT"
-    ? t("virtualAssistant")
-    : status === "AWAITING_FOR_ADMIN"
-      ? t("inQueue")
-      : status === "ACTIVE_WITH_ADMIN"
-        ? t("liveConnected")
-        : t("sessionEnded");
+  const statusLabel =
+    status === "BOT"
+      ? "KWADWO"
+      : status === "AWAITING_FOR_ADMIN"
+        ? t("waitingAgent")
+        : status === "ACTIVE_WITH_ADMIN"
+          ? t("supportAgent")
+          : t("conversationClosed");
+  const statusSubLabel =
+    status === "BOT"
+      ? t("virtualAssistant")
+      : status === "AWAITING_FOR_ADMIN"
+        ? t("inQueue")
+        : status === "ACTIVE_WITH_ADMIN"
+          ? t("liveConnected")
+          : t("sessionEnded");
   const quickPrompts = [
     t("promptOrder"),
     t("promptProvider"),
@@ -561,7 +554,6 @@ export function SupportChatWidget() {
   const isBot = status === "BOT";
 
   // ── Render ─────────────────────────────────────────────────────────────────
-
 
   // if(!isOpenChat) return null;
 
@@ -584,7 +576,6 @@ export function SupportChatWidget() {
       {/* Panel */}
       {isOpen && (
         <div className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-50 flex h-[min(42rem,calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] max-w-md flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:left-auto sm:right-4 sm:bottom-[max(1rem,env(safe-area-inset-bottom))] sm:w-[calc(100%-2rem)]">
-
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-3 dark:border-gray-700 sm:px-4">
             <div className="flex min-w-0 items-center gap-2">
@@ -611,9 +602,7 @@ export function SupportChatWidget() {
                   {view === "history" ? t("chatHistory") : statusLabel}
                 </h3>
                 <p className="truncate text-xs text-gray-500">
-                  {view === "history"
-                    ? t("pastConversations")
-                    : statusSubLabel}
+                  {view === "history" ? t("pastConversations") : statusSubLabel}
                 </p>
               </div>
             </div>
@@ -689,14 +678,7 @@ export function SupportChatWidget() {
                   </div>
                 ) : (
                   messages.map((msg) => (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isOwn={
-                        msg.senderType === "USER" ||
-                        msg.senderType === "SERVICE_PROVIDER"
-                      }
-                    />
+                    <MessageBubble key={msg.id} message={msg} />
                   ))
                 )}
                 {isBotTyping && <TypingDots />}
@@ -758,7 +740,9 @@ export function SupportChatWidget() {
                           ? t("waitingForAgent")
                           : messaging("typeMessage")
                       }
-                      disabled={isSending || isWaiting || isLoading || !conversation}
+                      disabled={
+                        isSending || isWaiting || isLoading || !conversation
+                      }
                       className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-white sm:text-sm"
                     />
                     <button
@@ -801,9 +785,7 @@ export function SupportChatWidget() {
                   <p className="text-sm font-medium text-gray-500">
                     {t("noHistory")}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    {t("startForHelp")}
-                  </p>
+                  <p className="text-xs text-gray-400">{t("startForHelp")}</p>
                 </div>
               ) : (
                 conversations.map((conv) => (

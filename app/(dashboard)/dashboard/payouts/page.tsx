@@ -56,10 +56,14 @@ type Pagination = { page: number; limit: number; total: number; pages: number };
 
 const PAGE_SIZE = 25;
 
-const money = (value: number | string = 0) =>
-  new Intl.NumberFormat("en-GH", {
+const money = (
+  value: number | string | undefined = 0,
+  currency = "GHS",
+  locale = currency === "ZAR" ? "en-ZA" : "en-GH",
+) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "GHS",
+    currency,
     minimumFractionDigits: 2,
   }).format(Number(value));
 
@@ -272,7 +276,9 @@ export default function AdminPayoutsPage() {
     setRefundInstitutions([]);
     setAction({ kind: "retry-refund", refund });
     try {
-      setRefundInstitutions(await apiService.getRefundInstitutions());
+      setRefundInstitutions(
+        await apiService.getRefundInstitutions(refund.order.marketId),
+      );
     } catch (error) {
       setRefundResolveError(
         error instanceof Error
@@ -291,6 +297,7 @@ export default function AdminPayoutsPage() {
       setRefundResolveError("Select the customer’s receiving bank.");
       return;
     }
+    if (!action?.refund) return;
     setIsResolvingRefundAccount(true);
     setRefundResolveError(null);
     setResolvedRefundAccount(null);
@@ -299,6 +306,7 @@ export default function AdminPayoutsPage() {
         await apiService.resolveRefundAccount(
           refundAccountNumber,
           refundBankCode,
+          action.refund.order.marketId,
         ),
       );
     } catch (error) {
@@ -363,7 +371,8 @@ export default function AdminPayoutsPage() {
         await apiService.retryRefund(action.refund.id, {
           accountNumber: refundAccountNumber,
           bankCode: refundBankCode,
-          currency: "GHS",
+          currency: action.refund.currency,
+          marketId: action.refund.order.marketId,
         });
         toast.success("Customer details submitted to Paystack");
       }
@@ -414,7 +423,11 @@ export default function AdminPayoutsPage() {
       label: t("payoutRequests"),
       count: payoutPagination.total,
     },
-    { id: "release", label: t("releaseReviews"), count: releasePagination.total },
+    {
+      id: "release",
+      label: t("releaseReviews"),
+      count: releasePagination.total,
+    },
     { id: "refunds", label: t("refunds"), count: refundPagination.total },
     {
       id: "chargebacks",
@@ -592,7 +605,10 @@ export default function AdminPayoutsPage() {
                               </p>
                               <p className="mt-0.5 font-semibold text-gray-900">
                                 {payout.items?.length || 0} orders ·{" "}
-                                {money(payout.grossEarningsAmount)}
+                                {money(
+                                  payout.grossEarningsAmount,
+                                  payout.currency,
+                                )}
                               </p>
                             </div>
                             {Number(payout.adjustmentAmount) > 0 && (
@@ -601,7 +617,11 @@ export default function AdminPayoutsPage() {
                                   Adjustments recovered
                                 </p>
                                 <p className="mt-0.5 font-semibold text-amber-800">
-                                  −{money(payout.adjustmentAmount)}
+                                  −
+                                  {money(
+                                    payout.adjustmentAmount,
+                                    payout.currency,
+                                  )}
                                 </p>
                               </div>
                             )}
@@ -609,7 +629,7 @@ export default function AdminPayoutsPage() {
                         </div>
                         <div className="flex flex-col items-start gap-3 lg:items-end">
                           <p className="text-2xl font-bold tracking-[-0.02em] text-gray-950">
-                            {money(payout.amount)}
+                            {money(payout.amount, payout.currency)}
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {payout.status === "REQUESTED" && (
@@ -707,7 +727,10 @@ export default function AdminPayoutsPage() {
                           "The provider requested an admin review after completing this order."}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                        <span>Provider due {money(review.providerAmount)}</span>
+                        <span>
+                          Provider due{" "}
+                          {money(review.providerAmount, review.order.currency)}
+                        </span>
                         <span>
                           Requested{" "}
                           {review.releaseReviewRequestedAt
@@ -820,7 +843,7 @@ export default function AdminPayoutsPage() {
                     </div>
                     <div className="flex flex-col items-start gap-3 lg:items-end">
                       <p className="text-xl font-bold text-gray-950">
-                        {money(refund.amount)}
+                        {money(refund.amount, refund.currency)}
                       </p>
                       <p className="text-xs text-gray-500">
                         {new Date(refund.createdAt).toLocaleString("en-GH")}
@@ -899,14 +922,14 @@ export default function AdminPayoutsPage() {
                       {item.order.provider.displayName ||
                         item.order.provider.email}
                       {item.balanceAdjustment
-                        ? ` · Future balance adjustment ${money(item.balanceAdjustment.amount)}`
+                        ? ` · Future balance adjustment ${money(item.balanceAdjustment.amount, item.currency)}`
                         : " · Unpaid earnings are held"}
                     </p>
                   </div>
                   <div className="text-left lg:text-right">
                     <p className="text-xs text-gray-500">Disputed amount</p>
                     <p className="mt-1 text-lg font-bold text-gray-950">
-                      {money(item.refundAmount)}
+                      {money(item.refundAmount, item.currency)}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       {new Date(item.createdAt).toLocaleDateString("en-GH")}
@@ -989,11 +1012,11 @@ export default function AdminPayoutsPage() {
               {action?.kind === "otp"
                 ? "Paystack requires the one-time code sent to the business transfer approver."
                 : action?.kind === "retry-refund"
-                  ? `Paystack needs the customer's receiving account before it can retry this exact ${money(action.refund?.amount)} refund.`
+                  ? `Paystack needs the customer's receiving account before it can retry this exact ${money(action.refund?.amount, action.refund?.currency)} refund.`
                   : action?.kind === "reattempt-refund"
-                    ? `This resubmits the failed ${money(action.refund?.amount)} refund for the additional charge. It does not change the order balance or provider earnings.`
+                    ? `This resubmits the failed ${money(action.refund?.amount, action.refund?.currency)} refund for the additional charge. It does not change the order balance or provider earnings.`
                     : action?.kind === "approve-payout"
-                      ? `This sends ${money(action.payout?.amount)} to ${action.payout?.institutionName} •••• ${action.payout?.accountNumberLast4}. The transfer cannot be recalled from Pavodah after Paystack accepts it.`
+                      ? `This sends ${money(action.payout?.amount, action.payout?.currency)} to ${action.payout?.institutionName} •••• ${action.payout?.accountNumberLast4}. The transfer cannot be recalled from Pavodah after Paystack accepts it.`
                       : action?.kind === "reject-payout"
                         ? "The reserved order earnings will return to the provider’s eligible balance."
                         : action?.approve

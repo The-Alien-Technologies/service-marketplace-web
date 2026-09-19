@@ -191,9 +191,7 @@ export default function QuoteDetailPage({
 
   if (!quote) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        {t("notFound")}
-      </div>
+      <div className="text-center py-16 text-gray-500">{t("notFound")}</div>
     );
   }
 
@@ -208,7 +206,9 @@ export default function QuoteDetailPage({
     <div className="space-y-8 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("providerTitle")}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {t("providerTitle")}
+        </h1>
         <p className="text-gray-500 mt-1">{t("providerSubtitle")}</p>
       </div>
 
@@ -264,7 +264,9 @@ export default function QuoteDetailPage({
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-gray-900 mb-1">{t("budget")}</h3>
+              <h3 className="text-sm font-bold text-gray-900 mb-1">
+                {t("budget")}
+              </h3>
               <p className="text-gray-600">
                 {quote.currency} {format.number(Number(quote.budget))}
               </p>
@@ -424,22 +426,30 @@ export default function QuoteDetailPage({
                       <SelectValue placeholder={t("deliveryTime")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1-3 Days">{marketplace("oneToThreeDays")}</SelectItem>
-                      <SelectItem value="3-5 Days">{marketplace("threeToFiveDays")}</SelectItem>
-                      <SelectItem value="1-2 Weeks">{marketplace("oneToTwoWeeks")}</SelectItem>
-                      <SelectItem value="1 Month+">{marketplace("oneMonthPlus")}</SelectItem>
+                      <SelectItem value="1-3 Days">
+                        {marketplace("oneToThreeDays")}
+                      </SelectItem>
+                      <SelectItem value="3-5 Days">
+                        {marketplace("threeToFiveDays")}
+                      </SelectItem>
+                      <SelectItem value="1-2 Weeks">
+                        {marketplace("oneToTwoWeeks")}
+                      </SelectItem>
+                      <SelectItem value="1 Month+">
+                        {marketplace("oneMonthPlus")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-700">
-                    {t("budgetGhs")}
+                    {t("budget")}
                   </label>
                   <div className="relative">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 border-r border-gray-200 pr-2 h-full py-2">
                       <span className="text-xs text-gray-600 font-medium">
-                        GHS
+                        {quote.currency}
                       </span>
                     </div>
                     <Input
@@ -481,7 +491,9 @@ export default function QuoteDetailPage({
 
           {isDeclined && (
             <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h3 className="font-bold text-gray-900 mb-4">{t("declineReason")}</h3>
+              <h3 className="font-bold text-gray-900 mb-4">
+                {t("declineReason")}
+              </h3>
               <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
                 {quote.declineReason || t("noReason")}
               </div>
@@ -517,7 +529,13 @@ export default function QuoteDetailPage({
           </DialogHeader>
 
           <div className="space-y-3 py-4">
-            {[t("tooBusy"), t("outsideArea"), t("budgetLow"), t("expertiseMismatch"), t("other")].map((reason) => (
+            {[
+              t("tooBusy"),
+              t("outsideArea"),
+              t("budgetLow"),
+              t("expertiseMismatch"),
+              t("other"),
+            ].map((reason) => (
               <label
                 key={reason}
                 className="flex items-center gap-3 cursor-pointer group"

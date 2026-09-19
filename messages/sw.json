@@ -91,6 +91,7 @@
     "contactSupport": "Wasiliana na msaada",
     "supportHistory": "Historia ya msaada",
     "dashboard": "Dashibodi",
+    "myDashboard": "Dashibodi yangu",
     "messages": "Ujumbe",
     "orders": "Maagizo",
     "myOrders": "Maagizo yangu",
@@ -278,7 +279,6 @@
     "getStarted": "Anza",
     "finishSetup": "Hebu tukamilishe usanidi wa akaunti yako",
     "basicProfile": "Maelezo ya msingi ya wasifu",
-    "fullName": "Jina kamili",
     "basicProfileBody": "Maelezo machache ya kubinafsisha matumizi yako na kujenga uaminifu.",
     "avatarPreview": "Onyesho la picha ya wasifu",
     "removePicture": "Ondoa picha ya wasifu",
@@ -479,8 +479,8 @@
     "goodService": "Huduma nzuri (3.5+)",
     "allRatings": "Zote",
     "selectedCount": "{count} zimechaguliwa",
-    "ratingHint": "Chagua viwango vya ukadiriaji unavyotaka kuona."
-    ,"categoryLoadFailed": "Hatukuweza kupakia maelezo ya aina.",
+    "ratingHint": "Chagua viwango vya ukadiriaji unavyotaka kuona.",
+    "categoryLoadFailed": "Hatukuweza kupakia maelezo ya aina.",
     "servicesLoadFailed": "Hatukuweza kupakia huduma.",
     "noServicesCategory": "Hakuna huduma zilizopatikana katika aina hii.",
     "youMayLike": "Unaweza pia kupenda",
@@ -492,8 +492,8 @@
     "uncategorized": "Bila aina",
     "anonymous": "Asiyejulikana",
     "serviceProviderTitle": "Mtoa huduma",
-    "popularService": "Huduma maarufu"
-    ,"overview": "Muhtasari",
+    "popularService": "Huduma maarufu",
+    "overview": "Muhtasari",
     "showLess": "Onyesha kidogo",
     "readMore": "Soma zaidi",
     "catalogue": "Katalogi",
@@ -506,8 +506,8 @@
     "choosePlan": "Chagua mpango wako",
     "flexiblePricing": "Bei zinazobadilika kulingana na mahitaji yako.",
     "popular": "Maarufu",
-    "contactMe": "Wasiliana nami"
-    ,"online": "Mtandaoni",
+    "contactMe": "Wasiliana nami",
+    "online": "Mtandaoni",
     "connectPrompt": "Ungependa kuwasiliana vipi?",
     "getQuote": "Pata bei",
     "startChat": "Anza gumzo",
@@ -553,6 +553,36 @@
     "refunded": "Imerejeshewa fedha",
     "disputed": "Ina mgogoro",
     "awaiting": "Inasubiri",
+    "all": "Yote",
+    "spending": "Matumizi",
+    "active": "Yanayoendelea",
+    "dashboardOrderScope": "Inaonyesha maagizo yaliyolipwa na kurejeshewa kwa {market}, kulingana na jumla za dashibodi.",
+    "dashboardCompletedScope": "Inaonyesha oda zote zilizokamilika katika {market}, pamoja na zilizorejeshewa fedha au kusasishwa baadaye.",
+    "dashboardGlobalOrderScope": "Inaonyesha oda zilizolipwa na kurejeshewa fedha katika masoko yote, kulingana na jumla ya dashibodi.",
+    "dashboardGlobalActiveScope": "Inaonyesha oda hai zilizolipwa katika masoko yote, kulingana na jumla ya dashibodi.",
+    "dashboardGlobalCompletedScope": "Inaonyesha oda zote zilizokamilika katika masoko yote, pamoja na zilizorejeshewa fedha au kusasishwa baadaye.",
+    "dashboardEmptyTitle": "Bado hakuna oda zinazolingana",
+    "dashboardEmptyBody": "Jumla hii ya dashibodi kwa sasa ni sifuri katika {market}. Oda mpya zinazolingana zitaonekana hapa.",
+    "dashboardGlobalEmptyBody": "Jumla hii ya akaunti kwa sasa ni sifuri. Oda mpya zinazolingana kutoka soko lolote zitaonekana hapa.",
+    "backToDashboard": "Rudi kwenye dashibodi",
+    "browseServices": "Vinjari huduma",
+    "clearDashboardScope": "Onyesha maagizo yote",
+    "selectedMarket": "soko lililochaguliwa",
+    "allMarkets": "masoko yote",
+    "dashboardAdminOrdersScope": "Inaonyesha oda za dashibodi kwa {market}.",
+    "dashboardAdminActiveScope": "Inaonyesha oda hai za dashibodi kwa {market}.",
+    "dashboardAdminRevenueScope": "Inaonyesha miamala ya mapato kwa {market}.",
+    "dashboardProviderOrdersScope": "Inaonyesha maagizo yaliyolipwa na kurejeshewa fedha kwa {market}.",
+    "dashboardProviderActiveScope": "Inaonyesha maagizo hai yaliyolipwa kwa {market}, yanayolingana na jumla ya dashibodi.",
+    "dashboardProviderCompletedScope": "Inaonyesha maagizo yote yaliyokamilishwa katika {market}, pamoja na yaliyorejeshewa fedha au kubadilishwa baadaye.",
+    "dashboardProviderMonthScope": "Inaonyesha maagizo yaliyolipwa yaliyowekwa katika {market} wakati wa {month}.",
+    "grossPaid": "Jumla iliyolipwa",
+    "processedRefunds": "Marejesho yaliyokamilika",
+    "netSpend": "Matumizi halisi",
+    "paginationLabel": "Kurasa za oda",
+    "showingOrders": "Inaonyesha oda {start}–{end} kati ya {total}",
+    "previousPage": "Iliyotangulia",
+    "nextPage": "Inayofuata",
     "declined": "Imekataliwa",
     "viewProfile": "Tazama wasifu",
     "orderId": "Nambari ya agizo: #{id}",
@@ -569,8 +599,8 @@
     "notFound": "Agizo halijapatikana.",
     "stagePlaced": "Agizo limewekwa",
     "stageProgress": "Inaendelea",
-    "stageDelivered": "Imewasilishwa"
-    ,"myOrders": "Maagizo yangu",
+    "stageDelivered": "Imewasilishwa",
+    "myOrders": "Maagizo yangu",
     "providerSubtitle": "Fuatilia maagizo yako ili utoe matokeo bora.",
     "clientSubtitle": "Fuatilia nafasi ulizoweka na uhakikishe kila huduma inaenda kwa ratiba.",
     "acceptOrder": "Kubali agizo",
@@ -587,10 +617,17 @@
     "adminTitle": "Maagizo na miamala",
     "adminSubtitle": "Fuatilia maagizo na malipo, na udhibiti miamala ya huduma.",
     "transactions": "Miamala",
+    "revenueLedger": "Daftari la mapato",
+    "orderIdHeader": "Namba ya oda",
+    "serviceHeader": "Huduma",
+    "commission": "Kamisheni",
+    "netRevenue": "Mapato halisi",
+    "actionHeader": "Hatua",
+    "viewOrder": "Tazama oda",
     "filters": "Vichujio",
     "exportData": "Hamisha data",
-    "noData": "Hakuna data inayopatikana."
-    ,"orderAcceptedSuccessfully": "Agizo limekubaliwa",
+    "noData": "Hakuna data inayopatikana.",
+    "orderAcceptedSuccessfully": "Agizo limekubaliwa",
     "cancelConfirm": "Ghairi agizo #{number}?",
     "cancelledSuccess": "Agizo limeghairiwa",
     "cancelFailed": "Hatukuweza kughairi agizo.",
@@ -652,6 +689,7 @@
     "savedRetry": "Agizo lako limehifadhiwa, kwa hivyo ni salama kujaribu tena.",
     "opening": "Inafungua malipo salama…",
     "viewStatus": "Tazama hali ya agizo",
+    "signInToPay": "Ingia ili ulipe {amount}",
     "pay": "Lipa {amount}",
     "returnService": "Rudi kwenye huduma",
     "paymentPrivacy": "Maelezo ya malipo huwekwa kwenye Paystack na hayahifadhiwi kamwe na Pavodah.",
@@ -721,8 +759,8 @@
     "replyPlaceholder": "Andika ujumbe wako hapa…",
     "proposedBudget": "Bajeti iliyopendekezwa",
     "offerAccepted": "Ofa imekubaliwa",
-    "offerExpired": "Kadirio limeisha muda"
-    ,"notFound": "Ombi la bei halijapatikana.",
+    "offerExpired": "Kadirio limeisha muda",
+    "notFound": "Ombi la bei halijapatikana.",
     "requestDescription": "Maelezo ya mradi",
     "attachments": "Viambatisho",
     "preview": "Hakiki",
@@ -741,8 +779,8 @@
     "expertiseMismatch": "Hailingani na utaalamu wangu",
     "other": "Nyingine",
     "messageClientLabel": "Ujumbe kwa mteja",
-    "submitDecline": "Tuma na ukatae"
-    ,"detailsSubtitle": "Kagua ombi lako la bei na ujibu ofa za watoa huduma.",
+    "submitDecline": "Tuma na ukatae",
+    "detailsSubtitle": "Kagua ombi lako la bei na ujibu ofa za watoa huduma.",
     "quoteNotFound": "Kadirio halijapatikana.",
     "yourBudget": "Bajeti yako",
     "yourAttachments": "Viambatisho vyako",
@@ -772,8 +810,8 @@
     "issueQuality": "Tatizo la ubora",
     "issuePayment": "Tatizo la malipo",
     "issueCommunication": "Tatizo la mawasiliano",
-    "issueOther": "Tatizo jingine"
-    ,"adminSubtitle": "Kagua na utatue migogoro kati ya wateja na watoa huduma.",
+    "issueOther": "Tatizo jingine",
+    "adminSubtitle": "Kagua na utatue migogoro kati ya wateja na watoa huduma.",
     "participantSubtitle": "Fuatilia migogoro ya maagizo unayohusika nayo.",
     "detailSubtitle": "Kagua hali na utatuzi wa mgogoro wa agizo hili.",
     "search": "Tafuta kwa agizo, mgogoro au aina ya tatizo…",
@@ -846,6 +884,7 @@
     "deleted": "Huduma imefutwa.",
     "deleteFailed": "Hatukuweza kufuta huduma.",
     "noServices": "Hakuna huduma zilizopatikana. Unda huduma yako ya kwanza ili kuanza!",
+    "noMarketplaceServices": "Hakuna huduma za sokoni zilizopatikana.",
     "resultsRange": "Inaonyesha {start} hadi {end} kati ya matokeo {total}",
     "viewDetails": "Tazama maelezo",
     "deleteTitle": "Futa huduma",
@@ -933,8 +972,11 @@
   "DashboardAnalytics": {
     "title": "Dashibodi",
     "adminSubtitle": "Fuatilia utendaji wa jukwaa moja kwa moja na ufanye vitendo vya haraka.",
+    "adminMarketScope": "Inaonyesha shughuli za {market}",
+    "adminGlobalScope": "Inaonyesha shughuli katika masoko yote",
     "providerSubtitle": "Dhibiti huduma, fuatilia mapato na ukuze biashara yako.",
     "userSubtitle": "Fuatilia maagizo na matumizi yako.",
+    "userScopeSummary": "Oda katika masoko yote · Matumizi yanaonyeshwa kwa {market} ({currency})",
     "loadingAdmin": "Inapakia data ya dashibodi…",
     "loadingProvider": "Inapakia data ya mtoa huduma…",
     "loadingUser": "Inapakia dashibodi yako…",
@@ -966,8 +1008,11 @@
     "recentOrders": "Maagizo ya hivi karibuni",
     "recentRequests": "Maombi ya maagizo ya hivi karibuni",
     "viewAllOrders": "Tazama maagizo yote",
+    "viewOrders": "Tazama maagizo",
     "viewReport": "Tazama ripoti ya kina",
+    "viewDetails": "Tazama maelezo",
     "topCategories": "Kategoria kuu",
+    "topCategoriesDefinition": "Zimepangwa kwa huduma zilizoundwa katika mwezi uliochaguliwa.",
     "noFinancialActivity": "Hakuna shughuli ya fedha iliyorekodiwa kwa {year}.",
     "noEarnings": "Hakuna mapato yaliyorekodiwa kwa {year} au {previous}.",
     "noSpending": "Hakuna matumizi yaliyorekodiwa kwa {year} au {previous}.",
@@ -981,7 +1026,32 @@
     "inYear": "mwaka {year}",
     "bestMonth": "Mwezi bora: {month} ({amount})",
     "highestMonth": "Mwezi wenye matumizi mengi: {month} ({amount})",
-    "noOrders": "Hakuna maagizo"
+    "noOrders": "Hakuna maagizo",
+    "providerLoadFallback": "Data ya dashibodi haikuweza kupakiwa.",
+    "providerNoData": "API ya uchanganuzi haikurudisha data ya dashibodi.",
+    "providerStaleSnapshot": "Imeshindikana kupakia mapato ya {requestedYear} na maagizo ya {requestedMonth}. Inaonyesha nakala ya mwisho iliyofanikiwa ya {snapshotYear} na {snapshotMonth}.",
+    "providerEarningsDetail": "Sehemu ya malipo ya mtoa huduma kabla ya marekebisho ya salio.",
+    "providerEarningsTrendDetail": "{current} zimepatikana mwezi huu; {previous} mwezi uliopita",
+    "providerActiveTrendNew": "maagizo yaliyolipwa mwezi huu",
+    "providerActiveTrendCompare": "maagizo mapya yaliyolipwa dhidi ya mwezi uliopita",
+    "providerActiveTrendDetail": "Maagizo mapya {current} yaliyolipwa mwezi huu; {previous} mwezi uliopita",
+    "providerCompletedTrendNew": "yamekamilishwa mwezi huu",
+    "providerCompletedTrendCompare": "yaliyokamilishwa dhidi ya mwezi uliopita",
+    "providerCompletedTrendDetail": "Maagizo {current} yamekamilishwa mwezi huu; {previous} mwezi uliopita",
+    "providerReviewCount": "{count, plural, =1 {tathmini 1} other {tathmini #}}",
+    "providerChartAria": "Mapato ya kila mwezi ya mtoa huduma ya {year} yakilinganishwa na {previous}",
+    "providerEarningsCaption": "Sehemu ya malipo ya mtoa huduma ya {year} na {previous}, kabla ya marekebisho ya salio",
+    "providerEarningsExplanation": "Mapato yanaonyesha sehemu yako ya malipo kabla ya marekebisho ya salio. Angalia Mapato na malipo ili kuona salio linaloweza kutolewa.",
+    "providerOrderTrendTitle": "Maagizo {current} katika {currentMonth}; {previous} mwezi uliopita",
+    "vsPreviousMonth": "dhidi ya mwezi uliopita",
+    "paidOrdersPlacedIn": "Maagizo yaliyolipwa yaliyowekwa katika {month}",
+    "providerOrderSummaryAria": "Muhtasari wa hali ya maagizo yaliyolipwa wa {month}: jumla {total}",
+    "statusCompleted": "Yamekamilika",
+    "statusPending": "Yanasubiri",
+    "statusAwaiting": "Yanasubiri",
+    "statusInProgress": "Yanaendelea",
+    "statusDeclined": "Yamekataliwa",
+    "statusRefunded": "Yamerejeshewa fedha"
   },
   "Earnings": {
     "title": "Mapato na malipo",
@@ -1023,7 +1093,9 @@
     "sendCode": "Tuma msimbo",
     "resend": "Tuma tena",
     "codeSent": "Msimbo wa uthibitishaji umetumwa.",
-    "destinationVerified": "Mahali pa malipo pamethibitishwa."
+    "destinationVerified": "Mahali pa malipo pamethibitishwa.",
+    "dashboardScope": "Inaonyesha mapato na malipo ya {market}, yanayolingana na jumla ya dashibodi.",
+    "clearDashboardScope": "Onyesha mapato yote"
   },
   "AdminOps": {
     "categoryTitle": "Usimamizi wa kategoria",
@@ -1033,6 +1105,10 @@
     "featured": "Zilizoangaziwa",
     "usersTitle": "Watumiaji",
     "usersSubtitle": "Dhibiti akaunti za wateja, watoa huduma na wasimamizi.",
+    "dashboardUsersScope": "Inaonyesha watumiaji walio katika jumla ya dashibodi kwa {market}.",
+    "dashboardActiveProvidersScope": "Inaonyesha watoa huduma hai walio katika jumla ya dashibodi kwa {market}.",
+    "clearDashboardScope": "Ondoa kichujio cha dashibodi",
+    "allMarkets": "masoko yote",
     "searchUsers": "Tafuta kwa jina au barua pepe…",
     "usersLoadFailed": "Hatukuweza kupakia watumiaji.",
     "userDeleted": "Mtumiaji amefutwa.",
@@ -1058,8 +1134,8 @@
     "approveProvider": "Idhinisha mtoa huduma",
     "requiredChanges": "Mabadiliko yanayohitajika",
     "changesPlaceholder": "Mfano: pakia kitambulisho kilicho wazi na ambacho muda wake haujaisha.",
-    "sendRequest": "Tuma ombi"
-    ,"filters": "Vichujio",
+    "sendRequest": "Tuma ombi",
+    "filters": "Vichujio",
     "noUsers": "Hakuna watumiaji waliopatikana",
     "deleteUser": "Futa mtumiaji",
     "deleteUserBody": "Una uhakika unataka kufuta mtumiaji huyu? Hatua hii haiwezi kutenduliwa.",
@@ -1068,8 +1144,8 @@
     "suspendBody": "Mtumiaji huyu atasimamishwa na hataweza kufikia jukwaa.",
     "activateBody": "Mtumiaji huyu atawezeshwa tena na anaweza kufikia jukwaa.",
     "suspend": "Simamisha",
-    "activate": "Washa"
-    ,"categories": "Kategoria",
+    "activate": "Washa",
+    "categories": "Kategoria",
     "addFeatured": "Ongeza kipengele kilichoangaziwa",
     "editCategory": "Hariri kategoria",
     "addCategoryTitle": "Ongeza kategoria mpya",
@@ -1081,15 +1157,15 @@
     "parentCategory": "Kategoria kuu",
     "selectOption": "Chagua chaguo",
     "categoryRequired": "Jina la kategoria linahitajika.",
-    "categoryDeleted": "Kategoria imefutwa!"
-    ,"payoutRequests": "Maombi ya malipo",
+    "categoryDeleted": "Kategoria imefutwa!",
+    "payoutRequests": "Maombi ya malipo",
     "releaseReviews": "Ukaguzi wa kuachilia",
     "refunds": "Marejesho",
     "paystackDisputes": "Migogoro ya Paystack",
     "reconcileTransfers": "Linganisha uhamisho",
     "reconcileRefunds": "Linganisha marejesho",
-    "refreshQueues": "Onyesha foleni upya"
-    ,"pendingReview": "Inasubiri ukaguzi",
+    "refreshQueues": "Onyesha foleni upya",
+    "pendingReview": "Inasubiri ukaguzi",
     "changesRequested": "Mabadiliko yameombwa",
     "approved": "Imeidhinishwa"
   },
@@ -1123,11 +1199,188 @@
     "earningsPayouts": "Mapato na malipo",
     "customerChat": "Mazungumzo na mteja",
     "quoteRequest": "Ombi la kadirio",
+    "marketsPayments": "Masoko na malipo",
+    "markets": "Masoko",
+    "countryAdministrators": "Wasimamizi wa nchi",
+    "serviceMarkets": "Masoko ya huduma",
+    "marketApplications": "Maombi ya masoko",
+    "superAdmin": "Msimamizi mkuu",
     "expand": "Panua utepe wa pembeni",
     "collapse": "Punguza utepe wa pembeni",
     "logout": "Toka",
     "logoutTitle": "Una uhakika unataka kutoka?",
     "logoutBody": "Utatolewa kwenye akaunti yako na utahitaji kuingia tena ili kuendelea."
+  },
+  "Markets": {
+    "countryOperations": "Uendeshaji wa nchi",
+    "somethingWentWrong": "Hitilafu imetokea",
+    "superAdminTitle": "Masoko na akaunti za malipo",
+    "superAdminBody": "Dhibiti upatikanaji kwa nchi na ubadilishe funguo za Paystack za kila soko. Thamani za siri husimbwa zinapohifadhiwa na hazirudishwi kamwe na API.",
+    "assignAdminTitle": "Teua msimamizi wa nchi",
+    "assignAdminBody": "Hatua hii hubadilisha akaunti iliyochaguliwa kuwa ya msimamizi na kuweka ufikiaji wake wa uendeshaji katika nchi moja pekee.",
+    "userId": "Kitambulisho cha mtumiaji",
+    "userIdAria": "Kitambulisho cha mtumiaji kwa msimamizi wa nchi",
+    "adminCountryAria": "Nchi ya msimamizi",
+    "chooseCountry": "Chagua nchi",
+    "assign": "Teua",
+    "assignValidation": "Weka kitambulisho cha mtumiaji na uchague nchi",
+    "adminAssigned": "Msimamizi wa nchi ameteuliwa",
+    "marketUpdated": "{market} imesasishwa",
+    "marketCounts": "{services, plural, one {huduma #} other {huduma #}} · {orders, plural, one {agizo #} other {maagizo #}} · {providers, plural, one {mtoa huduma #} other {watoa huduma #}}",
+    "marketStatus": {
+      "ACTIVE": "Linatumika",
+      "PAUSED": "Limesitishwa",
+      "INACTIVE": "Halitumiki"
+    },
+    "checkout": "Malipo",
+    "checkoutHelp": "Kubali malipo mapya ya wateja",
+    "providerOnboarding": "Usajili wa watoa huduma",
+    "providerOnboardingHelp": "Kubali maombi ya soko",
+    "publishing": "Uchapishaji",
+    "publishingHelp": "Ruhusu uchapishaji wa huduma mpya",
+    "paystackCredentials": "Vitambulisho vya Paystack",
+    "paystackAccount": "Akaunti ya Paystack",
+    "integrationSummary": "{status} · tumia ufunguo wa mazingira haya",
+    "integrationStatus": {
+      "ACTIVE": "Inatumika",
+      "PAUSED": "Imesitishwa",
+      "RETIRED": "Imeondolewa"
+    },
+    "configured": "Imesanidiwa",
+    "needsKey": "Inahitaji ufunguo",
+    "paystackSecretKey": "Ufunguo wa siri wa Paystack",
+    "paystackSecretKeyAria": "Ufunguo wa siri wa Paystack wa {market}",
+    "secretRequired": "Weka ufunguo mpya wa siri wa Paystack",
+    "stage": "Andaa",
+    "credentialStaged": "Kitambulisho kimethibitishwa na kuandaliwa. Kiwashe ukiwa tayari.",
+    "credentialActivated": "Kitambulisho kimewashwa. Watoa huduma lazima wathibitishe tena mahali pa kupokea malipo.",
+    "credentialRevoked": "Kitambulisho kimebatilishwa",
+    "credentialStatus": {
+      "STAGED": "Kimeandaliwa",
+      "ACTIVE": "Kinatumika",
+      "RETIRING": "Kinaondolewa",
+      "REVOKED": "Kimebatilishwa"
+    },
+    "activate": "Washa",
+    "revoke": "Batilisha",
+    "webhookCopied": "URL ya webhook imenakiliwa",
+    "copyWebhookUrl": "Nakili URL ya webhook",
+    "providerTitle": "Masoko yangu ya huduma",
+    "providerBody": "Omba kufanya kazi katika nchi zaidi. Idhini na maelezo ya malipo husimamiwa kando kwa kila soko.",
+    "applicationSent": "Ombi limetumwa kwa {market}",
+    "membershipStatus": {
+      "PENDING": "Linasubiri",
+      "ACTIVE": "Linatumika",
+      "REJECTED": "Limekataliwa",
+      "SUSPENDED": "Limesitishwa",
+      "NOT_JOINED": "Hujajiunga"
+    },
+    "servicesAndPayouts": "Huduma na malipo kwa {currency}",
+    "applyToOperate": "Omba kufanya kazi",
+    "adminTitle": "Maombi ya watoa huduma kwa masoko",
+    "adminBody": "Kagua watoa huduma wanaoomba ruhusa ya kuchapisha na kupokea malipo katika nchi uliyopangiwa.",
+    "rejectionReasonRequired": "Weka sababu ya kukataa",
+    "providerApproved": "Mtoa huduma ameidhinishwa",
+    "applicationRejected": "Ombi limekataliwa",
+    "noCountryAssigned": "Hakuna nchi iliyopangiwa akaunti hii ya msimamizi.",
+    "queueClear": "Foleni iko wazi",
+    "noPendingApplications": "Hakuna maombi ya soko yanayosubiri.",
+    "approve": "Idhinisha",
+    "rejectionReasonPlaceholder": "Sababu inahitajika ili kukataa",
+    "rejectionReasonLabel": "Sababu ya kukataa ombi la {name}",
+    "reject": "Kataa",
+    "searchMarketApplications": "Tafuta kwa jina au barua pepe ya mtoa huduma",
+    "sortApplications": "Panga maombi ya soko",
+    "oldestFirst": "Ya zamani kwanza",
+    "newestFirst": "Mapya kwanza",
+    "loadingApplications": "Inapakia maombi ya soko…",
+    "applicationsCount": "{count, plural, =0 {Hakuna maombi} one {Ombi #} other {Maombi #}}",
+    "applicationsLoadFailed": "Maombi ya soko hayakuweza kupakiwa",
+    "applicationsLoadFailedBody": "Angalia muunganisho wako kisha ujaribu tena.",
+    "noMatchingApplications": "Hakuna maombi yanayolingana",
+    "noMatchingApplicationsBody": "Jaribu jina lingine la mtoa huduma au anwani nyingine ya barua pepe.",
+    "unknownProvider": "Mtoa huduma asiyejulikana",
+    "submittedOn": "Lilitumwa {date}",
+    "verifiedProvider": "Mtoa huduma amethibitishwa",
+    "verificationRequired": "Uthibitishaji unahitajika",
+    "viewProviderApplication": "Angalia ombi la mtoa huduma",
+    "verifyBeforeApproval": "Idhinisha kwanza ombi kuu la mtoa huduma kabla ya kumpa ruhusa katika soko hili.",
+    "applicationsPagination": "Kurasa za maombi ya soko",
+    "pageOf": "Ukurasa wa {page} kati ya {totalPages}",
+    "saveMarketFailed": "Imeshindikana kuhifadhi soko lako",
+    "chooseMarketplaceCountry": "Chagua nchi ya soko",
+    "global": "Kimataifa",
+    "marketplace": "Soko",
+    "selectorBody": "Bei na malipo hutumia sarafu iliyoorodheshwa kwa kila huduma.",
+    "checkoutPaused": "Malipo yamesitishwa",
+    "globalBrowse": "Vinjari huduma zinazopatikana kimataifa",
+    "globalAdministration": "Usimamizi wa kimataifa",
+    "assignedMarket": "Soko ulilopangiwa",
+    "marketsTitle": "Masoko",
+    "marketsBody": "Angalia kila nchi kwa muhtasari, tambua mapengo ya uendeshaji, na ufungue soko kufanya mabadiliko ya kina.",
+    "manageAdministrators": "Dhibiti wasimamizi",
+    "searchMarkets": "Tafuta masoko",
+    "filterByStatus": "Chuja kwa hali",
+    "allStatuses": "Hali zote",
+    "noMarketsFound": "Hakuna masoko yaliyopatikana",
+    "adjustMarketFilters": "Badilisha utafutaji au kichujio cha hali.",
+    "market": "Soko",
+    "status": "Hali",
+    "administrators": "Wasimamizi",
+    "providers": "Watoa huduma",
+    "orders": "Maagizo",
+    "operations": "Uendeshaji",
+    "payment": "Malipo",
+    "manage": "Dhibiti",
+    "operationsEnabled": "{count} kati ya 3 zimewashwa",
+    "marketNotFound": "Soko halijapatikana",
+    "backToMarkets": "Rudi kwenye masoko",
+    "marketStatusLabel": "Hali ya soko",
+    "overview": "Muhtasari",
+    "payments": "Malipo",
+    "marketOverview": "Muhtasari wa soko",
+    "services": "Huduma",
+    "paymentReady": "Malipo yamesanidiwa",
+    "paymentReadyBody": "Kitambulisho hai cha Paystack kinapatikana kwa soko hili.",
+    "paymentNeedsAttention": "Usanidi wa malipo unahitaji kushughulikiwa",
+    "paymentNeedsAttentionBody": "Ongeza na uwashe kitambulisho cha Paystack kabla ya kupokea malipo.",
+    "operationalControls": "Vidhibiti vya uendeshaji",
+    "operationalControlsBody": "Sitisha shughuli moja moja bila kubadilisha hali ya jumla ya soko.",
+    "paymentSecurityBody": "Andaa, thibitisha, na uwashe vitambulisho bila kufichua siri zilizohifadhiwa.",
+    "noPaymentIntegration": "Hakuna muunganisho wa malipo uliosanidiwa kwa soko hili.",
+    "stageNewKey": "Andaa ufunguo mpya",
+    "marketAdministrators": "Wasimamizi wa soko",
+    "marketAdministratorsBody": "Watu wanaoruhusiwa kuendesha nchi hii kwa sasa.",
+    "noMarketAdministrators": "Hakuna msimamizi aliyepangiwa",
+    "noMarketAdministratorsBody": "Pangia msimamizi ili soko hili liwe na mwajibikaji wa uendeshaji.",
+    "adminStatus": { "ACTIVE": "Hai", "SUSPENDED": "Imesimamishwa" },
+    "countryAdministratorsTitle": "Wasimamizi wa nchi",
+    "countryAdministratorsBody": "Dhibiti wanaoweza kuendesha kila nchi, hali ya akaunti zao, na soko walilopangiwa.",
+    "addAdministrator": "Ongeza msimamizi",
+    "searchAdministrators": "Tafuta kwa jina au barua pepe",
+    "filterByMarket": "Chuja kwa soko",
+    "allMarkets": "Masoko yote",
+    "noAdministratorsFound": "Hakuna wasimamizi waliopatikana",
+    "noAdministratorsFoundBody": "Badilisha vichujio au ongeza msimamizi wa nchi.",
+    "administratorUpdated": "Msimamizi wa nchi amesasishwa",
+    "administratorAccessRemoved": "Ruhusa ya msimamizi imeondolewa",
+    "adminMarketAria": "Soko alilopangiwa {name}",
+    "accountStatus": "Hali ya akaunti",
+    "adminStatusAria": "Hali ya akaunti ya {name}",
+    "lastActive": "Alitumika mwisho",
+    "removeAccess": "Ondoa ruhusa",
+    "addAdministratorBody": "Tafuta akaunti hai ya mteja na uipangie nchi moja.",
+    "findUser": "Tafuta mtumiaji",
+    "searchUserPlaceholder": "Tafuta kwa jina au barua pepe",
+    "assignAdministrator": "Pangia msimamizi",
+    "removeAdministratorTitle": "Ondoa ruhusa ya msimamizi?",
+    "removeAdministratorBody": "{name} hataweza tena kuendesha nchi hii.",
+    "removeAdministratorNote": "Akaunti ya mtumiaji itabaki hai. Ruhusa za usimamizi na upangaji wa nchi pekee ndivyo vitaondolewa.",
+    "cancel": "Ghairi",
+    "loadFailed": "Hatukuweza kupakia taarifa hizi.",
+    "partialLoadFailed": "Baadhi ya taarifa za soko hazikuweza kupakiwa.",
+    "tryAgain": "Jaribu tena",
+    "administrator": "Msimamizi"
   },
   "Errors": {
     "title": "Hitilafu imetokea",
@@ -1148,11 +1401,11 @@
     "legal": "Kisheria",
     "trustSafety": "Uaminifu na usalama",
     "footerDescription": "Pata huduma zinazoaminika, dhibiti kazi na uhifadhi taarifa zote muhimu mahali pamoja.",
-    "noCategories": "Hakuna kategoria zinazopatikana"
-    ,"policies": "Sera za Pavodah",
+    "noCategories": "Hakuna kategoria zinazopatikana",
+    "policies": "Sera za Pavodah",
     "contents": "Yaliyomo",
-    "policyContents": "Yaliyomo kwenye sera"
-    ,"privacyDescription": "Jinsi Pavodah inavyokusanya, kutumia, kushiriki na kulinda taarifa binafsi.",
+    "policyContents": "Yaliyomo kwenye sera",
+    "privacyDescription": "Jinsi Pavodah inavyokusanya, kutumia, kushiriki na kulinda taarifa binafsi.",
     "termsDescription": "Masharti yanayotumika wateja, watoa huduma na wasimamizi wanapotumia Pavodah.",
     "trustDescription": "Mwongozo wa usalama wa akaunti, malipo, maagizo, mazungumzo na kuripoti kwenye Pavodah.",
     "helpTitle": "Kituo cha msaada",
@@ -1367,8 +1620,11 @@
     "yourResponse": "Jibu lako",
     "respond": "Jibu maoni",
     "responsePlaceholder": "Andika jibu lako…",
-    "showMore": "Onyesha zaidi"
-    ,"selectRating": "Chagua ukadiriaji.",
+    "showMore": "Onyesha zaidi",
+    "dashboardScope": "Inaonyesha tathmini na jumla ya maagizo yaliyokamilishwa kwa {market}.",
+    "clearDashboardScope": "Onyesha tathmini za masoko yote",
+    "selectedMarket": "soko lililochaguliwa",
+    "selectRating": "Chagua ukadiriaji.",
     "submitFailed": "Hatukuweza kutuma maoni yako.",
     "alreadyReviewed": "Tayari imetolewa maoni",
     "alreadyReviewedBody": "Tayari umetuma maoni kuhusu oda hii.",
@@ -1419,29 +1675,165 @@
     "title": "Sera ya faragha",
     "summary": "Sera hii inaeleza taarifa ambazo Pavodah hutumia kuendesha soko, kukamilisha miamala, kuwasiliana na watumiaji na kulinda huduma.",
     "sections": [
-      {"id":"information-collected","title":"Taarifa tunazokusanya","paragraphs":["Pavodah hukusanya taarifa unazotoa, taarifa zinazotokana na shughuli za soko na taarifa za kiufundi zinazohitajika kuendesha na kulinda huduma."],"bullets":["Maelezo ya akaunti na wasifu kama jina, barua pepe, simu, jukumu, picha ya wasifu, eneo na taarifa za mtoa huduma.","Orodha za huduma, maombi ya makadirio, maagizo, maelezo ya uwasilishaji, maoni, migogoro, ujumbe, mazungumzo ya msaada na faili unazotuma.","Rejea na hali za malipo, marejesho, makazi na malipo yanayotolewa. Watoa huduma wa malipo hushughulikia taarifa nyeti kwa huduma zao; Pavodah hupokea rekodi zinazohitajika kuthibitisha na kusimamia miamala.","Taarifa za kifaa, kivinjari, mtandao, uthibitishaji na matukio ya usalama zinazotumiwa kudumisha vipindi, kutambua matatizo na kuzuia matumizi mabaya."]},
-      {"id":"how-used","title":"Jinsi taarifa zinavyotumiwa","bullets":["Kuunda na kulinda akaunti, kukamilisha usajili na kutoa vipengele vinavyofaa jukumu.","Kuchapisha huduma, kuunganisha wateja na watoa huduma, kushughulikia makadirio na maagizo na kuhifadhi rekodi za miamala.","Kuthibitisha malipo, kusimamia marejesho, makazi na malipo na kuchunguza tofauti au udanganyifu.","Kuwasilisha ujumbe, arifa za miamala, msaada, usimamizi wa migogoro na majibu ya usalama.","Kufuatilia uaminifu, kutambua hitilafu, kutekeleza sera, kutii sheria na kuboresha huduma."]},
-      {"id":"sharing","title":"Wakati taarifa zinashirikiwa","paragraphs":["Pavodah hushiriki taarifa pale tu inapohitajika kutoa soko, kutekeleza muamala ulioombwa, kulinda huduma au kutimiza wajibu wa kisheria."],"bullets":["Wateja na watoa huduma hupokea taarifa za wasifu, agizo, kadirio, uwasilishaji, maoni na mazungumzo zinazohitajika kwa uhusiano wao wa sokoni.","Watoa huduma wa malipo, mawasiliano, hifadhi ya faili, uchanganuzi na miundombinu hupokea taarifa zinazohitajika kutoa huduma kwa Pavodah.","Wasimamizi walioidhinishwa wanaweza kufikia taarifa za msaada, migogoro, malipo, usalama na uendeshaji wa jukwaa.","Taarifa zinaweza kutolewa sheria inapohitaji au inapohitajika kwa busara kulinda haki, usalama, watumiaji au uadilifu wa Pavodah."]},
-      {"id":"notifications","title":"Arifa na mawasiliano","paragraphs":["Pavodah hutuma mawasiliano ya miamala kuhusu usalama wa akaunti, ujumbe, maagizo, malipo, marejesho, migogoro, maoni, msaada, makazi na malipo. Mapendeleo ya programu, barua pepe na SMS yanaweza kudhibitiwa kwenye Wasifu na mipangilio, ingawa baadhi ya mawasiliano ya huduma au usalama yanaweza kubaki muhimu.","Mawasiliano ya masoko, yanapotolewa, hushughulikiwa tofauti na mapendeleo ya arifa za miamala."]},
-      {"id":"retention-security","title":"Uhifadhi na usalama","paragraphs":["Pavodah huhifadhi taarifa kwa muda unaohitajika kutoa huduma, kuhifadhi rekodi za soko na fedha, kutatua migogoro, kulinda watumiaji na kutimiza wajibu wa kisheria. Aina tofauti za rekodi zinaweza kuwa na muda tofauti.","Hatua za kiutawala, kiufundi na kishirika hutumiwa kupunguza ufikiaji, mabadiliko, ufichuzi au upotevu usioidhinishwa. Hakuna huduma ya intaneti inayoweza kuhakikisha usalama kamili, kwa hivyo ripoti mara moja akaunti ikishukiwa kuingiliwa."]},
-      {"id":"choices","title":"Chaguo zako","bullets":["Kagua na usasishe mipangilio ya wasifu na arifa inayopatikana kutoka kwenye akaunti yako.","Tumia mchakato wa kuweka upya au kubadilisha nenosiri wakati taarifa za kuingia zinahitaji kusasishwa.","Wasiliana na msaada kuomba ufikiaji, marekebisho, ufutaji, kizuizi au ombi jingine la faragha. Baadhi ya taarifa zinaweza kuhitajika kuhifadhiwa kwa miamala, usalama, migogoro au uzingatiaji wa sheria."]},
-      {"id":"children","title":"Faragha ya watoto","paragraphs":["Pavodah haikusudiwi watoto wasioweza kukubali kisheria miamala ya soko au masharti haya. Ukiamini mtoto ametoa taarifa binafsi bila idhini inayofaa, wasiliana na msaada ili ikaguliwe."]},
-      {"id":"changes-contact","title":"Mabadiliko na mawasiliano","paragraphs":["Sera hii inaweza kusasishwa vipengele, watoa huduma au wajibu wa kisheria wa Pavodah unapobadilika. Mabadiliko muhimu yatawasilishwa kupitia njia inayofaa inapohitajika.","Maswali na maombi ya faragha yanaweza kutumwa kwa support@pavodah.com."]}
+      {
+        "id": "information-collected",
+        "title": "Taarifa tunazokusanya",
+        "paragraphs": [
+          "Pavodah hukusanya taarifa unazotoa, taarifa zinazotokana na shughuli za soko na taarifa za kiufundi zinazohitajika kuendesha na kulinda huduma."
+        ],
+        "bullets": [
+          "Maelezo ya akaunti na wasifu kama jina, barua pepe, simu, jukumu, picha ya wasifu, eneo na taarifa za mtoa huduma.",
+          "Orodha za huduma, maombi ya makadirio, maagizo, maelezo ya uwasilishaji, maoni, migogoro, ujumbe, mazungumzo ya msaada na faili unazotuma.",
+          "Rejea na hali za malipo, marejesho, makazi na malipo yanayotolewa. Watoa huduma wa malipo hushughulikia taarifa nyeti kwa huduma zao; Pavodah hupokea rekodi zinazohitajika kuthibitisha na kusimamia miamala.",
+          "Taarifa za kifaa, kivinjari, mtandao, uthibitishaji na matukio ya usalama zinazotumiwa kudumisha vipindi, kutambua matatizo na kuzuia matumizi mabaya."
+        ]
+      },
+      {
+        "id": "how-used",
+        "title": "Jinsi taarifa zinavyotumiwa",
+        "bullets": [
+          "Kuunda na kulinda akaunti, kukamilisha usajili na kutoa vipengele vinavyofaa jukumu.",
+          "Kuchapisha huduma, kuunganisha wateja na watoa huduma, kushughulikia makadirio na maagizo na kuhifadhi rekodi za miamala.",
+          "Kuthibitisha malipo, kusimamia marejesho, makazi na malipo na kuchunguza tofauti au udanganyifu.",
+          "Kuwasilisha ujumbe, arifa za miamala, msaada, usimamizi wa migogoro na majibu ya usalama.",
+          "Kufuatilia uaminifu, kutambua hitilafu, kutekeleza sera, kutii sheria na kuboresha huduma."
+        ]
+      },
+      {
+        "id": "sharing",
+        "title": "Wakati taarifa zinashirikiwa",
+        "paragraphs": [
+          "Pavodah hushiriki taarifa pale tu inapohitajika kutoa soko, kutekeleza muamala ulioombwa, kulinda huduma au kutimiza wajibu wa kisheria."
+        ],
+        "bullets": [
+          "Wateja na watoa huduma hupokea taarifa za wasifu, agizo, kadirio, uwasilishaji, maoni na mazungumzo zinazohitajika kwa uhusiano wao wa sokoni.",
+          "Watoa huduma wa malipo, mawasiliano, hifadhi ya faili, uchanganuzi na miundombinu hupokea taarifa zinazohitajika kutoa huduma kwa Pavodah.",
+          "Wasimamizi walioidhinishwa wanaweza kufikia taarifa za msaada, migogoro, malipo, usalama na uendeshaji wa jukwaa.",
+          "Taarifa zinaweza kutolewa sheria inapohitaji au inapohitajika kwa busara kulinda haki, usalama, watumiaji au uadilifu wa Pavodah."
+        ]
+      },
+      {
+        "id": "notifications",
+        "title": "Arifa na mawasiliano",
+        "paragraphs": [
+          "Pavodah hutuma mawasiliano ya miamala kuhusu usalama wa akaunti, ujumbe, maagizo, malipo, marejesho, migogoro, maoni, msaada, makazi na malipo. Mapendeleo ya programu, barua pepe na SMS yanaweza kudhibitiwa kwenye Wasifu na mipangilio, ingawa baadhi ya mawasiliano ya huduma au usalama yanaweza kubaki muhimu.",
+          "Mawasiliano ya masoko, yanapotolewa, hushughulikiwa tofauti na mapendeleo ya arifa za miamala."
+        ]
+      },
+      {
+        "id": "retention-security",
+        "title": "Uhifadhi na usalama",
+        "paragraphs": [
+          "Pavodah huhifadhi taarifa kwa muda unaohitajika kutoa huduma, kuhifadhi rekodi za soko na fedha, kutatua migogoro, kulinda watumiaji na kutimiza wajibu wa kisheria. Aina tofauti za rekodi zinaweza kuwa na muda tofauti.",
+          "Hatua za kiutawala, kiufundi na kishirika hutumiwa kupunguza ufikiaji, mabadiliko, ufichuzi au upotevu usioidhinishwa. Hakuna huduma ya intaneti inayoweza kuhakikisha usalama kamili, kwa hivyo ripoti mara moja akaunti ikishukiwa kuingiliwa."
+        ]
+      },
+      {
+        "id": "choices",
+        "title": "Chaguo zako",
+        "bullets": [
+          "Kagua na usasishe mipangilio ya wasifu na arifa inayopatikana kutoka kwenye akaunti yako.",
+          "Tumia mchakato wa kuweka upya au kubadilisha nenosiri wakati taarifa za kuingia zinahitaji kusasishwa.",
+          "Wasiliana na msaada kuomba ufikiaji, marekebisho, ufutaji, kizuizi au ombi jingine la faragha. Baadhi ya taarifa zinaweza kuhitajika kuhifadhiwa kwa miamala, usalama, migogoro au uzingatiaji wa sheria."
+        ]
+      },
+      {
+        "id": "children",
+        "title": "Faragha ya watoto",
+        "paragraphs": [
+          "Pavodah haikusudiwi watoto wasioweza kukubali kisheria miamala ya soko au masharti haya. Ukiamini mtoto ametoa taarifa binafsi bila idhini inayofaa, wasiliana na msaada ili ikaguliwe."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Mabadiliko na mawasiliano",
+        "paragraphs": [
+          "Sera hii inaweza kusasishwa vipengele, watoa huduma au wajibu wa kisheria wa Pavodah unapobadilika. Mabadiliko muhimu yatawasilishwa kupitia njia inayofaa inapohitajika.",
+          "Maswali na maombi ya faragha yanaweza kutumwa kwa support@pavodah.com."
+        ]
+      }
     ]
   },
   "TermsDocument": {
-    "title":"Masharti ya huduma",
-    "summary":"Masharti haya yanaeleza majukumu yanayoweka kazi, malipo, mawasiliano na usimamizi wa migogoro wazi kwa kila anayetumia Pavodah.",
-    "sections":[
-      {"id":"using-pavodah","title":"Kutumia Pavodah","paragraphs":["Masharti haya yanasimamia ufikiaji na matumizi ya soko la huduma la Pavodah. Kwa kufungua akaunti au kutumia jukwaa, unakubali kufuata Masharti haya na sera zinazohusishwa.","Lazima utoe taarifa sahihi za akaunti, ulinde maelezo ya kuingia na utumie Pavodah kwa shughuli halali za soko pekee. Unawajibika kwa vitendo vya akaunti yako isipokuwa uripoti haraka ufikiaji usioidhinishwa."]},
-      {"id":"marketplace-roles","title":"Majukumu sokoni","paragraphs":["Pavodah hutoa zana zinazosaidia wateja kupata huduma na watoa huduma kuzitoa na kuziwasilisha. Watoa huduma wanawajibika kwa usahihi, uhalali, ubora na uwasilishaji. Wateja wanawajibika kutoa mahitaji sahihi na kukagua kazi kwa wakati.","Agizo, kadirio, ujumbe, maoni au wasifu hauundi ajira, ushirika au uwakala kati ya Pavodah na mtumiaji wa soko."]},
-      {"id":"orders-payments","title":"Maagizo na malipo","paragraphs":["Tumia malipo na mchakato wa agizo wa Pavodah kwa malipo ya soko. Kiasi, sarafu, ada na vitendo vinavyopatikana huonyeshwa kabla au wakati wa malipo na kwenye rekodi ya agizo.","Uthibitishaji wa malipo, marejesho, makazi na malipo yanaweza kutegemea watoa huduma wa malipo na taasisi za fedha. Hali ya kusubiri haithibitishi kuwa fedha zimekamilisha kila hatua."],"bullets":["Usimwombe mtumiaji mwingine ahamishe malipo nje ya Pavodah kwa kazi iliyopangwa kupitia Pavodah.","Usitoe taarifa ya uongo kuhusu hali ya malipo, uwasilishaji, marejesho au malipo yanayotolewa.","Kagua maelezo ya agizo kabla ya kukubali uwasilishaji au kufanya kitendo kingine cha mwisho."]},
-      {"id":"provider-obligations","title":"Wajibu wa watoa huduma","paragraphs":["Watoa huduma lazima waeleze huduma kwa uaminifu, watumie bei na muda wanaoweza kutimiza, wawe na idhini inayohitajika na wawasilishe mabadiliko muhimu kabla ya uwasilishaji.","Hawaruhusiwi kuchapisha huduma za udanganyifu, haramu, zinazokiuka haki, hatari au zilizopigwa marufuku. Pavodah inaweza kukagua, kuweka kikomo au kuondoa huduma hatarishi."]},
-      {"id":"user-content","title":"Ujumbe, maoni na maudhui","paragraphs":["Unabaki kuwajibika kwa taarifa za wasifu, orodha za huduma, faili, ujumbe, maoni na ushahidi wa migogoro unaotuma. Unaruhusu Pavodah kuhifadhi, kuonyesha, kuchakata na kusambaza maudhui hayo inapohitajika kuendesha na kulinda soko.","Maudhui hayapaswi kuwa ya udanganyifu, unyanyasaji, ubaguzi, vitisho haramu, uvamizi wa faragha au ukiukaji wa haki. Maoni lazima yaakisi uzoefu halisi na yasibadilishwe kwa faida."]},
-      {"id":"disputes-refunds","title":"Migogoro na marejesho","paragraphs":["Maagizo yanayostahiki yanaweza kutoa kitendo cha mgogoro ndani ya jukwaa. Kila upande utoe taarifa sahihi na ushirikiane. Pavodah inaweza kuzingatia hali ya agizo, ujumbe, uwasilishaji, malipo na ushahidi uliotumwa.","Upatikanaji na kiasi cha marejesho hutegemea mazingira ya malipo na agizo. Marejesho yanaweza kuhitaji muda zaidi baada ya kurekodiwa kuwa yameanzishwa au kushughulikiwa."]},
-      {"id":"enforcement","title":"Vizuizi na utekelezaji","paragraphs":["Pavodah inaweza kuzuia maudhui, miamala, vipengele au akaunti inapohitajika kuchunguza matumizi mabaya, kutii sheria, kulinda watumiaji, kushughulikia hatari ya usalama au kutekeleza Masharti haya. Taarifa zaidi zinaweza kuombwa kabla ya kurejesha ufikiaji."]},
-      {"id":"availability-liability","title":"Upatikanaji na wajibu","paragraphs":["Pavodah hujitahidi kutoa soko linaloaminika, lakini upatikanaji usiokatizwa au usio na hitilafu haujahakikishwa. Kwa kadiri sheria inavyoruhusu, Pavodah haiwajibiki kwa hasara zisizo za moja kwa moja au vitendo, huduma, maelezo au mipango ya nje ya jukwaa ya mtumiaji.","Hakuna katika Masharti haya kinachoondoa haki au wajibu usioweza kuondolewa kisheria."]},
-      {"id":"changes-contact","title":"Mabadiliko na mawasiliano","paragraphs":["Pavodah inaweza kusasisha Masharti haya huduma, mahitaji ya kisheria au hatari za soko zinapobadilika. Mabadiliko muhimu yatawasilishwa kupitia njia inayofaa kabla ya kuanza kutumika inapohitajika.","Maswali kuhusu Masharti haya yanaweza kutumwa kwa support@pavodah.com."]}
+    "title": "Masharti ya huduma",
+    "summary": "Masharti haya yanaeleza majukumu yanayoweka kazi, malipo, mawasiliano na usimamizi wa migogoro wazi kwa kila anayetumia Pavodah.",
+    "sections": [
+      {
+        "id": "using-pavodah",
+        "title": "Kutumia Pavodah",
+        "paragraphs": [
+          "Masharti haya yanasimamia ufikiaji na matumizi ya soko la huduma la Pavodah. Kwa kufungua akaunti au kutumia jukwaa, unakubali kufuata Masharti haya na sera zinazohusishwa.",
+          "Lazima utoe taarifa sahihi za akaunti, ulinde maelezo ya kuingia na utumie Pavodah kwa shughuli halali za soko pekee. Unawajibika kwa vitendo vya akaunti yako isipokuwa uripoti haraka ufikiaji usioidhinishwa."
+        ]
+      },
+      {
+        "id": "marketplace-roles",
+        "title": "Majukumu sokoni",
+        "paragraphs": [
+          "Pavodah hutoa zana zinazosaidia wateja kupata huduma na watoa huduma kuzitoa na kuziwasilisha. Watoa huduma wanawajibika kwa usahihi, uhalali, ubora na uwasilishaji. Wateja wanawajibika kutoa mahitaji sahihi na kukagua kazi kwa wakati.",
+          "Agizo, kadirio, ujumbe, maoni au wasifu hauundi ajira, ushirika au uwakala kati ya Pavodah na mtumiaji wa soko."
+        ]
+      },
+      {
+        "id": "orders-payments",
+        "title": "Maagizo na malipo",
+        "paragraphs": [
+          "Tumia malipo na mchakato wa agizo wa Pavodah kwa malipo ya soko. Kiasi, sarafu, ada na vitendo vinavyopatikana huonyeshwa kabla au wakati wa malipo na kwenye rekodi ya agizo.",
+          "Uthibitishaji wa malipo, marejesho, makazi na malipo yanaweza kutegemea watoa huduma wa malipo na taasisi za fedha. Hali ya kusubiri haithibitishi kuwa fedha zimekamilisha kila hatua."
+        ],
+        "bullets": [
+          "Usimwombe mtumiaji mwingine ahamishe malipo nje ya Pavodah kwa kazi iliyopangwa kupitia Pavodah.",
+          "Usitoe taarifa ya uongo kuhusu hali ya malipo, uwasilishaji, marejesho au malipo yanayotolewa.",
+          "Kagua maelezo ya agizo kabla ya kukubali uwasilishaji au kufanya kitendo kingine cha mwisho."
+        ]
+      },
+      {
+        "id": "provider-obligations",
+        "title": "Wajibu wa watoa huduma",
+        "paragraphs": [
+          "Watoa huduma lazima waeleze huduma kwa uaminifu, watumie bei na muda wanaoweza kutimiza, wawe na idhini inayohitajika na wawasilishe mabadiliko muhimu kabla ya uwasilishaji.",
+          "Hawaruhusiwi kuchapisha huduma za udanganyifu, haramu, zinazokiuka haki, hatari au zilizopigwa marufuku. Pavodah inaweza kukagua, kuweka kikomo au kuondoa huduma hatarishi."
+        ]
+      },
+      {
+        "id": "user-content",
+        "title": "Ujumbe, maoni na maudhui",
+        "paragraphs": [
+          "Unabaki kuwajibika kwa taarifa za wasifu, orodha za huduma, faili, ujumbe, maoni na ushahidi wa migogoro unaotuma. Unaruhusu Pavodah kuhifadhi, kuonyesha, kuchakata na kusambaza maudhui hayo inapohitajika kuendesha na kulinda soko.",
+          "Maudhui hayapaswi kuwa ya udanganyifu, unyanyasaji, ubaguzi, vitisho haramu, uvamizi wa faragha au ukiukaji wa haki. Maoni lazima yaakisi uzoefu halisi na yasibadilishwe kwa faida."
+        ]
+      },
+      {
+        "id": "disputes-refunds",
+        "title": "Migogoro na marejesho",
+        "paragraphs": [
+          "Maagizo yanayostahiki yanaweza kutoa kitendo cha mgogoro ndani ya jukwaa. Kila upande utoe taarifa sahihi na ushirikiane. Pavodah inaweza kuzingatia hali ya agizo, ujumbe, uwasilishaji, malipo na ushahidi uliotumwa.",
+          "Upatikanaji na kiasi cha marejesho hutegemea mazingira ya malipo na agizo. Marejesho yanaweza kuhitaji muda zaidi baada ya kurekodiwa kuwa yameanzishwa au kushughulikiwa."
+        ]
+      },
+      {
+        "id": "enforcement",
+        "title": "Vizuizi na utekelezaji",
+        "paragraphs": [
+          "Pavodah inaweza kuzuia maudhui, miamala, vipengele au akaunti inapohitajika kuchunguza matumizi mabaya, kutii sheria, kulinda watumiaji, kushughulikia hatari ya usalama au kutekeleza Masharti haya. Taarifa zaidi zinaweza kuombwa kabla ya kurejesha ufikiaji."
+        ]
+      },
+      {
+        "id": "availability-liability",
+        "title": "Upatikanaji na wajibu",
+        "paragraphs": [
+          "Pavodah hujitahidi kutoa soko linaloaminika, lakini upatikanaji usiokatizwa au usio na hitilafu haujahakikishwa. Kwa kadiri sheria inavyoruhusu, Pavodah haiwajibiki kwa hasara zisizo za moja kwa moja au vitendo, huduma, maelezo au mipango ya nje ya jukwaa ya mtumiaji.",
+          "Hakuna katika Masharti haya kinachoondoa haki au wajibu usioweza kuondolewa kisheria."
+        ]
+      },
+      {
+        "id": "changes-contact",
+        "title": "Mabadiliko na mawasiliano",
+        "paragraphs": [
+          "Pavodah inaweza kusasisha Masharti haya huduma, mahitaji ya kisheria au hatari za soko zinapobadilika. Mabadiliko muhimu yatawasilishwa kupitia njia inayofaa kabla ya kuanza kutumika inapohitajika.",
+          "Maswali kuhusu Masharti haya yanaweza kutumwa kwa support@pavodah.com."
+        ]
+      }
     ]
   }
 }

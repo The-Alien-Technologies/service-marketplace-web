@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   LineChart,
   Line,
@@ -47,7 +48,8 @@ import {
   AnalyticsTrend,
   UserAnalytics,
 } from "@/types/analytics";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useMarketStore } from "@/store/market-store";
 
 const STATUS_COLORS: Record<string, string> = {
   Completed: "var(--success)",
@@ -78,8 +80,8 @@ function currentMonthKey() {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatMonthKey(value: string) {
-  return new Intl.DateTimeFormat("en-GH", {
+function formatMonthKey(value: string, locale = "en-GH") {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     year: "numeric",
     timeZone: "UTC",
@@ -129,6 +131,21 @@ function AdminDashboard() {
   const common = useTranslations("Common");
   const format = useFormatter();
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const markets = useMarketStore((state) => state.markets);
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const selectedMarketId =
+    user?.role === "ADMIN"
+      ? user.adminMarketId || undefined
+      : selectedMarketCode === "GLOBAL"
+        ? undefined
+        : markets.find((market) => market.code === selectedMarketCode)?.id;
+  const selectedMarket = markets.find(
+    (market) => market.id === selectedMarketId,
+  );
+  const marketQuery = selectedMarketId
+    ? `&marketId=${encodeURIComponent(selectedMarketId)}`
+    : "";
   const [data, setData] = useState<AdminAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -150,6 +167,7 @@ function AdminDashboard() {
         const analytics = await apiService.getAdminAnalytics({
           year: selectedYear,
           categoryMonth: selectedCategoryMonth,
+          marketId: selectedMarketId,
         });
         if (!cancelled) setData(analytics);
       } catch (error) {
@@ -172,7 +190,7 @@ function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [retryKey, selectedCategoryMonth, selectedYear]);
+  }, [retryKey, selectedCategoryMonth, selectedMarketId, selectedYear]);
 
   if (loading && !data) {
     return (
@@ -217,8 +235,10 @@ function AdminDashboard() {
     orderStatusBreakdown = [],
     topCategories = [],
     revenueChart = [],
+    marketRevenueBreakdown = [],
     totalOrders = 0,
   } = data;
+  const isMultiCurrency = data.currency === "MULTI";
   const chartHasData = revenueChart.some(
     (item) => item.revenue || item.commission || item.payout,
   );
@@ -238,6 +258,7 @@ function AdminDashboard() {
       icon: Users,
       color: "text-orange-600",
       barColor: "bg-orange-600",
+      href: `/dashboard/users?source=dashboard${marketQuery}`,
     },
     {
       label: t("activeProviders"),
@@ -247,6 +268,7 @@ function AdminDashboard() {
       icon: Briefcase,
       color: "text-purple-600",
       barColor: "bg-purple-600",
+      href: `/dashboard/users?source=dashboard&role=SERVICE_PROVIDER&status=ACTIVE${marketQuery}`,
     },
     {
       label: t("activeOrders"),
@@ -256,16 +278,22 @@ function AdminDashboard() {
       icon: ShoppingBag,
       color: "text-blue-600",
       barColor: "bg-blue-600",
+      href: `/dashboard/orders?source=dashboard&tab=Orders&status=PENDING%2CAWAITING%2CIN_PROGRESS&paidOnly=true${marketQuery}`,
     },
-    {
-      label: t("revenue"),
-      value: formatCurrency(stats.revenue, data.currency),
-      trend: describeTrend(trends.revenue),
-      trendDetail: `${formatCurrency(trends.revenue.current, data.currency)} retained this month; ${formatCurrency(trends.revenue.previous, data.currency)} last month`,
-      icon: CreditCard,
-      color: "text-green-600",
-      barColor: "bg-green-600",
-    },
+    ...(!isMultiCurrency
+      ? [
+          {
+            label: t("netRevenue"),
+            value: formatCurrency(stats.revenue, data.currency),
+            trend: describeTrend(trends.revenue),
+            trendDetail: `${formatCurrency(trends.revenue.current, data.currency)} retained this month; ${formatCurrency(trends.revenue.previous, data.currency)} last month`,
+            icon: CreditCard,
+            color: "text-green-600",
+            barColor: "bg-green-600",
+            href: `/dashboard/orders?source=dashboard&tab=Revenue${marketQuery}`,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -279,13 +307,18 @@ function AdminDashboard() {
           <h1 className="text-2xl font-bold tracking-[-0.02em] text-gray-900">
             {t("title")}
           </h1>
-          <p className="mt-1 text-gray-500">
-            {t("adminSubtitle")}
+          <p className="mt-1 text-gray-500">{t("adminSubtitle")}</p>
+          <p className="mt-1 text-sm font-medium text-green-800">
+            {selectedMarket
+              ? t("adminMarketScope", { market: selectedMarket.name })
+              : t("adminGlobalScope")}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <p className="hidden text-xs text-gray-500 md:block">
-            {t("updated", { date: format.dateTime(new Date(data.generatedAt), "dateTime") })}
+            {t("updated", {
+              date: format.dateTime(new Date(data.generatedAt), "dateTime"),
+            })}
           </p>
           <Button
             variant="outline"
@@ -326,11 +359,18 @@ function AdminDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-6 md:grid-cols-2",
+          isMultiCurrency ? "lg:grid-cols-3" : "lg:grid-cols-4",
+        )}
+      >
         {statCards.map((stat) => (
-          <div
+          <Link
             key={stat.label}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative"
+            href={stat.href}
+            aria-label={`${stat.label}: ${stat.value}. ${t("viewDetails")}`}
+            className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 motion-reduce:transform-none"
           >
             <div
               className={`absolute top-0 left-0 w-full h-1 ${stat.barColor}`}
@@ -349,15 +389,62 @@ function AdminDashboard() {
                 </span>{" "}
                 {stat.trend.label}
               </div>
+              <span className="mt-4 inline-flex items-center text-sm font-semibold text-green-700">
+                {t("viewDetails")}
+                <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {isMultiCurrency && (
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Revenue by country
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Currencies stay separate; no exchange rate is assumed in the
+                global view.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {marketRevenueBreakdown.map((market) => (
+                <div
+                  key={market.id}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-gray-900">{market.name}</p>
+                    <span className="text-xs font-semibold text-gray-500">
+                      {market.currency}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xl font-bold text-gray-950">
+                    {formatCurrency(market.total, market.currency)}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatCurrency(market.currentMonth, market.currency)} this
+                    month ·{" "}
+                    {formatCurrency(market.previousMonth, market.currency)}
+                    last month
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Revenue Chart (Left - 2/3) */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div
+          className={cn(
+            "rounded-xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2",
+            isMultiCurrency && "hidden",
+          )}
+        >
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-gray-900">
@@ -506,9 +593,7 @@ function AdminDashboard() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               {t("orderStatusSummary")}
             </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              {t("orderStatusBody")}
-            </p>
+            <p className="text-sm text-gray-500 mb-6">{t("orderStatusBody")}</p>
 
             <div className="flex flex-col items-center gap-4 sm:flex-row lg:flex-col xl:flex-row">
               <div
@@ -578,7 +663,11 @@ function AdminDashboard() {
             <div className="mt-6 pt-4 border-t border-gray-100">
               <button
                 className="flex items-center text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
-                onClick={() => router.push("/dashboard/orders")}
+                onClick={() =>
+                  router.push(
+                    `/dashboard/orders?source=dashboard&tab=Orders${marketQuery}`,
+                  )
+                }
               >
                 {t("viewReport")} <ArrowRight className="ml-1 h-4 w-4" />
               </button>
@@ -589,13 +678,20 @@ function AdminDashboard() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-card-foreground">
-                  {t("topCategories")}
-                </h3>
-                <Info
-                  className="h-4 w-4 text-gray-400"
-                  aria-label="Ranked by services created during the selected month"
-                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-card-foreground">
+                      {t("topCategories")}
+                    </h3>
+                    <Info
+                      className="h-4 w-4 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {t("topCategoriesDefinition")}
+                  </p>
+                </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -677,7 +773,14 @@ function AdminDashboard() {
 function ProviderDashboard() {
   const t = useTranslations("DashboardAnalytics");
   const common = useTranslations("Common");
+  const locale = useLocale();
   const router = useRouter();
+  const markets = useMarketStore((state) => state.markets);
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const selectedMarketId =
+    selectedMarketCode === "GLOBAL"
+      ? undefined
+      : markets.find((market) => market.code === selectedMarketCode)?.id;
   const [data, setData] = useState<ProviderAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -698,6 +801,7 @@ function ProviderDashboard() {
         const analytics = await apiService.getProviderAnalytics({
           year: selectedYear,
           orderMonth: selectedOrderMonth,
+          marketId: selectedMarketId,
         });
         if (!cancelled) setData(analytics);
       } catch (error) {
@@ -705,7 +809,7 @@ function ProviderDashboard() {
           setLoadError(
             error instanceof Error
               ? error.message
-              : "The dashboard data could not be loaded.",
+              : t("providerLoadFallback"),
           );
         }
       } finally {
@@ -720,7 +824,7 @@ function ProviderDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [retryKey, selectedOrderMonth, selectedYear]);
+  }, [retryKey, selectedMarketId, selectedOrderMonth, selectedYear, t]);
 
   if (loading && !data) {
     return (
@@ -746,7 +850,7 @@ function ProviderDashboard() {
           {t("providerUnavailable")}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-red-800 dark:text-red-200">
-          {loadError ?? "The analytics API did not return dashboard data."}
+          {loadError ?? t("providerNoData")}
         </p>
         <Button
           variant="outline"
@@ -773,14 +877,28 @@ function ProviderDashboard() {
   const staleOrderSnapshot = data.orderMonth !== selectedOrderMonth;
   const staleFilterSnapshot = staleYearSnapshot || staleOrderSnapshot;
   const orderTrend = describeTrend(orderSummary.trend);
+  const marketParam = encodeURIComponent(data.market.id);
+  const statusLabels: Record<string, string> = {
+    Completed: t("statusCompleted"),
+    Pending: t("statusPending"),
+    Awaiting: t("statusAwaiting"),
+    "In-progress": t("statusInProgress"),
+    "In progress": t("statusInProgress"),
+    Declined: t("statusDeclined"),
+    Refunded: t("statusRefunded"),
+  };
 
   const providerStats = [
     {
       label: t("lifetimeEarnings"),
       value: formatCurrency(stats.earnings, data.currency),
       trend: describeTrend(trends.earnings),
-      trendDetail: `${formatCurrency(trends.earnings.current, data.currency)} earned this month; ${formatCurrency(trends.earnings.previous, data.currency)} last month`,
-      detail: "Provider share after refunds, before balance adjustments.",
+      trendDetail: t("providerEarningsTrendDetail", {
+        current: formatCurrency(trends.earnings.current, data.currency),
+        previous: formatCurrency(trends.earnings.previous, data.currency),
+      }),
+      detail: t("providerEarningsDetail"),
+      href: `/dashboard/earnings?source=dashboard&marketId=${marketParam}`,
       icon: CreditCard,
       color: "text-green-600",
       barColor: "bg-green-600",
@@ -791,9 +909,13 @@ function ProviderDashboard() {
       trend: describeTrend(trends.newPaidOrders),
       trendLabel:
         trends.newPaidOrders.changePercent === null
-          ? "paid orders this month"
-          : "new paid orders vs last month",
-      trendDetail: `${numberFormatter.format(trends.newPaidOrders.current)} newly paid orders this month; ${numberFormatter.format(trends.newPaidOrders.previous)} last month`,
+          ? t("providerActiveTrendNew")
+          : t("providerActiveTrendCompare"),
+      trendDetail: t("providerActiveTrendDetail", {
+        current: numberFormatter.format(trends.newPaidOrders.current),
+        previous: numberFormatter.format(trends.newPaidOrders.previous),
+      }),
+      href: `/dashboard/orders?source=dashboard&tab=Active&marketId=${marketParam}&paidOnly=true&page=1`,
       icon: Briefcase,
       color: "text-blue-600",
       barColor: "bg-blue-600",
@@ -804,9 +926,13 @@ function ProviderDashboard() {
       trend: describeTrend(trends.completedOrders),
       trendLabel:
         trends.completedOrders.changePercent === null
-          ? "completed this month"
-          : "completed vs last month",
-      trendDetail: `${numberFormatter.format(trends.completedOrders.current)} orders completed this month; ${numberFormatter.format(trends.completedOrders.previous)} last month`,
+          ? t("providerCompletedTrendNew")
+          : t("providerCompletedTrendCompare"),
+      trendDetail: t("providerCompletedTrendDetail", {
+        current: numberFormatter.format(trends.completedOrders.current),
+        previous: numberFormatter.format(trends.completedOrders.previous),
+      }),
+      href: `/dashboard/orders?source=dashboard&tab=Completed&marketId=${marketParam}&completedHistory=true&page=1`,
       icon: CheckCircle2,
       color: "text-purple-600",
       barColor: "bg-purple-600",
@@ -814,7 +940,8 @@ function ProviderDashboard() {
     {
       label: t("averageRating"),
       value: `${stats.averageRating} / 5`,
-      supportingText: `${numberFormatter.format(stats.reviewCount)} ${stats.reviewCount === 1 ? "review" : "reviews"}`,
+      supportingText: t("providerReviewCount", { count: stats.reviewCount }),
+      href: `/dashboard/reviews?source=dashboard&marketId=${marketParam}`,
       icon: Star,
       color: "text-orange-500",
       barColor: "bg-orange-500",
@@ -827,7 +954,7 @@ function ProviderDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            {t("providerSubtitle")}
+            {t("providerSubtitle")} · {data.market.name} ({data.currency})
           </p>
         </div>
         {refreshing && (
@@ -851,7 +978,12 @@ function ProviderDashboard() {
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
               {staleFilterSnapshot
-                ? `Could not load ${selectedYear} earnings and ${formatMonthKey(selectedOrderMonth)} orders. Showing the last successful snapshot for ${data.selectedYear} and ${formatMonthKey(data.orderMonth)}.`
+                ? t("providerStaleSnapshot", {
+                    requestedYear: selectedYear,
+                    requestedMonth: formatMonthKey(selectedOrderMonth, locale),
+                    snapshotYear: data.selectedYear,
+                    snapshotMonth: formatMonthKey(data.orderMonth, locale),
+                  })
                 : t("refreshFailed")}{" "}
               {loadError}
             </p>
@@ -868,9 +1000,11 @@ function ProviderDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {providerStats.map((stat) => (
-          <div
+          <Link
             key={stat.label}
-            className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+            href={stat.href}
+            aria-label={`${stat.label}: ${stat.value}. ${t("viewDetails")}`}
+            className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 motion-reduce:transition-none"
           >
             <div
               className={`absolute top-0 left-0 w-full h-1 ${stat.barColor}`}
@@ -905,8 +1039,11 @@ function ProviderDashboard() {
                   {stat.detail}
                 </p>
               )}
+              <span className="mt-3 inline-flex items-center text-xs font-semibold text-green-700 opacity-80 group-hover:opacity-100 dark:text-green-300">
+                {t("viewDetails")} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -945,16 +1082,17 @@ function ProviderDashboard() {
                   <span className="font-semibold text-card-foreground">
                     {formatCurrency(data.earningsSummary.total, data.currency)}
                   </span>{" "}
-                  in {data.selectedYear}
+                  {t("inYear", { year: data.selectedYear })}
                   {data.earningsSummary.bestMonth && (
                     <>
                       {" "}
-                      · Best month: {data.earningsSummary.bestMonth.name} (
-                      {formatCurrency(
-                        data.earningsSummary.bestMonth.earnings,
-                        data.currency,
-                      )}
-                      )
+                      · {t("bestMonth", {
+                        month: data.earningsSummary.bestMonth.name,
+                        amount: formatCurrency(
+                          data.earningsSummary.bestMonth.earnings,
+                          data.currency,
+                        ),
+                      })}
                     </>
                   )}
                 </div>
@@ -989,7 +1127,10 @@ function ProviderDashboard() {
                 staleYearSnapshot && "opacity-60",
               )}
               role="img"
-              aria-label={`Monthly provider earnings for ${data.selectedYear} compared with ${data.selectedYear - 1}`}
+              aria-label={t("providerChartAria", {
+                year: data.selectedYear,
+                previous: data.selectedYear - 1,
+              })}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={earningsChart} barGap={0}>
@@ -1062,19 +1203,24 @@ function ProviderDashboard() {
               {!chartHasData && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p className="rounded-lg bg-card/95 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm">
-                    {t("noEarnings", { year: data.selectedYear, previous: data.selectedYear - 1 })}
+                    {t("noEarnings", {
+                      year: data.selectedYear,
+                      previous: data.selectedYear - 1,
+                    })}
                   </p>
                 </div>
               )}
             </div>
             <table className="sr-only">
               <caption>
-                Provider share after refunds for {data.selectedYear} and{" "}
-                {data.selectedYear - 1}, before balance adjustments
+                {t("providerEarningsCaption", {
+                  year: data.selectedYear,
+                  previous: data.selectedYear - 1,
+                })}
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Month</th>
+                  <th scope="col">{t("month")}</th>
                   <th scope="col">{data.selectedYear}</th>
                   <th scope="col">{data.selectedYear - 1}</th>
                 </tr>
@@ -1090,9 +1236,7 @@ function ProviderDashboard() {
               </tbody>
             </table>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Earnings are your provider share after refunds and before balance
-              adjustments. See Earnings &amp; payouts for your withdrawable
-              balance.
+              {t("providerEarningsExplanation")}
             </p>
           </div>
 
@@ -1102,12 +1246,12 @@ function ProviderDashboard() {
               <h3 className="text-lg font-bold text-card-foreground">
                 {t("recentRequests")}
               </h3>
-              <button
+              <Link
                 className="min-h-11 self-start px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300 sm:self-auto"
-                onClick={() => router.push("/dashboard/orders")}
+                href={`/dashboard/orders?source=dashboard&marketId=${marketParam}&paidOnly=true&page=1`}
               >
                 {t("viewAllOrders")}
-              </button>
+              </Link>
             </div>
 
             <div className="divide-y divide-border">
@@ -1172,14 +1316,19 @@ function ProviderDashboard() {
                       )}
                     >
                       {order.status === "PENDING" || order.status === "AWAITING"
-                        ? "Awaiting"
-                        : order.status
-                            .toLowerCase()
-                            .replace("_", " ")
-                            .replace(/^./, (value) => value.toUpperCase())}
+                        ? t("statusAwaiting")
+                        : order.status === "IN_PROGRESS"
+                          ? t("statusInProgress")
+                          : order.status === "COMPLETED"
+                            ? t("statusCompleted")
+                            : order.status === "DECLINED"
+                              ? t("statusDeclined")
+                              : order.status === "REFUNDED"
+                                ? t("statusRefunded")
+                                : order.status}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {new Intl.DateTimeFormat("en-GH", {
+                      {new Intl.DateTimeFormat(locale, {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
@@ -1215,7 +1364,7 @@ function ProviderDashboard() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="min-h-11">
-                    {formatMonthKey(selectedOrderMonth)}
+                    {formatMonthKey(selectedOrderMonth, locale)}
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1225,7 +1374,7 @@ function ProviderDashboard() {
                       key={month}
                       onSelect={() => setSelectedOrderMonth(month)}
                     >
-                      {formatMonthKey(month)}
+                      {formatMonthKey(month, locale)}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -1238,15 +1387,21 @@ function ProviderDashboard() {
               </div>
               <div
                 className="text-sm text-muted-foreground"
-                title={`${numberFormatter.format(orderSummary.trend.current)} orders in ${formatMonthKey(data.orderMonth)}; ${numberFormatter.format(orderSummary.trend.previous)} in the previous month`}
+                title={t("providerOrderTrendTitle", {
+                  current: numberFormatter.format(orderSummary.trend.current),
+                  currentMonth: formatMonthKey(data.orderMonth, locale),
+                  previous: numberFormatter.format(orderSummary.trend.previous),
+                })}
               >
                 <span className={cn("font-semibold", orderTrend.className)}>
                   {orderTrend.value}
                 </span>{" "}
-                vs previous month
+                {t("vsPreviousMonth")}
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Paid orders placed in {formatMonthKey(data.orderMonth)}
+                {t("paidOrdersPlacedIn", {
+                  month: formatMonthKey(data.orderMonth, locale),
+                })}
               </div>
             </div>
 
@@ -1256,9 +1411,10 @@ function ProviderDashboard() {
                 staleOrderSnapshot && "opacity-60",
               )}
               role="img"
-              aria-label={`Order totals for ${formatMonthKey(data.orderMonth)}: ${orderSummary.breakdown
-                .map((item) => `${item.name} ${item.value}`)
-                .join(", ")}`}
+              aria-label={t("providerOrderSummaryAria", {
+                month: formatMonthKey(data.orderMonth, locale),
+                total: orderSummary.total,
+              })}
             >
               {orderSummary.breakdown.map((item) => (
                 <div
@@ -1276,7 +1432,7 @@ function ProviderDashboard() {
               ))}
               {orderSummary.total === 0 && (
                 <div className="flex h-full w-full items-center justify-center bg-muted text-xs font-medium text-muted-foreground">
-                  No paid orders
+                  {t("noPaidOrders")}
                 </div>
               )}
             </div>
@@ -1294,7 +1450,9 @@ function ProviderDashboard() {
                         STATUS_COLORS[item.name] || "var(--border)",
                     }}
                   ></span>
-                  <span className="text-muted-foreground">{item.name}</span>
+                  <span className="text-muted-foreground">
+                    {statusLabels[item.name] ?? item.name}
+                  </span>
                   <span className="ml-auto font-bold text-card-foreground">
                     {item.value}
                   </span>
@@ -1302,12 +1460,12 @@ function ProviderDashboard() {
               ))}
             </div>
             <div className="mt-6 border-t border-border pt-4">
-              <button
+              <Link
                 className="flex min-h-11 items-center px-1 text-sm font-medium text-green-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 dark:text-green-300"
-                onClick={() => router.push("/dashboard/orders")}
+                href={`/dashboard/orders?source=dashboard&marketId=${marketParam}&createdMonth=${encodeURIComponent(data.orderMonth)}&paidOnly=true&page=1`}
               >
                 {t("viewAllOrders")} <ArrowRight className="ml-1 h-4 w-4" />
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -1322,6 +1480,12 @@ function UserDashboard() {
   const t = useTranslations("DashboardAnalytics");
   const common = useTranslations("Common");
   const router = useRouter();
+  const markets = useMarketStore((state) => state.markets);
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const selectedMarketId =
+    selectedMarketCode === "GLOBAL"
+      ? undefined
+      : markets.find((market) => market.code === selectedMarketCode)?.id;
   const [data, setData] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1340,6 +1504,7 @@ function UserDashboard() {
       try {
         const analytics = await apiService.getUserAnalytics({
           year: selectedYear,
+          marketId: selectedMarketId,
         });
         if (!cancelled) setData(analytics);
       } catch (error) {
@@ -1362,7 +1527,7 @@ function UserDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [retryKey, selectedYear]);
+  }, [retryKey, selectedMarketId, selectedYear]);
 
   if (loading && !data) {
     return (
@@ -1427,6 +1592,7 @@ function UserDashboard() {
       icon: CreditCard,
       color: "text-green-600",
       barColor: "bg-green-600",
+      href: `/dashboard/orders?tab=Spending&marketId=${encodeURIComponent(data.market.id)}&paidOnly=true&spendingOnly=true&page=1`,
     },
     {
       label: t("activeOrders"),
@@ -1440,6 +1606,7 @@ function UserDashboard() {
       icon: Briefcase,
       color: "text-blue-600",
       barColor: "bg-blue-600",
+      href: "/dashboard/orders?tab=Active&paidOnly=true&page=1",
     },
     {
       label: t("completedOrders"),
@@ -1453,6 +1620,7 @@ function UserDashboard() {
       icon: CheckCircle2,
       color: "text-purple-600",
       barColor: "bg-purple-600",
+      href: "/dashboard/orders?tab=Completed&completedHistory=true&page=1",
     },
     {
       label: t("totalOrders"),
@@ -1461,6 +1629,7 @@ function UserDashboard() {
       icon: ShoppingBag,
       color: "text-orange-500",
       barColor: "bg-orange-500",
+      href: "/dashboard/orders?tab=All&paidOnly=true&page=1",
     },
   ];
 
@@ -1470,7 +1639,10 @@ function UserDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            {t("userSubtitle")}
+            {t("userScopeSummary", {
+              market: data.market.name,
+              currency: data.currency,
+            })}
           </p>
         </div>
         {refreshing && (
@@ -1511,9 +1683,11 @@ function UserDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {userStats.map((stat) => (
-          <div
+          <Link
             key={stat.label}
-            className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+            href={stat.href}
+            aria-label={`${stat.label}: ${stat.value}. ${t("viewOrders")}`}
+            className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 motion-reduce:transform-none"
           >
             <div
               className={`absolute left-0 top-0 h-1 w-full ${stat.barColor}`}
@@ -1548,8 +1722,12 @@ function UserDashboard() {
                   {stat.detail}
                 </p>
               )}
+              <span className="mt-4 inline-flex items-center text-sm font-semibold text-green-700 dark:text-green-300">
+                {t("viewOrders")}
+                <ArrowRight className="ml-1.5 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -1705,7 +1883,10 @@ function UserDashboard() {
               {!chartHasData && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p className="rounded-lg bg-card/95 px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm">
-                    {t("noSpending", { year: data.selectedYear, previous: data.selectedYear - 1 })}
+                    {t("noSpending", {
+                      year: data.selectedYear,
+                      previous: data.selectedYear - 1,
+                    })}
                   </p>
                 </div>
               )}
@@ -1785,7 +1966,13 @@ function UserDashboard() {
                           {order.providerName}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          · {t("netPaid", { amount: formatCurrency(order.netTotal, order.currency) })}
+                          ·{" "}
+                          {t("netPaid", {
+                            amount: formatCurrency(
+                              order.netTotal,
+                              order.currency,
+                            ),
+                          })}
                         </span>
                       </div>
                       <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -1942,7 +2129,7 @@ export default function DashboardPage() {
     return <UserDashboard />;
   }
 
-  if (user?.role === "ADMIN") {
+  if (user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") {
     return <AdminDashboard />;
   }
 

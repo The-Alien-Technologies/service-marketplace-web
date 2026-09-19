@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   getFilteredRowModel,
   flexRender,
@@ -42,13 +43,23 @@ import Image from "next/image";
 import { apiService } from "@/lib/api";
 import { User } from "@/types/auth";
 import { toast } from "react-toastify";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useMarketStore } from "@/store/market-store";
+import { marketDisplayName } from "@/lib/market-display";
 
 const columnHelper = createColumnHelper<User>();
 
 export default function UsersPage() {
   const t = useTranslations("AdminOps");
   const common = useTranslations("Common");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
+  const dashboardSource = searchParams.get("source") === "dashboard";
+  const marketId = searchParams.get("marketId") || undefined;
+  const roleFilter = searchParams.get("role") || undefined;
+  const statusFilter = searchParams.get("status") || undefined;
+  const markets = useMarketStore((state) => state.markets);
+  const scopedMarket = markets.find((market) => market.id === marketId);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [users, setUsers] = useState<User[]>([]);
@@ -69,35 +80,46 @@ export default function UsersPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [userToUpdate, setUserToUpdate] = useState<User | null>(null);
   const [newStatus, setNewStatus] = useState<"ACTIVE" | "SUSPENDED" | null>(
-    null
+    null,
   );
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const fetchUsers = async (page = 1) => {
-    try {
-      setIsLoading(true);
-      const response = await apiService.getUsers({
-        page,
-        limit: pagination.limit,
-        search: globalFilter || undefined,
-      });
-      setUsers(response.users);
-      setPagination({
-        page: response.page,
-        limit: response.limit,
-        total: response.total,
-        totalPages: response.totalPages,
-      });
-    } catch (error) {
-      toast.error(t("usersLoadFailed"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const fetchUsers = useCallback(
+    async (page = 1) => {
+      try {
+        setIsLoading(true);
+        const response = await apiService.getUsers({
+          page,
+          limit: pagination.limit,
+          search: globalFilter || undefined,
+          role: roleFilter,
+          status: statusFilter,
+          marketId,
+          marketplaceOnly: dashboardSource,
+        });
+        setUsers(response.users);
+        setPagination({
+          page: response.page,
+          limit: response.limit,
+          total: response.total,
+          totalPages: response.totalPages,
+        });
+      } catch {
+        toast.error(t("usersLoadFailed"));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      dashboardSource,
+      globalFilter,
+      marketId,
+      pagination.limit,
+      roleFilter,
+      statusFilter,
+      t,
+    ],
+  );
 
   // Debounced search
   useEffect(() => {
@@ -105,7 +127,7 @@ export default function UsersPage() {
       fetchUsers(1);
     }, 500);
     return () => clearTimeout(timer);
-  }, [globalFilter]);
+  }, [fetchUsers]);
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
@@ -114,7 +136,7 @@ export default function UsersPage() {
       await apiService.deleteUser(userToDelete);
       toast.success(t("userDeleted"));
       fetchUsers(pagination.page);
-    } catch (error) {
+    } catch {
       toast.error(t("userDeleteFailed"));
     } finally {
       setIsDeleting(false);
@@ -130,7 +152,7 @@ export default function UsersPage() {
       await apiService.updateUserStatus(userToUpdate.id, newStatus);
       toast.success(t("userStatusUpdated"));
       fetchUsers(pagination.page);
-    } catch (error) {
+    } catch {
       toast.error(t("userStatusFailed"));
     } finally {
       setIsUpdatingStatus(false);
@@ -145,10 +167,7 @@ export default function UsersPage() {
     setDeleteDialogOpen(true);
   };
 
-  const openStatusDialog = (
-    user: User,
-    status: "ACTIVE" | "SUSPENDED"
-  ) => {
+  const openStatusDialog = (user: User, status: "ACTIVE" | "SUSPENDED") => {
     setUserToUpdate(user);
     setNewStatus(status);
     setStatusDialogOpen(true);
@@ -276,11 +295,13 @@ export default function UsersPage() {
         header: "Date of Joining",
         cell: (info) => (
           <span className="text-gray-600">
-            {info.getValue() ? new Date(info.getValue()!).toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            }) : "—"}
+            {info.getValue()
+              ? new Date(info.getValue()!).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "—"}
           </span>
         ),
       }),
@@ -338,7 +359,7 @@ export default function UsersPage() {
         },
       }),
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -360,10 +381,31 @@ export default function UsersPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t("usersTitle")}</h1>
-        <p className="text-gray-500">
-          {t("usersSubtitle")}
-        </p>
+        <p className="text-gray-500">{t("usersSubtitle")}</p>
       </div>
+
+      {dashboardSource && (
+        <div className="flex flex-col gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {t(
+              roleFilter === "SERVICE_PROVIDER" && statusFilter === "ACTIVE"
+                ? "dashboardActiveProvidersScope"
+                : "dashboardUsersScope",
+              {
+                market: scopedMarket
+                  ? marketDisplayName(locale, scopedMarket)
+                  : t("allMarkets"),
+              },
+            )}
+          </p>
+          <Link
+            href="/dashboard/users"
+            className="shrink-0 font-semibold text-green-800 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          >
+            {t("clearDashboardScope")}
+          </Link>
+        </div>
+      )}
 
       {/* Filters and Search */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -376,7 +418,10 @@ export default function UsersPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="flex w-full items-center gap-2 sm:w-auto">
+        <Button
+          variant="outline"
+          className="flex w-full items-center gap-2 sm:w-auto"
+        >
           <Filter className="w-4 h-4" />
           {t("filters")}
         </Button>
@@ -391,72 +436,72 @@ export default function UsersPage() {
         ) : (
           <>
             <div className="overflow-x-auto overscroll-x-contain">
-            <table className="min-w-[760px] w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className={`px-6 py-4 ${
-                          header.id === "name" ? "w-[250px]" : ""
-                        } ${
-                          (header.column.columnDef.meta as any)?.align ===
-                          "right"
-                            ? "text-right"
-                            : ""
-                        }`}
-                        onClick={header.column.getToggleSortingHandler()}
-                        style={{
-                          cursor: header.column.getCanSort()
-                            ? "pointer"
-                            : "default",
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {{
-                            asc: " ↑",
-                            desc: " ↓",
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-12 text-center text-gray-500"
-                    >
-                      {t("noUsers")}
-                    </td>
-                  </tr>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-6 py-4">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
+              <table className="min-w-[760px] w-full text-sm text-left">
+                <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className={`px-6 py-4 ${
+                            header.id === "name" ? "w-[250px]" : ""
+                          } ${
+                            (header.column.columnDef.meta as any)?.align ===
+                            "right"
+                              ? "text-right"
+                              : ""
+                          }`}
+                          onClick={header.column.getToggleSortingHandler()}
+                          style={{
+                            cursor: header.column.getCanSort()
+                              ? "pointer"
+                              : "default",
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                            {{
+                              asc: " ↑",
+                              desc: " ↓",
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        </th>
                       ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {table.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
+                        {t("noUsers")}
+                      </td>
+                    </tr>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
 
             {/* Pagination */}
@@ -552,7 +597,9 @@ export default function UsersPage() {
             </div>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-900 text-center">
-                {newStatus === "SUSPENDED" ? t("suspendUser") : t("activateUser")}
+                {newStatus === "SUSPENDED"
+                  ? t("suspendUser")
+                  : t("activateUser")}
               </DialogTitle>
               <DialogDescription className="text-center text-gray-500 mt-2">
                 {newStatus === "SUSPENDED"

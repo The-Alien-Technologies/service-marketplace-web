@@ -11,7 +11,7 @@ export type ReleaseReviewStatus =
   | "APPROVED"
   | "REJECTED";
 
-export type PayoutDestinationType = "GHIPSS" | "MOBILE_MONEY";
+export type PayoutDestinationType = "GHIPSS" | "MOBILE_MONEY" | "BASA";
 
 export type ProviderPayoutStatus =
   | "REQUESTED"
@@ -63,6 +63,7 @@ export interface PayoutInstitution {
 
 export interface ProviderPayout {
   id: string;
+  marketId: string;
   reference: string;
   amount: number | string;
   grossEarningsAmount: number | string;
@@ -96,7 +97,7 @@ export interface ProviderPayout {
 }
 
 export interface EarningsSummary {
-  currency: "GHS";
+  currency: string;
   held: number | string;
   eligible: number | string;
   reserved: number | string;
@@ -134,6 +135,8 @@ export interface ReleaseReview extends OrderSettlement {
   order: {
     id: string;
     orderNumber: string;
+    marketId: string;
+    currency: string;
     planTitle: string;
     total: number | string;
     client: {

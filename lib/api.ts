@@ -46,6 +46,14 @@ import {
 } from "@/types/payout";
 import { AppNotification, NotificationPage } from "@/types/notification";
 import {
+  CountryAdministrator,
+  Market,
+  PaymentCredentialVersion,
+  PaymentIntegration,
+  ProviderMarketMembership,
+  ProviderMarketMembershipStatus,
+} from "@/types/market";
+import {
   AUTH_TOKEN_STORAGE_KEY,
   REFRESH_TOKEN_STORAGE_KEY,
   clearStoredAuthSession,
@@ -59,6 +67,17 @@ interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data: T;
+}
+
+export class ApiError extends Error {
+  readonly status: number;
+  attemptsLeft?: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
 }
 
 interface AuthResponse {
@@ -108,8 +127,9 @@ class ApiService {
             | { message?: string; attemptsLeft?: number };
         } catch {
           if (!response.ok) {
-            throw new Error(
+            throw new ApiError(
               `The API returned an invalid response (${response.status}). Please try again.`,
+              response.status,
             );
           }
           throw new Error("The API returned an invalid response.");
@@ -119,16 +139,16 @@ class ApiService {
       if (!response.ok) {
         // Handle specific error format from the backend
         if (data?.message) {
-          // Create a custom error with additional properties if available
-          const error = new Error(data.message) as Error & {
-            attemptsLeft?: number;
-          };
+          const error = new ApiError(data.message, response.status);
           if ("attemptsLeft" in data && data.attemptsLeft !== undefined) {
             error.attemptsLeft = data.attemptsLeft;
           }
           throw error;
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new ApiError(
+          `HTTP error! status: ${response.status}`,
+          response.status,
+        );
       }
 
       if (!data || !("data" in data)) {
@@ -215,12 +235,184 @@ class ApiService {
     return response.data;
   }
 
-  async sendPhoneVerification(
-    phoneNumber: string,
-  ): Promise<{ phoneNumber: string; expiresAt: string }> {
+  // Markets and country operations
+  async getMarkets(): Promise<Market[]> {
+    const response = await this.request<Market[]>("/markets");
+    return response.data;
+  }
+
+  async getAllMarkets(): Promise<Market[]> {
+    const response = await this.request<Market[]>("/markets/admin/all");
+    return response.data;
+  }
+
+  async selectMarket(marketCode?: string): Promise<Market | null> {
+    const response = await this.request<Market | null>("/markets/selection", {
+      method: "POST",
+      body: JSON.stringify({ marketCode }),
+    });
+    return response.data;
+  }
+
+  async updateMarket(
+    id: string,
+    data: Partial<
+      Pick<
+        Market,
+        | "status"
+        | "checkoutEnabled"
+        | "providerOnboardingEnabled"
+        | "servicePublishingEnabled"
+      >
+    >,
+  ): Promise<Market> {
+    const response = await this.request<Market>(`/markets/admin/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async getProviderMarketMemberships(): Promise<ProviderMarketMembership[]> {
+    const response = await this.request<ProviderMarketMembership[]>(
+      "/markets/provider/memberships",
+    );
+    return response.data;
+  }
+
+  async applyToMarket(marketId: string): Promise<ProviderMarketMembership> {
+    const response = await this.request<ProviderMarketMembership>(
+      `/markets/provider/memberships/${marketId}`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async getMarketMembershipApplications(options?: {
+    marketId?: string;
+    status?: ProviderMarketMembershipStatus;
+    search?: string;
+    page?: number;
+    limit?: number;
+    orderBy?: "asc" | "desc";
+  }): Promise<{
+    applications: ProviderMarketMembership[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const params = new URLSearchParams();
+    if (options?.marketId) params.set("marketId", options.marketId);
+    if (options?.status) params.set("status", options.status);
+    if (options?.search) params.set("search", options.search);
+    if (options?.page) params.set("page", String(options.page));
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.orderBy) params.set("orderBy", options.orderBy);
+    const response = await this.request<{
+      applications: ProviderMarketMembership[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/markets/admin/provider-memberships${params.size ? `?${params}` : ""}`);
+    return response.data;
+  }
+
+  async reviewMarketMembership(
+    id: string,
+    status: Exclude<ProviderMarketMembershipStatus, "PENDING">,
+    reason?: string,
+  ): Promise<ProviderMarketMembership> {
+    const response = await this.request<ProviderMarketMembership>(
+      `/markets/admin/provider-memberships/${id}`,
+      { method: "PATCH", body: JSON.stringify({ status, reason }) },
+    );
+    return response.data;
+  }
+
+  async assignCountryAdmin(userId: string, marketId: string): Promise<User> {
+    const response = await this.request<User>("/markets/admin/country-admins", {
+      method: "POST",
+      body: JSON.stringify({ userId, marketId }),
+    });
+    return response.data;
+  }
+
+  async getCountryAdministrators(options?: {
+    search?: string;
+    marketId?: string;
+    status?: "ACTIVE" | "SUSPENDED";
+  }): Promise<CountryAdministrator[]> {
+    const params = new URLSearchParams();
+    if (options?.search) params.set("search", options.search);
+    if (options?.marketId) params.set("marketId", options.marketId);
+    if (options?.status) params.set("status", options.status);
+    const response = await this.request<CountryAdministrator[]>(
+      `/markets/admin/country-admins${params.size ? `?${params}` : ""}`,
+    );
+    return response.data;
+  }
+
+  async updateCountryAdministrator(
+    id: string,
+    data: { marketId?: string; status?: "ACTIVE" | "SUSPENDED" },
+  ): Promise<CountryAdministrator> {
+    const response = await this.request<CountryAdministrator>(
+      `/markets/admin/country-admins/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+    );
+    return response.data;
+  }
+
+  async removeCountryAdministrator(id: string): Promise<User> {
+    const response = await this.request<User>(
+      `/markets/admin/country-admins/${id}`,
+      { method: "DELETE" },
+    );
+    return response.data;
+  }
+
+  async getPaymentIntegrations(): Promise<PaymentIntegration[]> {
+    const response = await this.request<PaymentIntegration[]>(
+      "/payments/admin/integrations",
+    );
+    return response.data;
+  }
+
+  async stagePaymentCredential(integrationId: string, secretKey: string) {
+    const response = await this.request<PaymentCredentialVersion>(
+      `/payments/admin/integrations/${integrationId}/credentials`,
+      { method: "POST", body: JSON.stringify({ secretKey }) },
+    );
+    return response.data;
+  }
+
+  async activatePaymentCredential(credentialId: string) {
+    const response = await this.request<PaymentCredentialVersion>(
+      `/payments/admin/integrations/credentials/${credentialId}/activate`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async revokePaymentCredential(credentialId: string) {
+    const response = await this.request<PaymentCredentialVersion>(
+      `/payments/admin/integrations/credentials/${credentialId}/revoke`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async sendPhoneVerification(phoneNumber: string): Promise<{
+    phoneNumber: string;
+    expiresAt?: string;
+    alreadyVerified?: boolean;
+  }> {
     const response = await this.request<{
       phoneNumber: string;
-      expiresAt: string;
+      expiresAt?: string;
+      alreadyVerified?: boolean;
     }>("/auth/send-phone-verification", {
       method: "POST",
       body: JSON.stringify({
@@ -247,12 +439,15 @@ class ApiService {
     return response.data;
   }
 
-  async resendPhoneVerification(
-    phoneNumber: string,
-  ): Promise<{ phoneNumber: string; expiresAt: string }> {
+  async resendPhoneVerification(phoneNumber: string): Promise<{
+    phoneNumber: string;
+    expiresAt?: string;
+    alreadyVerified?: boolean;
+  }> {
     const response = await this.request<{
       phoneNumber: string;
-      expiresAt: string;
+      expiresAt?: string;
+      alreadyVerified?: boolean;
     }>("/auth/resend-phone-verification", {
       method: "POST",
       body: JSON.stringify({
@@ -419,6 +614,7 @@ class ApiService {
       sortBy?: string;
       page?: number;
       limit?: number;
+      market?: string;
     },
   ): Promise<{
     services: Service[];
@@ -438,6 +634,7 @@ class ApiService {
     if (filters?.sortBy) params.append("sortBy", filters.sortBy);
     if (filters?.page) params.append("page", filters.page.toString());
     if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.market) params.append("market", filters.market);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -457,6 +654,8 @@ class ApiService {
     search?: string;
     role?: string;
     status?: string;
+    marketId?: string;
+    marketplaceOnly?: boolean;
   }): Promise<{
     users: User[];
     total: number;
@@ -470,6 +669,8 @@ class ApiService {
     if (options?.search) params.append("search", options.search);
     if (options?.role) params.append("role", options.role);
     if (options?.status) params.append("status", options.status);
+    if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.marketplaceOnly) params.append("marketplaceOnly", "true");
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -575,12 +776,12 @@ class ApiService {
 
     // Add service data as JSON
     formData.append("title", data.title);
+    formData.append("marketId", data.marketId);
+    if (data.availability) formData.append("availability", data.availability);
     formData.append("categoryId", data.categoryId);
     formData.append("overview", data.overview);
 
-    if (data.tags && data.tags.length > 0) {
-      data.tags.forEach((tag) => formData.append("tags[]", tag));
-    }
+    if (data.tags) formData.append("tags", JSON.stringify(data.tags));
 
     // Add plans
     formData.append("plans", JSON.stringify(data.plans));
@@ -610,6 +811,7 @@ class ApiService {
     categoryId?: string;
     page?: number;
     limit?: number;
+    market?: string;
   }): Promise<{
     services: Service[];
     total: number;
@@ -622,6 +824,7 @@ class ApiService {
     if (options?.categoryId) params.append("categoryId", options.categoryId);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.market) params.append("market", options.market);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -638,6 +841,7 @@ class ApiService {
     status?: ServiceStatus;
     page?: number;
     limit?: number;
+    marketId?: string;
   }): Promise<{
     services: Service[];
     total: number;
@@ -649,6 +853,7 @@ class ApiService {
     if (options?.status) params.append("status", options.status);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.marketId) params.append("marketId", options.marketId);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -667,6 +872,7 @@ class ApiService {
     providerId?: string;
     page?: number;
     limit?: number;
+    marketId?: string;
   }): Promise<{
     services: Service[];
     total: number;
@@ -680,6 +886,7 @@ class ApiService {
     if (options?.providerId) params.append("providerId", options.providerId);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.marketId) params.append("marketId", options.marketId);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -710,11 +917,10 @@ class ApiService {
     const formData = new FormData();
 
     if (data.title) formData.append("title", data.title);
+    if (data.availability) formData.append("availability", data.availability);
     if (data.categoryId) formData.append("categoryId", data.categoryId);
     if (data.overview) formData.append("overview", data.overview);
-    if (data.tags) {
-      data.tags.forEach((tag) => formData.append("tags[]", tag));
-    }
+    if (data.tags) formData.append("tags", JSON.stringify(data.tags));
     if (data.plans) {
       formData.append("plans", JSON.stringify(data.plans));
     }
@@ -805,6 +1011,7 @@ class ApiService {
     city?: string;
     state?: string;
     country?: string;
+    countryIso2?: string;
     postalCode?: string;
     isPrimary?: boolean;
   }): Promise<void> {
@@ -1158,6 +1365,7 @@ class ApiService {
     page?: number;
     limit?: number;
     search?: string;
+    marketId?: string;
   }): Promise<{
     data: AdminPaymentTransaction[];
     pagination: {
@@ -1171,6 +1379,7 @@ class ApiService {
     if (options?.page) params.set("page", String(options.page));
     if (options?.limit) params.set("limit", String(options.limit));
     if (options?.search) params.set("search", options.search);
+    if (options?.marketId) params.set("marketId", options.marketId);
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
       data: AdminPaymentTransaction[];
@@ -1248,7 +1457,12 @@ class ApiService {
 
   async retryRefund(
     id: string,
-    details: { accountNumber: string; bankCode: string; currency: "GHS" },
+    details: {
+      accountNumber: string;
+      bankCode: string;
+      currency: string;
+      marketId: string;
+    },
   ) {
     const response = await this.request<AdminRefund>(
       `/payments/admin/refunds/${id}/retry`,
@@ -1265,19 +1479,23 @@ class ApiService {
     return response.data;
   }
 
-  async getRefundInstitutions() {
+  async getRefundInstitutions(marketId: string) {
     const response = await this.request<RefundInstitution[]>(
-      "/payments/admin/refund-institutions",
+      `/payments/admin/refund-institutions?marketId=${encodeURIComponent(marketId)}`,
     );
     return response.data;
   }
 
-  async resolveRefundAccount(accountNumber: string, bankCode: string) {
+  async resolveRefundAccount(
+    accountNumber: string,
+    bankCode: string,
+    marketId: string,
+  ) {
     const response = await this.request<ResolvedRefundAccount>(
       "/payments/admin/refund-account/resolve",
       {
         method: "POST",
-        body: JSON.stringify({ accountNumber, bankCode }),
+        body: JSON.stringify({ accountNumber, bankCode, marketId }),
       },
     );
     return response.data;
@@ -1325,6 +1543,10 @@ class ApiService {
     status?: string;
     page?: number;
     limit?: number;
+    marketId?: string;
+    paidOnly?: boolean;
+    spendingOnly?: boolean;
+    completedHistory?: boolean;
   }): Promise<{
     data: Order[];
     pagination: {
@@ -1338,6 +1560,10 @@ class ApiService {
     if (options?.status) params.append("status", options.status);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.paidOnly) params.append("paidOnly", "true");
+    if (options?.spendingOnly) params.append("spendingOnly", "true");
+    if (options?.completedHistory) params.append("completedHistory", "true");
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -1356,6 +1582,9 @@ class ApiService {
     status?: string;
     page?: number;
     limit?: number;
+    marketId?: string;
+    completedHistory?: boolean;
+    createdMonth?: string;
   }): Promise<{
     data: Order[];
     pagination: {
@@ -1369,6 +1598,11 @@ class ApiService {
     if (options?.status) params.append("status", options.status);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.completedHistory)
+      params.append("completedHistory", "true");
+    if (options?.createdMonth)
+      params.append("createdMonth", options.createdMonth);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -1388,6 +1622,9 @@ class ApiService {
     page?: number;
     limit?: number;
     search?: string;
+    marketId?: string;
+    paidOnly?: boolean;
+    settledOnly?: boolean;
   }): Promise<{
     data: Order[];
     pagination: {
@@ -1402,6 +1639,9 @@ class ApiService {
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
     if (options?.search) params.append("search", options.search);
+    if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.paidOnly) params.append("paidOnly", "true");
+    if (options?.settledOnly) params.append("settledOnly", "true");
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -1457,6 +1697,7 @@ class ApiService {
     sort?: string;
     page?: number;
     limit?: number;
+    marketId?: string;
   }): Promise<{
     data: Review[];
     summary: ReviewSummary & { completedOrders: number };
@@ -1467,6 +1708,7 @@ class ApiService {
     if (options?.sort) params.append("sort", options.sort);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.marketId) params.append("marketId", options.marketId);
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
       data: Review[];
@@ -1523,10 +1765,12 @@ class ApiService {
   async getProviderAnalytics(filters?: {
     year?: number;
     orderMonth?: string;
+    marketId?: string;
   }): Promise<ProviderAnalytics> {
     const query = new URLSearchParams();
     if (filters?.year) query.set("year", String(filters.year));
     if (filters?.orderMonth) query.set("orderMonth", filters.orderMonth);
+    if (filters?.marketId) query.set("marketId", filters.marketId);
     const queryString = query.toString();
     const suffix = queryString ? `?${queryString}` : "";
     const response = await this.request<ProviderAnalytics>(
@@ -1535,9 +1779,13 @@ class ApiService {
     return response.data;
   }
 
-  async getUserAnalytics(filters?: { year?: number }): Promise<UserAnalytics> {
+  async getUserAnalytics(filters?: {
+    year?: number;
+    marketId?: string;
+  }): Promise<UserAnalytics> {
     const query = new URLSearchParams();
     if (filters?.year) query.set("year", String(filters.year));
+    if (filters?.marketId) query.set("marketId", filters.marketId);
     const queryString = query.toString();
     const suffix = queryString ? `?${queryString}` : "";
     const response = await this.request<UserAnalytics>(
@@ -1549,12 +1797,14 @@ class ApiService {
   async getAdminAnalytics(filters?: {
     year?: number;
     categoryMonth?: string;
+    marketId?: string;
   }): Promise<AdminAnalytics> {
     const query = new URLSearchParams();
     if (filters?.year) query.set("year", String(filters.year));
     if (filters?.categoryMonth) {
       query.set("categoryMonth", filters.categoryMonth);
     }
+    if (filters?.marketId) query.set("marketId", filters.marketId);
     const queryString = query.toString();
     const suffix = queryString ? `?${queryString}` : "";
     const response = await this.request<AdminAnalytics>(
@@ -1573,7 +1823,7 @@ class ApiService {
       description: string;
       deliveryTime: string;
       budget: number;
-      currency?: string;
+      marketId?: string;
     },
     attachments: File[] = [],
   ): Promise<QuoteRequest> {
@@ -1584,7 +1834,7 @@ class ApiService {
     formData.append("description", data.description);
     formData.append("deliveryTime", data.deliveryTime);
     formData.append("budget", String(data.budget));
-    formData.append("currency", data.currency ?? "GHS");
+    if (data.marketId) formData.append("marketId", data.marketId);
     attachments.forEach((f) => formData.append("attachments", f));
 
     const token = localStorage.getItem("auth_token");
@@ -1675,9 +1925,9 @@ class ApiService {
 
   // ─── Provider earnings and payouts ─────────────────────────────────────
 
-  async getPayoutInstitutions(type: PayoutDestinationType) {
+  async getPayoutInstitutions(type: PayoutDestinationType, marketId: string) {
     const response = await this.request<PayoutInstitution[]>(
-      `/payouts/institutions?type=${type}`,
+      `/payouts/institutions?type=${type}&marketId=${encodeURIComponent(marketId)}`,
     );
     return response.data;
   }
@@ -1690,14 +1940,15 @@ class ApiService {
     return response.data;
   }
 
-  async getPayoutAccount() {
+  async getPayoutAccount(marketId: string) {
     const response = await this.request<PayoutAccount | null>(
-      "/payouts/account",
+      `/payouts/account?marketId=${encodeURIComponent(marketId)}`,
     );
     return response.data;
   }
 
   async updatePayoutAccount(data: {
+    marketId: string;
     type: PayoutDestinationType;
     institutionCode: string;
     accountNumber: string;
@@ -1711,31 +1962,40 @@ class ApiService {
     return response.data;
   }
 
-  async getEarningsSummary() {
-    const response = await this.request<EarningsSummary>("/payouts/summary");
+  async getEarningsSummary(marketId: string) {
+    const response = await this.request<EarningsSummary>(
+      `/payouts/summary?marketId=${encodeURIComponent(marketId)}`,
+    );
     return response.data;
   }
 
-  async getProviderEarnings(page = 1, limit = 20) {
+  async getProviderEarnings(marketId: string, page = 1, limit = 20) {
     const response = await this.request<{
       data: ProviderEarning[];
       pagination: { page: number; limit: number; total: number; pages: number };
-    }>(`/payouts/earnings?page=${page}&limit=${limit}`);
+    }>(
+      `/payouts/earnings?marketId=${encodeURIComponent(marketId)}&page=${page}&limit=${limit}`,
+    );
     return response.data;
   }
 
-  async requestPayout() {
-    const response = await this.request<ProviderPayout>("/payouts/requests", {
-      method: "POST",
-    });
+  async requestPayout(marketId: string) {
+    const response = await this.request<ProviderPayout>(
+      `/payouts/requests?marketId=${encodeURIComponent(marketId)}`,
+      {
+        method: "POST",
+      },
+    );
     return response.data;
   }
 
-  async getProviderPayouts(page = 1, limit = 20) {
+  async getProviderPayouts(marketId: string, page = 1, limit = 20) {
     const response = await this.request<{
       data: ProviderPayout[];
       pagination: { page: number; limit: number; total: number; pages: number };
-    }>(`/payouts/requests?page=${page}&limit=${limit}`);
+    }>(
+      `/payouts/requests?marketId=${encodeURIComponent(marketId)}&page=${page}&limit=${limit}`,
+    );
     return response.data;
   }
 
@@ -1797,19 +2057,33 @@ class ApiService {
     return response.data;
   }
 
-  async getPaymentSettings() {
+  async getPaymentSettings(marketId?: string) {
+    const suffix = marketId ? `?marketId=${encodeURIComponent(marketId)}` : "";
     const response = await this.request<{
       commissionRate: number | string;
       updatedAt: string;
-    }>("/payouts/admin/settings");
+      market: {
+        id: string;
+        name: string;
+        currency: string;
+        locale: string;
+      };
+    }>(`/payouts/admin/settings${suffix}`);
     return response.data;
   }
 
-  async updatePaymentSettings(commissionRate: number) {
+  async updatePaymentSettings(commissionRate: number, marketId?: string) {
+    const suffix = marketId ? `?marketId=${encodeURIComponent(marketId)}` : "";
     const response = await this.request<{
       commissionRate: number | string;
       updatedAt: string;
-    }>("/payouts/admin/settings", {
+      market: {
+        id: string;
+        name: string;
+        currency: string;
+        locale: string;
+      };
+    }>(`/payouts/admin/settings${suffix}`, {
       method: "PATCH",
       body: JSON.stringify({ commissionRate }),
     });

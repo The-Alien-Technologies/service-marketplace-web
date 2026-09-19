@@ -35,13 +35,11 @@ import {
   isValidPartialRefund,
   remainingRefundAmount,
 } from "@/lib/payment-state";
+import { formatMoney } from "@/lib/money";
 import {
   Dispute,
   DisputeResolutionType,
   DisputeStatus,
-  ISSUE_TYPE_LABELS,
-  DISPUTE_STATUS_LABELS,
-  DISPUTE_PRIORITY_LABELS,
 } from "@/types/dispute";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
@@ -68,7 +66,15 @@ function StatusBadge({ status }: { status: DisputeStatus }) {
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dots[status]}`} />
-      {t(status === "OPEN" ? "open" : status === "INVESTIGATING" ? "investigating" : status === "RESOLVED" ? "resolved" : "closed")}
+      {t(
+        status === "OPEN"
+          ? "open"
+          : status === "INVESTIGATING"
+            ? "investigating"
+            : status === "RESOLVED"
+              ? "resolved"
+              : "closed",
+      )}
     </span>
   );
 }
@@ -138,7 +144,10 @@ export default function DisputeDetailsPage({
   const common = useTranslations("Common");
   const format = useFormatter();
   const { disputeId } = use(params);
-  const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
+  const isAdmin = useAuthStore(
+    (state) =>
+      state.user?.role === "ADMIN" || state.user?.role === "SUPER_ADMIN",
+  );
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<DisputeStatus>("OPEN");
@@ -204,7 +213,9 @@ export default function DisputeDetailsPage({
       const amount = Number(refundAmount);
       if (!isValidPartialRefund(amount, refundableAmount)) {
         toast.error(
-          t("partialRefundInvalid", { amount: format.number(refundableAmount, "currency") }),
+          t("partialRefundInvalid", {
+            amount: formatMoney(refundableAmount, dispute.order.currency),
+          }),
         );
         return;
       }
@@ -230,9 +241,7 @@ export default function DisputeDetailsPage({
       setResolveConfirmOpen(false);
       await fetchDispute();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("resolveFailed"),
-      );
+      toast.error(error instanceof Error ? error.message : t("resolveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -259,9 +268,7 @@ export default function DisputeDetailsPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-gray-500 mt-1">
-            {isAdmin
-              ? t("adminSubtitle")
-              : t("detailSubtitle")}
+            {isAdmin ? t("adminSubtitle") : t("detailSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -304,7 +311,9 @@ export default function DisputeDetailsPage({
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">{common("service")}</span>
+              <span className="text-gray-500 text-xs block">
+                {common("service")}
+              </span>
               <span className="font-medium text-gray-900">
                 {dispute.order.service.title}
               </span>
@@ -318,14 +327,18 @@ export default function DisputeDetailsPage({
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">{common("total")}</span>
+              <span className="text-gray-500 text-xs block">
+                {common("total")}
+              </span>
               <span className="font-bold text-gray-900">
-                {format.number(Number(dispute.order.total), "currency")}
+                {formatMoney(dispute.order.total, dispute.order.currency)}
               </span>
             </div>
             <span className="text-gray-300">|</span>
             <div>
-              <span className="text-gray-500 text-xs block">{t("priority")}</span>
+              <span className="text-gray-500 text-xs block">
+                {t("priority")}
+              </span>
               <span
                 className={cn(
                   "font-medium",
@@ -336,16 +349,20 @@ export default function DisputeDetailsPage({
                       : "text-gray-600",
                 )}
               >
-                {t(dispute.priority === "LOW" ? "low" : dispute.priority === "MEDIUM" ? "medium" : "high")}
+                {t(
+                  dispute.priority === "LOW"
+                    ? "low"
+                    : dispute.priority === "MEDIUM"
+                      ? "medium"
+                      : "high",
+                )}
               </span>
             </div>
           </div>
 
           {/* Parties Involved */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">
-              {t("parties")}
-            </h3>
+            <h3 className="text-sm font-bold text-gray-900">{t("parties")}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white border border-gray-100 rounded-xl">
               <PartyCard party={dispute.client} role="client" />
               <PartyCard party={dispute.provider} role="provider" />
@@ -360,7 +377,9 @@ export default function DisputeDetailsPage({
 
           {/* Issue Summary */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">{t("issueSummary")}</h3>
+            <h3 className="text-lg font-bold text-gray-900">
+              {t("issueSummary")}
+            </h3>
             <div className="space-y-4 p-5 bg-white border border-gray-100 rounded-xl">
               <div>
                 <span className="block text-xs text-gray-500 mb-1">
@@ -399,7 +418,8 @@ export default function DisputeDetailsPage({
               <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-green-800 text-sm mb-1">
-                  {t("title")} {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
+                  {t("title")}{" "}
+                  {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
                 </h4>
                 {dispute.adminNote && (
                   <p className="text-sm text-green-700">{dispute.adminNote}</p>
@@ -418,164 +438,169 @@ export default function DisputeDetailsPage({
         <div className="w-full xl:w-[360px] space-y-6">
           {/* Admin Resolution Panel */}
           {isAdmin && (
-          <div className="bg-white border border-gray-100 rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-bold text-gray-900">
-              {t("adminResolution")}
-            </h3>
+            <div className="bg-white border border-gray-100 rounded-xl p-5 space-y-4">
+              <h3 className="text-sm font-bold text-gray-900">
+                {t("adminResolution")}
+              </h3>
 
-            {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" ? (
-              <>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="dispute-review-status"
-                    className="text-xs font-medium text-gray-700"
-                  >
-                    {t("reviewStatus")}
-                  </label>
-                  <div className="flex gap-2">
+              {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" ? (
+                <>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="dispute-review-status"
+                      className="text-xs font-medium text-gray-700"
+                    >
+                      {t("reviewStatus")}
+                    </label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={selectedStatus}
+                        onValueChange={(v) =>
+                          setSelectedStatus(v as DisputeStatus)
+                        }
+                      >
+                        <SelectTrigger
+                          id="dispute-review-status"
+                          className="bg-white"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="OPEN">{t("open")}</SelectItem>
+                          <SelectItem value="INVESTIGATING">
+                            {t("investigating")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        onClick={handleSaveStatus}
+                        disabled={isSaving || selectedStatus === dispute.status}
+                      >
+                        {common("save")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="dispute-financial-outcome"
+                      className="text-xs font-medium text-gray-700"
+                    >
+                      {t("financialOutcome")}
+                    </label>
                     <Select
-                      value={selectedStatus}
-                      onValueChange={(v) =>
-                        setSelectedStatus(v as DisputeStatus)
+                      value={resolutionType}
+                      onValueChange={(value) =>
+                        setResolutionType(value as DisputeResolutionType)
                       }
                     >
                       <SelectTrigger
-                        id="dispute-review-status"
+                        id="dispute-financial-outcome"
                         className="bg-white"
                       >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="OPEN">{t("open")}</SelectItem>
-                        <SelectItem value="INVESTIGATING">
-                          {t("investigating")}
+                        <SelectItem value="RELEASE_PROVIDER">
+                          {t("releaseProvider")}
+                        </SelectItem>
+                        <SelectItem value="FULL_REFUND">
+                          {t("fullCustomerRefund")}
+                        </SelectItem>
+                        <SelectItem value="PARTIAL_REFUND">
+                          {t("partialCustomerRefund")}
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button
-                      variant="outline"
-                      onClick={handleSaveStatus}
-                      disabled={isSaving || selectedStatus === dispute.status}
-                    >
-                      {common("save")}
-                    </Button>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label
-                    htmlFor="dispute-financial-outcome"
-                    className="text-xs font-medium text-gray-700"
-                  >
-                    {t("financialOutcome")}
-                  </label>
-                  <Select
-                    value={resolutionType}
-                    onValueChange={(value) =>
-                      setResolutionType(value as DisputeResolutionType)
-                    }
-                  >
-                    <SelectTrigger
-                      id="dispute-financial-outcome"
-                      className="bg-white"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="RELEASE_PROVIDER">
-                        {t("releaseProvider")}
-                      </SelectItem>
-                      <SelectItem value="FULL_REFUND">
-                        {t("fullCustomerRefund")}
-                      </SelectItem>
-                      <SelectItem value="PARTIAL_REFUND">
-                        {t("partialCustomerRefund")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {resolutionType === "PARTIAL_REFUND" && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="dispute-refund-amount"
+                        className="text-xs font-medium text-gray-700"
+                      >
+                        {t("refundAmount")}
+                      </label>
+                      <Input
+                        id="dispute-refund-amount"
+                        type="number"
+                        min="0.01"
+                        max={Math.max(0, Number(dispute.order.total) - 0.01)}
+                        step="0.01"
+                        value={refundAmount}
+                        onChange={(event) =>
+                          setRefundAmount(event.target.value)
+                        }
+                        placeholder="0.00"
+                        className="bg-white"
+                      />
+                      {Number(refundAmount) > 0 && (
+                        <p className="text-xs leading-relaxed text-gray-500">
+                          The remaining{" "}
+                          {formatMoney(
+                            Math.max(
+                              0,
+                              refundableAmount - Number(refundAmount),
+                            ),
+                            dispute.order.currency,
+                          )}{" "}
+                          is split using the order’s original{" "}
+                          {Number(dispute.order.commissionRate ?? 10)}%
+                          commission rate.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                  Financial outcome:{" "}
+                  {dispute.resolutionType?.replaceAll("_", " ").toLowerCase() ||
+                    "resolved"}
+                  {dispute.resolutionRefundAmount
+                    ? ` · ${formatMoney(dispute.resolutionRefundAmount, dispute.order.currency)} refund`
+                    : ""}
                 </div>
+              )}
 
-                {resolutionType === "PARTIAL_REFUND" && (
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="dispute-refund-amount"
-                      className="text-xs font-medium text-gray-700"
-                    >
-                      {t("refundAmount")}
-                    </label>
-                    <Input
-                      id="dispute-refund-amount"
-                      type="number"
-                      min="0.01"
-                      max={Math.max(0, Number(dispute.order.total) - 0.01)}
-                      step="0.01"
-                      value={refundAmount}
-                      onChange={(event) => setRefundAmount(event.target.value)}
-                      placeholder="0.00"
-                      className="bg-white"
-                    />
-                    {Number(refundAmount) > 0 && (
-                      <p className="text-xs leading-relaxed text-gray-500">
-                        The remaining GHS{" "}
-                        {Math.max(
-                          0,
-                          refundableAmount - Number(refundAmount),
-                        ).toFixed(2)}{" "}
-                        is split using the order’s original{" "}
-                        {Number(dispute.order.commissionRate ?? 10)}% commission
-                        rate.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
-                Financial outcome:{" "}
-                {dispute.resolutionType?.replaceAll("_", " ").toLowerCase() ||
-                  "resolved"}
-                {dispute.resolutionRefundAmount
-                  ? ` · GHS ${Number(dispute.resolutionRefundAmount).toFixed(2)} refund`
-                  : ""}
+              <div className="space-y-2">
+                <label
+                  htmlFor="dispute-resolution-note"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  {t("resolutionNote")}{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <Textarea
+                  id="dispute-resolution-note"
+                  placeholder={t("resolutionNotePlaceholder")}
+                  className="min-h-[120px] bg-white resize-none text-sm"
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
               </div>
-            )}
 
-            <div className="space-y-2">
-              <label
-                htmlFor="dispute-resolution-note"
-                className="text-xs font-medium text-gray-700"
-              >
-                {t("resolutionNote")}{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <Textarea
-                id="dispute-resolution-note"
-                placeholder={t("resolutionNotePlaceholder")}
-                className="min-h-[120px] bg-white resize-none text-sm"
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-              />
+              {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" && (
+                <Button
+                  className="w-full bg-[#15803d] hover:bg-[#14532d] text-white flex items-center gap-2 justify-center"
+                  onClick={requestResolution}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  {isSaving
+                    ? common("submitting")
+                    : resolutionType === "RELEASE_PROVIDER"
+                      ? t("releaseEarnings")
+                      : t("submitRefund")}
+                </Button>
+              )}
             </div>
-
-            {dispute.status !== "RESOLVED" && dispute.status !== "CLOSED" && (
-              <Button
-                className="w-full bg-[#15803d] hover:bg-[#14532d] text-white flex items-center gap-2 justify-center"
-                onClick={requestResolution}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4" />
-                )}
-                {isSaving
-                  ? common("submitting")
-                  : resolutionType === "RELEASE_PROVIDER"
-                    ? t("releaseEarnings")
-                    : t("submitRefund")}
-              </Button>
-            )}
-          </div>
           )}
 
           {/* Timeline */}
@@ -608,7 +633,13 @@ export default function DisputeDetailsPage({
                   </div>
                   <p className="text-sm font-medium text-gray-900 leading-none">
                     {t("statusChanged", {
-                      status: t(dispute.status === "INVESTIGATING" ? "investigating" : dispute.status === "RESOLVED" ? "resolved" : "closed"),
+                      status: t(
+                        dispute.status === "INVESTIGATING"
+                          ? "investigating"
+                          : dispute.status === "RESOLVED"
+                            ? "resolved"
+                            : "closed",
+                      ),
                     })}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -627,7 +658,8 @@ export default function DisputeDetailsPage({
                     <div className="w-2.5 h-2.5 rounded-full bg-green-600" />
                   </div>
                   <p className="text-sm font-medium text-gray-900 leading-none">
-                    {t("title")} {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
+                    {t("title")}{" "}
+                    {t(dispute.status === "RESOLVED" ? "resolved" : "closed")}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {format.dateTime(new Date(dispute.resolvedAt), "dateTime")}
@@ -661,8 +693,8 @@ export default function DisputeDetailsPage({
               {resolutionType === "RELEASE_PROVIDER"
                 ? t("releaseTitle")
                 : resolutionType === "FULL_REFUND"
-                  ? `Refund the remaining GHS ${refundableAmount.toFixed(2)}?`
-                  : `Refund GHS ${Number(refundAmount || 0).toFixed(2)}?`}
+                  ? `Refund the remaining ${formatMoney(refundableAmount, dispute.order.currency)}?`
+                  : `Refund ${formatMoney(refundAmount || 0, dispute.order.currency)}?`}
             </DialogTitle>
             <DialogDescription>
               {resolutionType === "RELEASE_PROVIDER"
@@ -671,8 +703,8 @@ export default function DisputeDetailsPage({
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-            Order #{dispute.order.orderNumber} · Remaining refundable GHS{" "}
-            {refundableAmount.toFixed(2)}
+            Order #{dispute.order.orderNumber} · Remaining refundable{" "}
+            {formatMoney(refundableAmount, dispute.order.currency)}
           </div>
           <DialogFooter>
             <Button

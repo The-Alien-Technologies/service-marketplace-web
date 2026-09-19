@@ -21,6 +21,9 @@ import { apiService } from "@/lib/api";
 import { toast } from "react-toastify";
 import { useCategoriesStore } from "@/store/categories-store";
 import { useTranslations } from "next-intl";
+import { ProviderMarketMembership } from "@/types/market";
+import { useAuthStore } from "@/store/auth-store";
+import { canCreateService } from "@/lib/provider-access";
 
 type Plan = {
   id: string;
@@ -45,15 +48,46 @@ export default function AddServicePage() {
   const common = useTranslations("Common");
   const router = useRouter();
   const { categories, fetchCategories } = useCategoriesStore();
+  const { user, hasHydrated } = useAuthStore();
+  const canCreate = canCreateService(user);
+
+  useEffect(() => {
+    if (hasHydrated && !canCreate) {
+      router.replace("/dashboard/services");
+    }
+  }, [canCreate, hasHydrated, router]);
 
   // Fetch categories on mount
   useEffect(() => {
+    if (!canCreate) return;
+
     fetchCategories();
-  }, [fetchCategories]);
+    void apiService
+      .getProviderMarketMemberships()
+      .then((memberships) => {
+        setMarketMemberships(memberships);
+        const primary = memberships.find(
+          (membership) =>
+            membership.status === "ACTIVE" && membership.isPrimary,
+        );
+        const firstActive = memberships.find(
+          (membership) => membership.status === "ACTIVE",
+        );
+        setMarketId(primary?.marketId || firstActive?.marketId || "");
+      })
+      .catch(() => toast.error("Could not load your approved markets"));
+  }, [canCreate, fetchCategories]);
 
   // Service data state
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [marketId, setMarketId] = useState("");
+  const [availability, setAvailability] = useState<"MARKET" | "GLOBAL">(
+    "MARKET",
+  );
+  const [marketMemberships, setMarketMemberships] = useState<
+    ProviderMarketMembership[]
+  >([]);
   const [overview, setOverview] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
@@ -75,6 +109,13 @@ export default function AddServicePage() {
   const [addons, setAddons] = useState<Addon[]>([]);
 
   const [showAddons, setShowAddons] = useState(true);
+
+  const activeMarketMemberships = marketMemberships.filter(
+    (membership) => membership.status === "ACTIVE",
+  );
+  const selectedMarket = activeMarketMemberships.find(
+    (membership) => membership.marketId === marketId,
+  )?.market;
 
   const togglePlanExpansion = (id: string) => {
     setPlans(
@@ -166,9 +207,7 @@ export default function AddServicePage() {
     const filesToAdd = files.slice(0, remainingSlots);
 
     if (files.length > remainingSlots) {
-      toast.warning(
-        t("maxImages", { count: remainingSlots }),
-      );
+      toast.warning(t("maxImages", { count: remainingSlots }));
     }
 
     setPortfolioImages([...portfolioImages, ...filesToAdd]);
@@ -213,14 +252,16 @@ export default function AddServicePage() {
       toast.error(t("categoryRequired"));
       return;
     }
+    if (!marketId) {
+      toast.error("Choose an approved market for this service");
+      return;
+    }
     if (!overview.trim()) {
       toast.error(t("overviewRequired"));
       return;
     }
     if (plans.length === 0) {
-      toast.error(
-        t("atLeastOnePlan"),
-      );
+      toast.error(t("atLeastOnePlan"));
       return;
     }
 
@@ -254,6 +295,8 @@ export default function AddServicePage() {
 
       // Prepare data
       const serviceData = {
+        marketId,
+        availability,
         title,
         categoryId,
         overview,
@@ -288,14 +331,10 @@ export default function AddServicePage() {
       if (portfolioImages.length > 0) {
         try {
           await apiService.uploadServiceImages(service.id, portfolioImages);
-          toast.success(
-            t("imagesUploaded", { count: portfolioImages.length }),
-          );
+          toast.success(t("imagesUploaded", { count: portfolioImages.length }));
         } catch (error) {
           console.error("Failed to upload portfolio images:", error);
-          toast.warning(
-            t("imagesUploadPartial"),
-          );
+          toast.warning(t("imagesUploadPartial"));
         }
       }
 
@@ -316,6 +355,15 @@ export default function AddServicePage() {
     }
   };
 
+  if (!hasHydrated || !canCreate) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-700" />
+        <span className="sr-only">{common("loading")}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[1200px] mx-auto pb-20">
       {/* Header */}
@@ -328,15 +376,17 @@ export default function AddServicePage() {
             {services("myServices")}
           </Link>
           <ChevronLeft className="w-4 h-4 mx-2 rotate-180" />
-          <span className="text-gray-900 font-medium">{t("previewPublish")}</span>
+          <span className="text-gray-900 font-medium">
+            {t("previewPublish")}
+          </span>
         </nav>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{services("myServices")}</h1>
-            <p className="text-gray-500 mt-1">
-              {t("createSubtitle")}
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {services("myServices")}
+            </h1>
+            <p className="text-gray-500 mt-1">{t("createSubtitle")}</p>
           </div>
         </div>
       </div>
@@ -401,6 +451,55 @@ export default function AddServicePage() {
               {t("generalDetails")}
             </h2>
 
+            <div className="rounded-xl border border-green-200 bg-green-50/70 p-4">
+              <label
+                htmlFor="market-select"
+                className="text-sm font-semibold text-gray-900"
+              >
+                Service market and currency
+              </label>
+              <Select value={marketId} onValueChange={setMarketId}>
+                <SelectTrigger id="market-select" className="mt-2 bg-white">
+                  <SelectValue placeholder="Choose an approved market" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeMarketMemberships.map(({ market }) => (
+                    <SelectItem key={market.id} value={market.id}>
+                      {market.name} · {market.currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {activeMarketMemberships.length === 0 ? (
+                <p className="mt-2 text-xs leading-5 text-amber-800">
+                  You need an approved country membership before publishing a
+                  service.
+                </p>
+              ) : (
+                <p className="mt-2 text-xs leading-5 text-gray-600">
+                  This service will always be priced and paid in{" "}
+                  {selectedMarket?.currency ?? "the selected market currency"}.
+                </p>
+              )}
+              <div className="mt-3 flex items-center justify-between gap-4 border-t border-green-200 pt-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Global discovery
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Show this offer in Global without changing its currency.
+                  </p>
+                </div>
+                <Switch
+                  checked={availability === "GLOBAL"}
+                  onCheckedChange={(checked) =>
+                    setAvailability(checked ? "GLOBAL" : "MARKET")
+                  }
+                  aria-label="Make service globally discoverable"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label
                 htmlFor="title"
@@ -435,9 +534,7 @@ export default function AddServicePage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                {t("categoryHelp")}
-              </p>
+              <p className="text-xs text-gray-500">{t("categoryHelp")}</p>
             </div>
 
             <div className="space-y-2">
@@ -462,7 +559,9 @@ export default function AddServicePage() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">{services("tags")}</span>
+              <span className="text-sm font-medium text-gray-700">
+                {services("tags")}
+              </span>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
                   <div
@@ -504,10 +603,10 @@ export default function AddServicePage() {
 
           {/* Catalogue */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t("catalogue")}</h2>
-            <p className="text-sm text-gray-500 -mt-2">
-              {t("catalogueHelp")}
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("catalogue")}
+            </h2>
+            <p className="text-sm text-gray-500 -mt-2">{t("catalogueHelp")}</p>
 
             <input
               type="file"
@@ -572,9 +671,7 @@ export default function AddServicePage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 {services("pricingPlans")}
               </h2>
-              <p className="text-sm text-gray-500">
-                {t("pricingHelp")}
-              </p>
+              <p className="text-sm text-gray-500">{t("pricingHelp")}</p>
             </div>
 
             {/* Suggested Examples */}
@@ -635,7 +732,7 @@ export default function AddServicePage() {
                         </h3>
                         {!plan.isExpanded && plan.price && (
                           <p className="text-xs text-gray-500">
-                            GHS {plan.price}
+                            {selectedMarket?.currency ?? "—"} {plan.price}
                           </p>
                         )}
                       </div>
@@ -714,7 +811,7 @@ export default function AddServicePage() {
                         <div className="relative">
                           <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
                             <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
-                              GHS
+                              {selectedMarket?.currency ?? "—"}
                             </span>
                           </div>
                           <Input
@@ -793,9 +890,7 @@ export default function AddServicePage() {
                 )}
               >
                 <Plus className="w-4 h-4" />
-                {plans.length >= 5
-                  ? t("maximumPlans")
-                  : t("addPlan")}
+                {plans.length >= 5 ? t("maximumPlans") : t("addPlan")}
               </button>
             </div>
           </div>
@@ -806,11 +901,11 @@ export default function AddServicePage() {
               <div>
                 <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-1">
                   {services("addOns")}{" "}
-                  <span className="text-gray-400 font-normal">({common("optional")})</span>
+                  <span className="text-gray-400 font-normal">
+                    ({common("optional")})
+                  </span>
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t("addOnsBody")}
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{t("addOnsBody")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">{t("show")}</span>
@@ -880,7 +975,7 @@ export default function AddServicePage() {
                       <div className="relative">
                         <div className="absolute left-0 top-0 bottom-0 px-3 bg-gray-50 border-r border-gray-200 rounded-l-md flex items-center">
                           <span className="text-sm font-medium text-gray-600 flex items-center gap-1">
-                            GHS
+                            {selectedMarket?.currency ?? "—"}
                           </span>
                         </div>
                         <Input

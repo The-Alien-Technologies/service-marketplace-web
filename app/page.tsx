@@ -7,24 +7,23 @@ import { ServiceCarousel } from "@/components/sections/carousels/service-carouse
 import { CategoryCarousel } from "@/components/sections/carousels/category-carousel";
 import { MomentsSection } from "@/components/sections/home/moments-section";
 import { HowItWorksSection } from "@/components/sections/home/how-it-works-section";
-import { GetInspiredSection } from "@/components/sections/home/get-inspired-section";
 import { AppDownloadSection } from "@/components/sections/home/app-download-section";
-import { useAuthStore } from "@/store/auth-store";
 import { useCategories } from "@/store/categories-store";
 import { CategoryCardData } from "@/components/sections/cards/category-card";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
 import { ServiceCardData } from "@/components/sections/cards/service-card";
-import {useFormatter, useTranslations} from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
+import { useMarketStore } from "@/store/market-store";
 
 export default function Home() {
   const t = useTranslations("Home");
   const marketplace = useTranslations("Marketplace");
   const common = useTranslations("Common");
-  const format = useFormatter();
-  const { showAuth } = useAuthStore();
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
   const router = useRouter();
   const { featuredCategories, topLevelCategories, isLoading } = useCategories();
 
@@ -34,31 +33,35 @@ export default function Home() {
   const [isLoadingServices, setIsLoadingServices] = useState(true);
 
   // Transform Service to ServiceCardData
-  const transformServiceToCard = (service: Service): ServiceCardData => {
-    const minPrice =
-      service.plans && service.plans.length > 0
-        ? Math.min(...service.plans.map((p) => Number(p.price)))
-        : 0;
+  const transformServiceToCard = useCallback(
+    (service: Service): ServiceCardData => {
+      const minPrice =
+        service.plans && service.plans.length > 0
+          ? Math.min(...service.plans.map((p) => Number(p.price)))
+          : 0;
 
-    const providerName =
-      service.provider?.displayName ||
-      `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
-      common("provider");
+      const providerName =
+        service.provider?.displayName ||
+        `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
+        common("provider");
 
-    return {
-      id: service.id,
-      providerName: providerName,
-      providerAvatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
-      isPro: false, // TODO: Add pro status later
-      isOnline: false, // TODO: Add online status later
-      serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
-      description: service.title,
-      price: marketplace("from", {
-        price: format.number(minPrice, {style: "currency", currency: "GHS"})
-      }),
-      rating: 0, // TODO: Add rating system later
-    };
-  };
+      return {
+        id: service.id,
+        providerName: providerName,
+        providerAvatar:
+          service.provider?.avatar || "/assets/temp/user/u1.jpg",
+        isPro: false, // TODO: Add pro status later
+        isOnline: false, // TODO: Add online status later
+        serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
+        description: service.title,
+        price: marketplace("from", {
+          price: formatMoney(minPrice, service.currency, service.market?.locale),
+        }),
+        rating: 0, // TODO: Add rating system later
+      };
+    },
+    [common, marketplace],
+  );
 
   // Fetch services on mount
   useEffect(() => {
@@ -70,6 +73,7 @@ export default function Home() {
         const response = await apiService.getServices({
           status: "PUBLISHED",
           limit: 10,
+          market: selectedMarketCode,
         });
 
         const transformedServices = response.services.map(
@@ -88,7 +92,7 @@ export default function Home() {
     };
 
     fetchServices();
-  }, []);
+  }, [selectedMarketCode, transformServiceToCard]);
 
   // Transform API categories to CategoryCardData format
   const categoryCardData: CategoryCardData[] = useMemo(() => {
@@ -124,9 +128,7 @@ export default function Home() {
               text: t("seeBestsellers"),
               onClick: () => router.push("/services"),
             }}
-            onServiceClick={(service) =>
-              router.push(`/services/${service.id}`)
-            }
+            onServiceClick={(service) => router.push(`/services/${service.id}`)}
           />
         )}
       </div>

@@ -20,7 +20,9 @@ const ITEMS_PER_PAGE = 12;
 import { Category } from "@/types/auth"; // Assuming Category type is exported from auth types based on api.ts
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
+import { useMarketStore } from "@/store/market-store";
 
 export default function CategoryPage({
   params,
@@ -29,7 +31,8 @@ export default function CategoryPage({
 }) {
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
-  const format = useFormatter();
+  const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const markets = useMarketStore((state) => state.markets);
   const [currentPage, setCurrentPage] = useState(1);
   const { slug } = use(params);
 
@@ -47,6 +50,19 @@ export default function CategoryPage({
 
   const [isCategoryLoading, setIsCategoryLoading] = useState(true);
   const [isServicesLoading, setIsServicesLoading] = useState(true);
+
+  useEffect(() => {
+    if (selectedMarketCode !== "GLOBAL") return;
+    setFilters((current) => ({
+      ...current,
+      minPrice: undefined,
+      maxPrice: undefined,
+      sortBy: current.sortBy.startsWith("price_")
+        ? "best_match"
+        : current.sortBy,
+    }));
+    setCurrentPage(1);
+  }, [selectedMarketCode]);
 
   // Fetch category details - only runs when slug changes
   useEffect(() => {
@@ -79,6 +95,7 @@ export default function CategoryPage({
             page: currentPage,
             limit: ITEMS_PER_PAGE,
             ...filters,
+            market: selectedMarketCode,
           },
         );
 
@@ -95,7 +112,7 @@ export default function CategoryPage({
     if (slug) {
       fetchServices();
     }
-  }, [slug, currentPage, filters, t]);
+  }, [slug, currentPage, filters, selectedMarketCode, t]);
 
   // Fetch latest services - only once
   useEffect(() => {
@@ -104,6 +121,7 @@ export default function CategoryPage({
         const latestData = await apiService.getServices({
           limit: 10,
           status: "PUBLISHED",
+          market: selectedMarketCode,
         });
         setLatestServices(latestData.services);
       } catch (error) {
@@ -112,9 +130,12 @@ export default function CategoryPage({
     };
 
     fetchLatest();
-  }, []);
+  }, [selectedMarketCode]);
 
   const totalPages = Math.ceil(totalServices / ITEMS_PER_PAGE);
+  const selectedMarket = markets.find(
+    (market) => market.code === selectedMarketCode,
+  );
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -154,8 +175,11 @@ export default function CategoryPage({
       <main className="">
         {/* Filters Section */}
         <CategoryFilters
+          key={selectedMarketCode}
           categoryName={displayCategoryName}
           resultCount={totalServices}
+          currency={selectedMarket?.currency}
+          isGlobal={selectedMarketCode === "GLOBAL"}
           onFilterChange={handleFilterChange}
         />
 
@@ -180,7 +204,13 @@ export default function CategoryPage({
                   service.coverImage || "/assets/temp/products/p1.jpg",
                 description: service.title,
                 price: service.plans?.[0]?.price
-                  ? t("from", { price: format.number(service.plans[0].price, "currency") })
+                  ? t("from", {
+                      price: formatMoney(
+                        service.plans[0].price,
+                        service.currency,
+                        service.market?.locale,
+                      ),
+                    })
                   : t("priceOnRequest"),
                 rating: 0, // TODO: Add to API
                 isOnline: true, // TODO: Add to API
@@ -188,9 +218,7 @@ export default function CategoryPage({
             />
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">
-                {t("noServicesCategory")}
-              </p>
+              <p className="text-gray-500 text-lg">{t("noServicesCategory")}</p>
             </div>
           )}
         </div>
@@ -222,7 +250,13 @@ export default function CategoryPage({
               serviceImage: service.coverImage ?? "",
               description: service.title,
               price: service.plans?.[0]?.price
-                ? t("from", { price: format.number(service.plans[0].price, "currency") })
+                ? t("from", {
+                    price: formatMoney(
+                      service.plans[0].price,
+                      service.currency,
+                      service.market?.locale,
+                    ),
+                  })
                 : t("priceOnRequest"),
               rating: 0,
               isOnline: true,

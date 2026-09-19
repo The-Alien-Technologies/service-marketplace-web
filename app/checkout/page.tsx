@@ -13,25 +13,26 @@ import {
 import { Header } from "@/components/layout/header";
 import { CheckoutHeader } from "@/components/sections/checkout/checkout-header";
 import { Button } from "@/components/ui/button";
-import { apiService } from "@/lib/api";
+import { ApiError, apiService } from "@/lib/api";
 import { canInitializePayment } from "@/lib/payment-state";
+import { useAuthStore } from "@/store/auth-store";
 import { useOrderStore } from "@/store/order-store";
 import type { Order } from "@/types/order";
-import {useFormatter, useTranslations} from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatMoney } from "@/lib/money";
 
 function CheckoutContent() {
   const t = useTranslations("Checkout");
   const common = useTranslations("Common");
   const home = useTranslations("Home");
   const errors = useTranslations("Errors");
-  const format = useFormatter();
-  const formatMoney = (value: number | string, currency = "GHS") =>
-    format.number(Number(value), {style: "currency", currency});
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedOrderId = searchParams.get("orderId");
   const { pendingOrder, clearPendingOrder, setCreatedOrderId } =
     useOrderStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const showAuth = useAuthStore((state) => state.showAuth);
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
@@ -64,9 +65,7 @@ function CheckoutContent() {
       } catch (error) {
         if (!cancelled) {
           setLoadError(
-            error instanceof Error
-              ? error.message
-              : errors("loadFailed"),
+            error instanceof Error ? error.message : errors("loadFailed"),
           );
         }
       } finally {
@@ -78,7 +77,7 @@ function CheckoutContent() {
     return () => {
       cancelled = true;
     };
-  }, [existingOrderId, loadVersion, pendingOrder, router]);
+  }, [errors, existingOrderId, loadVersion, pendingOrder, router]);
 
   const summary = useMemo(() => {
     if (order) {
@@ -96,7 +95,7 @@ function CheckoutContent() {
         addOns: order.addOns ?? [],
         addOnsTotal: Number(order.addOnsTotal ?? 0),
         total: Number(order.total),
-        currency: order.currency || "GHS",
+        currency: order.currency,
         orderNumber: order.orderNumber,
       };
     }
@@ -117,21 +116,26 @@ function CheckoutContent() {
       })),
       addOnsTotal: pendingOrder.addOnsTotal,
       total: pendingOrder.subtotal,
-      currency: "GHS",
+      currency: pendingOrder.currency,
       orderNumber: null,
     };
-  }, [order, pendingOrder]);
+  }, [order, pendingOrder, t]);
 
   const handleContinueToPaystack = async () => {
     setPaymentError(null);
+
+    if (!isAuthenticated) {
+      showAuth("signin");
+      return;
+    }
+
     setIsPaying(true);
 
     try {
       let payableOrder = order;
 
       if (!payableOrder) {
-        if (!pendingOrder)
-          throw new Error(t("missingDetails"));
+        if (!pendingOrder) throw new Error(t("missingDetails"));
         payableOrder = await apiService.createOrder({
           serviceId: pendingOrder.serviceId,
           planId: pendingOrder.plan.id,
@@ -154,10 +158,13 @@ function CheckoutContent() {
 
       window.location.assign(payment.authorizationUrl);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setIsPaying(false);
+        showAuth("signin");
+        return;
+      }
       setPaymentError(
-        error instanceof Error
-          ? error.message
-          : t("startFailed"),
+        error instanceof Error ? error.message : t("startFailed"),
       );
       setIsPaying(false);
     }
@@ -256,15 +263,11 @@ function CheckoutContent() {
             <div className="mt-10 max-w-xl space-y-4 text-sm text-gray-700 dark:text-gray-200">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
-                <p>
-                  {t("workAfterPayment")}
-                </p>
+                <p>{t("workAfterPayment")}</p>
               </div>
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-700 dark:text-brand-400" />
-                <p>
-                  {t("safeRetry")}
-                </p>
+                <p>{t("safeRetry")}</p>
               </div>
             </div>
           </section>
@@ -359,8 +362,14 @@ function CheckoutContent() {
                   </>
                 ) : isNotPayable ? (
                   t("viewStatus")
+                ) : !isAuthenticated ? (
+                  t("signInToPay", {
+                    amount: formatMoney(summary.total, summary.currency),
+                  })
                 ) : (
-                  t("pay", {amount: formatMoney(summary.total, summary.currency)})
+                  t("pay", {
+                    amount: formatMoney(summary.total, summary.currency),
+                  })
                 )}
               </Button>
               <Button

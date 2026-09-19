@@ -32,11 +32,14 @@ export function ProviderProfileForm() {
   const router = useRouter();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [phoneVerificationStep, setPhoneVerificationStep] = useState<PhoneVerificationStep>('input');
+  const { user, nextProviderStep, previousProviderStep } = useAuthStore();
+  const hasVerifiedPhone = Boolean(user?.phoneVerified && user.phoneNumber);
+  const [phoneVerificationStep, setPhoneVerificationStep] = useState<PhoneVerificationStep>(
+    hasVerifiedPhone ? 'verified' : 'input',
+  );
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
   const [isDragging, setIsDragging] = useState(false);
-  const { nextProviderStep, previousProviderStep } = useAuthStore();
 
   // Refs for file input
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -65,9 +68,10 @@ export function ProviderProfileForm() {
       language: z.string().min(1, t('languageRequired')),
     })),
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      language: getSupportedLanguage(locale).value,
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      phoneNumber: user?.phoneNumber || '',
+      language: user?.preferredLanguage || getSupportedLanguage(locale).value,
     },
   });
 
@@ -79,7 +83,7 @@ export function ProviderProfileForm() {
   // Check if all required fields are completed
   const isFormValid = () => {
     return (
-      selectedAvatar &&
+      (selectedAvatar || avatarPreview) &&
       firstName?.trim() &&
       lastName?.trim() &&
       phoneNumber?.trim() &&
@@ -96,7 +100,7 @@ export function ProviderProfileForm() {
     }
 
     // Check if avatar is selected (mandatory)
-    if (!selectedAvatar) {
+    if (!selectedAvatar && !avatarPreview) {
       toast.error(onboarding('pictureRequired'));
       return;
     }
@@ -111,7 +115,7 @@ export function ProviderProfileForm() {
       };
 
       // Update profile with avatar - reuse existing API
-      await apiService.updateProfile(profileData, selectedAvatar);
+      await apiService.updateProfile(profileData, selectedAvatar || undefined);
       
       toast.success(onboarding('profileSaved'));
       nextProviderStep();
@@ -285,27 +289,7 @@ export function ProviderProfileForm() {
           />
         </div>
 
-        {/* Full Name */}
-        <div>
-          <label
-            htmlFor="provider-full-name"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            {onboarding('fullName')}
-          </label>
-          <div className="relative">
-            <Input
-              id="provider-full-name"
-              value={`${firstName || ''} ${lastName || ''}`.trim()}
-              placeholder="John Doe"
-              className="pl-10 h-12"
-              readOnly
-            />
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        {/* First Name and Last Name - Hidden but registered */}
+        {/* First Name and Last Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -341,6 +325,7 @@ export function ProviderProfileForm() {
           value={phoneNumber || ''}
           onChange={(value) => setValue('phoneNumber', value)}
           onVerificationChange={setPhoneVerificationStep}
+          initiallyVerified={hasVerifiedPhone}
           required
           error={errors.phoneNumber?.message}
         />
