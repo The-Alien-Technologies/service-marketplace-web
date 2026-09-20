@@ -48,6 +48,7 @@ interface PricingPlansProps {
   serviceId: string;
   currency: string;
   locale?: string;
+  checkoutEnabled?: boolean;
 }
 
 export function PricingPlans({
@@ -58,8 +59,10 @@ export function PricingPlans({
   serviceId,
   currency,
   locale,
+  checkoutEnabled = true,
 }: PricingPlansProps) {
   const t = useTranslations("Marketplace");
+  const markets = useTranslations("Markets");
   const common = useTranslations("Common");
   const [selectedPlan, setSelectedPlan] = useState<string>(plans[0]?.id || "");
   const [expandedPlans, setExpandedPlans] = useState<Set<string>>(
@@ -108,6 +111,7 @@ export function PricingPlans({
   };
 
   const handleConfirm = () => {
+    if (!checkoutEnabled) return;
     setIsCheckoutModalOpen(true);
   };
 
@@ -229,11 +233,17 @@ export function PricingPlans({
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
+            disabled={!checkoutEnabled}
+            className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
           >
-            {common("confirm")}
+            {checkoutEnabled ? common("confirm") : markets("checkoutPaused")}
           </button>
         </div>
+        {!checkoutEnabled && (
+          <p className="mt-3 text-sm text-amber-700 dark:text-amber-300" role="status">
+            {markets("checkoutPausedBody")}
+          </p>
+        )}
       </div>
 
       {/* Contact Modal */}

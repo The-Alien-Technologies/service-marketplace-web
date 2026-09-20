@@ -14,6 +14,28 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "**.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3000",
+        pathname: "/uploads/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "3000",
+        pathname: "/uploads/**",
+      },
+      {
+        protocol: "https",
         hostname: "tryoom-dev.s3.us-east-1.amazonaws.com",
         pathname: "/**",
       },

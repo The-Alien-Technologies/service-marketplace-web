@@ -116,6 +116,10 @@ export default function AddServicePage() {
   const selectedMarket = activeMarketMemberships.find(
     (membership) => membership.marketId === marketId,
   )?.market;
+  const publishingEnabled = selectedMarket
+    ? selectedMarket.status === "ACTIVE" &&
+      selectedMarket.servicePublishingEnabled
+    : true;
 
   const togglePlanExpansion = (id: string) => {
     setPlans(
@@ -1028,7 +1032,7 @@ export default function AddServicePage() {
             <Button
               className="w-full py-6 text-base font-medium bg-[#15803d] hover:bg-[#14532d] text-white"
               onClick={() => handleSubmit("PUBLISHED")}
-              disabled={isDraftSaving || isPublishing}
+              disabled={isDraftSaving || isPublishing || !publishingEnabled}
             >
               {isPublishing ? (
                 <>
@@ -1039,6 +1043,11 @@ export default function AddServicePage() {
                 t("publish")
               )}
             </Button>
+            {!publishingEnabled && (
+              <p className="text-sm text-amber-700 dark:text-amber-300" role="status">
+                {t("publishingPaused")}
+              </p>
+            )}
           </div>
         </div>
       </div>

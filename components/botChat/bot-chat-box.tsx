@@ -1,11 +1,10 @@
 "use client";
 
-import { X, Plus, Smile, Send, Camera, Mic } from "lucide-react";
+import { X, Send } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { ChatFormData } from "./chatInput";
 import ChatMessages, { Message } from "./chatMessage";
-import axios from 'axios';
 import { apiService } from "@/lib/api";
 import TypingIndicator from "./typingIndicator";
 
@@ -85,13 +84,13 @@ if ( event.key === 'Enter'){
           {/* Avatar */}
           <div className="relative">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-              {/* <Image
+              <Image
                 src={botAvatar}
                 alt={botName}
                 width={40}
                 height={40}
                 className="w-full h-full object-cover"
-              /> */}
+              />
             </div>
             {isOnline && (
               <div className="absolute bottom-0 right-0">
@@ -159,16 +158,6 @@ if ( event.key === 'Enter'){
       {/* Input Area */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          {/* Plus Button */}
-          <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-            <Plus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-
-          {/* Emoji Button */}
-          <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-            <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-
           {/* Input Field */}
           <input
             type="text"
@@ -185,15 +174,6 @@ if ( event.key === 'Enter'){
         <Send className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
 
-          {/* Camera Button */}
-          <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-            <Camera className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-
-          {/* Mic Button */}
-          <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-            <Mic className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
         </div>
       </div>
     </div>

@@ -59,6 +59,10 @@ export type Order = {
   service: {
     id: string;
     title: string;
+    market?: {
+      status: "ACTIVE" | "PAUSED" | "INACTIVE";
+      checkoutEnabled: boolean;
+    };
     category: {
       name: string;
     };

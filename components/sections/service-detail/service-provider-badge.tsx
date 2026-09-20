@@ -7,7 +7,7 @@ import { useFormatter, useTranslations } from "next-intl";
 interface ServiceProviderBadgeProps {
   providerName: string;
   providerAvatar?: string;
-  providerTitle: string;
+  providerTitle?: string;
   location: string;
   rating: number;
   isPro?: boolean;
@@ -20,8 +20,8 @@ export function ServiceProviderBadge({
   providerTitle,
   location,
   rating,
-  isPro = true,
-  isOnline = true,
+  isPro = false,
+  isOnline = false,
 }: ServiceProviderBadgeProps) {
   const t = useTranslations("Marketplace");
   const format = useFormatter();
@@ -103,9 +103,11 @@ export function ServiceProviderBadge({
           </div>
 
           {/* Second Line - Title */}
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {providerTitle}
-          </p>
+          {providerTitle && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {providerTitle}
+            </p>
+          )}
         </div>
       </div>
     </div>

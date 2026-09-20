@@ -176,10 +176,8 @@ export default function ServiceDetailPage({
         `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
         common("provider"),
       avatar: service.provider?.avatar || undefined,
-      title: t("serviceProviderTitle"), // TODO: Add title to provider profile
       location: service.market?.name || service.currency,
       rating: reviewData.summary.average,
-      isPro: false, // TODO: Implement pro status
     },
     pricingPlans:
       service.plans?.map((plan) => ({
@@ -249,11 +247,8 @@ export default function ServiceDetailPage({
             <ServiceProviderBadge
               providerName={serviceData.provider.name}
               providerAvatar={serviceData.provider.avatar}
-              providerTitle={serviceData.provider.title}
               location={serviceData.provider.location}
               rating={serviceData.provider.rating}
-              isPro={serviceData.provider.isPro}
-              isOnline={false}
             />
 
             {/* Pricing Plans */}
@@ -265,6 +260,10 @@ export default function ServiceDetailPage({
               serviceId={serviceId}
               currency={service.currency}
               locale={service.market?.locale}
+              checkoutEnabled={
+                service.market?.status === "ACTIVE" &&
+                service.market?.checkoutEnabled !== false
+              }
             />
           </div>
         </div>

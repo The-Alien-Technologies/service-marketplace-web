@@ -61,6 +61,7 @@ export interface Service {
     locale: string;
     status: "ACTIVE" | "PAUSED" | "INACTIVE";
     checkoutEnabled: boolean;
+    servicePublishingEnabled: boolean;
   };
   provider?: {
     id: string;

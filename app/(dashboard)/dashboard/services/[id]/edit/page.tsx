@@ -64,6 +64,10 @@ export default function EditServicePage() {
         setCategoryId(service.categoryId);
         setServiceCurrency(service.currency);
         setServiceMarketName(service.market?.name ?? "Service market");
+        setServicePublishingEnabled(
+          service.market?.status === "ACTIVE" &&
+            service.market?.servicePublishingEnabled !== false,
+        );
         setAvailability(service.availability);
         setOverview(service.overview);
         setTags(service.tags || []);
@@ -121,6 +125,8 @@ export default function EditServicePage() {
   const [categoryId, setCategoryId] = useState("");
   const [serviceCurrency, setServiceCurrency] = useState("");
   const [serviceMarketName, setServiceMarketName] = useState("");
+  const [servicePublishingEnabled, setServicePublishingEnabled] =
+    useState(true);
   const [availability, setAvailability] = useState<"MARKET" | "GLOBAL">(
     "MARKET",
   );
@@ -1101,7 +1107,9 @@ export default function EditServicePage() {
             <Button
               className="w-full py-6 text-base font-medium bg-[#15803d] hover:bg-[#14532d] text-white"
               onClick={() => handleSubmit("PUBLISHED")}
-              disabled={isDraftSaving || isPublishing}
+              disabled={
+                isDraftSaving || isPublishing || !servicePublishingEnabled
+              }
             >
               {isPublishing ? (
                 <>
@@ -1112,6 +1120,11 @@ export default function EditServicePage() {
                 t("publish")
               )}
             </Button>
+            {!servicePublishingEnabled && (
+              <p className="text-sm text-amber-700 dark:text-amber-300" role="status">
+                {t("publishingPaused")}
+              </p>
+            )}
           </div>
         </div>
       </div>

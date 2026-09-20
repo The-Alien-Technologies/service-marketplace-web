@@ -51,9 +51,11 @@ export function SignUpForm() {
         setUser(result.user);
       }
 
-      toast.success(
-        t("accountCreated"),
-      );
+      if (result.emailVerificationSent === false) {
+        toast.warn(t("verificationDeliveryFailed"));
+      } else {
+        toast.success(t("accountCreated"));
+      }
       nextUserStep();
     } catch (error) {
       const errorMessage =

@@ -52,7 +52,11 @@ export function ProviderWelcomeForm() {
         setUser(result.user);
       }
 
-      toast.success(t("accountCreated"));
+      if (result.emailVerificationSent === false) {
+        toast.warn(t("verificationDeliveryFailed"));
+      } else {
+        toast.success(t("accountCreated"));
+      }
       nextProviderStep();
     } catch (error) {
       const errorMessage =

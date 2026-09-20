@@ -124,6 +124,17 @@ function CheckoutContent() {
   const handleContinueToPaystack = async () => {
     setPaymentError(null);
 
+    if (
+      order &&
+      canInitializePayment(order.paymentStatus) &&
+      order.service.market &&
+      (order.service.market.status !== "ACTIVE" ||
+        !order.service.market.checkoutEnabled)
+    ) {
+      setPaymentError(t("checkoutPaused"));
+      return;
+    }
+
     if (!isAuthenticated) {
       showAuth("signin");
       return;
@@ -222,6 +233,13 @@ function CheckoutContent() {
   const isNotPayable = order
     ? !canInitializePayment(order.paymentStatus)
     : false;
+  const isCheckoutPaused = Boolean(
+    order &&
+      canInitializePayment(order.paymentStatus) &&
+      order.service.market &&
+      (order.service.market.status !== "ACTIVE" ||
+        !order.service.market.checkoutEnabled),
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -348,18 +366,30 @@ function CheckoutContent() {
               </div>
             )}
 
+            {isCheckoutPaused && (
+              <div
+                role="status"
+                className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{t("checkoutPaused")}</p>
+              </div>
+            )}
+
             <div className="mt-6 space-y-3">
               <Button
                 size="lg"
                 className="h-12 w-full bg-brand-800 text-white hover:bg-brand-900"
                 onClick={handleContinueToPaystack}
-                disabled={isPaying}
+                disabled={isPaying || isCheckoutPaused}
               >
                 {isPaying ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {t("opening")}
                   </>
+                ) : isCheckoutPaused ? (
+                  t("checkoutPausedAction")
                 ) : isNotPayable ? (
                   t("viewStatus")
                 ) : !isAuthenticated ? (

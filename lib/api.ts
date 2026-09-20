@@ -86,6 +86,7 @@ interface AuthResponse {
   refreshToken: string;
   user?: User;
   isNewUser?: boolean;
+  emailVerificationSent?: boolean;
 }
 
 class ApiService {
