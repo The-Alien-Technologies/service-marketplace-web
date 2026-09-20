@@ -20,9 +20,11 @@ import { useMarketStore } from "@/store/market-store";
 export function MarketSelector({
   className,
   align = "end",
+  compactOnMobile = false,
 }: {
   className?: string;
   align?: "start" | "center" | "end";
+  compactOnMobile?: boolean;
 }) {
   const t = useTranslations("Markets");
   const locale = useLocale();
@@ -61,7 +63,18 @@ export function MarketSelector({
           ) : (
             <Globe2 className="h-4 w-4" />
           )}
-          <span>{selected?.code ?? t("global")}</span>
+          {compactOnMobile ? (
+            <>
+              <span className="sm:hidden">{selected?.code ?? t("global")}</span>
+              <span className="hidden sm:inline">
+                {selected ? marketDisplayName(locale, selected) : t("global")}
+              </span>
+            </>
+          ) : (
+            <span>
+              {selected ? marketDisplayName(locale, selected) : t("global")}
+            </span>
+          )}
           <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
         </button>
       </DropdownMenuTrigger>
@@ -88,9 +101,7 @@ export function MarketSelector({
               </span>
               <span className="text-xs text-gray-500">
                 {market.currency}
-                {market.status === "PAUSED"
-                  ? ` · ${t("checkoutPaused")}`
-                  : ""}
+                {market.status === "PAUSED" ? ` · ${t("checkoutPaused")}` : ""}
               </span>
             </span>
             {selectedCode === market.code && (
@@ -105,9 +116,7 @@ export function MarketSelector({
         >
           <span>
             <span className="block font-medium">{t("global")}</span>
-            <span className="text-xs text-gray-500">
-              {t("globalBrowse")}
-            </span>
+            <span className="text-xs text-gray-500">{t("globalBrowse")}</span>
           </span>
           {selectedCode === "GLOBAL" && (
             <Check className="h-4 w-4 text-green-700" />

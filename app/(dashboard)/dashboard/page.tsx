@@ -134,6 +134,7 @@ function AdminDashboard() {
   const user = useAuthStore((state) => state.user);
   const markets = useMarketStore((state) => state.markets);
   const selectedMarketCode = useMarketStore((state) => state.selectedCode);
+  const selectMarket = useMarketStore((state) => state.select);
   const selectedMarketId =
     user?.role === "ADMIN"
       ? user.adminMarketId || undefined
@@ -240,7 +241,8 @@ function AdminDashboard() {
   } = data;
   const isMultiCurrency = data.currency === "MULTI";
   const chartHasData = revenueChart.some(
-    (item) => item.revenue || item.commission || item.payout,
+    (item) =>
+      item.grossVolume || item.netRevenue || item.commission || item.payout,
   );
   const donutData = totalOrders
     ? orderStatusBreakdown
@@ -283,10 +285,10 @@ function AdminDashboard() {
     ...(!isMultiCurrency
       ? [
           {
-            label: t("netRevenue"),
+            label: t("platformRevenue"),
             value: formatCurrency(stats.revenue, data.currency),
             trend: describeTrend(trends.revenue),
-            trendDetail: `${formatCurrency(trends.revenue.current, data.currency)} retained this month; ${formatCurrency(trends.revenue.previous, data.currency)} last month`,
+            trendDetail: `${formatCurrency(trends.revenue.current, data.currency)} Pavodah revenue this month; ${formatCurrency(trends.revenue.previous, data.currency)} last month`,
             icon: CreditCard,
             color: "text-green-600",
             barColor: "bg-green-600",
@@ -295,6 +297,17 @@ function AdminDashboard() {
         ]
       : []),
   ];
+
+  const switchToMarket = async (marketCode: string) => {
+    try {
+      await apiService.selectMarket(marketCode);
+      selectMarket(marketCode);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : t("marketSwitchFailed"),
+      );
+    }
+  };
 
   return (
     <div
@@ -402,39 +415,120 @@ function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {isMultiCurrency && (
           <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Revenue by country
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Currencies stay separate; no exchange rate is assumed in the
-                global view.
-              </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {t("marketRevenueTitle")}
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                  {t("marketRevenueBody")}
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    {selectedYear}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {data.availableYears.map((year) => (
+                    <DropdownMenuItem
+                      key={year}
+                      onSelect={() => setSelectedYear(year)}
+                    >
+                      {year}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {marketRevenueBreakdown.map((market) => (
-                <div
-                  key={market.id}
-                  className="rounded-xl border border-gray-200 bg-gray-50 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-gray-900">{market.name}</p>
-                    <span className="text-xs font-semibold text-gray-500">
-                      {market.currency}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-xl font-bold text-gray-950">
-                    {formatCurrency(market.total, market.currency)}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {formatCurrency(market.currentMonth, market.currency)} this
-                    month ·{" "}
-                    {formatCurrency(market.previousMonth, market.currency)}
-                    last month
-                  </p>
+
+            <div className="mt-6 overflow-x-auto">
+              <div className="min-w-[800px]">
+                <div className="grid grid-cols-[minmax(180px,1.35fr)_repeat(4,minmax(120px,1fr))_100px] gap-4 border-b border-gray-200 px-3 pb-3 text-xs font-semibold text-gray-500">
+                  <span>{t("market")}</span>
+                  <span className="text-right">{t("platformRevenue")}</span>
+                  <span className="text-right">{t("grossVolume")}</span>
+                  <span className="text-right">{t("commissions")}</span>
+                  <span className="text-right">{t("payouts")}</span>
+                  <span className="text-right">{t("monthGrowth")}</span>
                 </div>
-              ))}
+                {marketRevenueBreakdown.map((market) => (
+                  <button
+                    type="button"
+                    key={market.id}
+                    onClick={() => void switchToMarket(market.code)}
+                    className="grid w-full grid-cols-[minmax(180px,1.35fr)_repeat(4,minmax(120px,1fr))_100px] items-center gap-4 border-b border-gray-100 px-3 py-4 text-left transition-colors last:border-b-0 hover:bg-green-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600"
+                    aria-label={t("viewMarketRevenue", {
+                      market: market.name,
+                      revenue: formatCurrency(
+                        market.netRevenue,
+                        market.currency,
+                      ),
+                      volume: formatCurrency(
+                        market.grossVolume,
+                        market.currency,
+                      ),
+                      commission: formatCurrency(
+                        market.commission,
+                        market.currency,
+                      ),
+                      payout: formatCurrency(market.payout, market.currency),
+                      growth:
+                        market.growthPercent === null
+                          ? t("newRevenue")
+                          : `${market.growthPercent > 0 ? "+" : ""}${market.growthPercent.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`,
+                    })}
+                  >
+                    <span>
+                      <span className="block font-semibold text-gray-900">
+                        {market.name}
+                      </span>
+                      <span className="mt-0.5 block text-xs font-medium text-gray-500">
+                        {market.code} · {market.currency}
+                      </span>
+                    </span>
+                    <span className="text-right font-semibold text-gray-950">
+                      {formatCurrency(market.netRevenue, market.currency)}
+                    </span>
+                    <span className="text-right text-sm text-gray-700">
+                      {formatCurrency(market.grossVolume, market.currency)}
+                    </span>
+                    <span className="text-right text-sm text-gray-700">
+                      {formatCurrency(market.commission, market.currency)}
+                    </span>
+                    <span className="text-right text-sm text-gray-700">
+                      {formatCurrency(market.payout, market.currency)}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-right text-sm font-semibold",
+                        market.growthPercent === null ||
+                          market.growthPercent > 0
+                          ? "text-green-700"
+                          : market.growthPercent < 0
+                            ? "text-red-700"
+                            : "text-gray-500",
+                      )}
+                      title={`${formatCurrency(market.currentMonthNetRevenue, market.currency)} ${formatMonthKey(market.comparisonMonth)} · ${formatCurrency(market.previousMonthNetRevenue, market.currency)} ${formatMonthKey(market.previousComparisonMonth)}`}
+                    >
+                      {market.growthPercent === null
+                        ? t("newRevenue")
+                        : `${market.growthPercent > 0 ? "+" : ""}${market.growthPercent.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`}
+                    </span>
+                  </button>
+                ))}
+                {marketRevenueBreakdown.length === 0 && (
+                  <p className="px-3 py-10 text-center text-sm text-gray-500">
+                    {t("noMarketRevenue")}
+                  </p>
+                )}
+              </div>
             </div>
+            <p className="mt-4 text-xs leading-relaxed text-gray-500">
+              {t("platformRevenueDefinition")}
+            </p>
           </div>
         )}
 
@@ -490,11 +584,15 @@ function AdminDashboard() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-blue-400" />
-                  <span className="text-gray-600">{t("netRevenue")}</span>
+                  <span className="text-gray-600">{t("grossVolume")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-orange-400" />
                   <span className="text-gray-600">{t("commissions")}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-purple-400" />
+                  <span className="text-gray-600">{t("platformRevenue")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-green-400" />
@@ -534,11 +632,13 @@ function AdminDashboard() {
                 <Tooltip
                   formatter={(value, name) => [
                     formatCurrency(Number(value ?? 0), data.currency),
-                    name === "revenue"
-                      ? t("netRevenue")
+                    name === "grossVolume"
+                      ? t("grossVolume")
                       : name === "commission"
                         ? t("commissions")
-                        : t("payouts"),
+                        : name === "netRevenue"
+                          ? t("platformRevenue")
+                          : t("payouts"),
                   ]}
                   contentStyle={{
                     backgroundColor: "#1f2937",
@@ -551,12 +651,20 @@ function AdminDashboard() {
                 />
                 <Line
                   type="monotone"
-                  dataKey="revenue"
+                  dataKey="grossVolume"
                   stroke="#60a5fa" // blue-400
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 6 }}
-                  name="revenue"
+                  name="grossVolume"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="netRevenue"
+                  stroke="#c084fc" // purple-400
+                  strokeWidth={2}
+                  dot={false}
+                  name="netRevenue"
                 />
                 <Line
                   type="monotone"
@@ -807,9 +915,7 @@ function ProviderDashboard() {
       } catch (error) {
         if (!cancelled) {
           setLoadError(
-            error instanceof Error
-              ? error.message
-              : t("providerLoadFallback"),
+            error instanceof Error ? error.message : t("providerLoadFallback"),
           );
         }
       } finally {
@@ -1086,7 +1192,8 @@ function ProviderDashboard() {
                   {data.earningsSummary.bestMonth && (
                     <>
                       {" "}
-                      · {t("bestMonth", {
+                      ·{" "}
+                      {t("bestMonth", {
                         month: data.earningsSummary.bestMonth.name,
                         amount: formatCurrency(
                           data.earningsSummary.bestMonth.earnings,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { marketDisplayName } from "@/lib/market-display";
 import { useAuthStore } from "@/store/auth-store";
@@ -15,10 +15,7 @@ export function DashboardMarketContext() {
 
   if (user?.role === "SUPER_ADMIN") {
     return (
-      <div className="hidden items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 sm:flex">
-        <Globe2 className="h-4 w-4 text-green-700" />
-        {t("globalAdministration")}
-      </div>
+      <MarketSelector className="inline-flex px-2 sm:px-3" compactOnMobile />
     );
   }
 

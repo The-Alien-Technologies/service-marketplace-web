@@ -10,7 +10,10 @@ interface MarketStore {
   hasExplicitChoice: boolean;
   isLoading: boolean;
   hasLoaded: boolean;
-  load: (preferredMarketId?: string | null) => Promise<void>;
+  load: (
+    preferredMarketId?: string | null,
+    defaultGlobal?: boolean,
+  ) => Promise<void>;
   select: (code: string, explicit?: boolean) => void;
 }
 
@@ -24,7 +27,7 @@ export const useMarketStore = create<MarketStore>()(
       hasExplicitChoice: false,
       isLoading: false,
       hasLoaded: false,
-      load: async (preferredMarketId) => {
+      load: async (preferredMarketId, defaultGlobal = false) => {
         const loadId = ++latestLoad;
         set({ isLoading: true });
         try {
@@ -38,6 +41,7 @@ export const useMarketStore = create<MarketStore>()(
               ? current.selectedCode
               : undefined,
             preferredMarketId,
+            defaultGlobal,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: navigator.language,
           });

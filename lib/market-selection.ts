@@ -5,6 +5,7 @@ export function suggestMarketCode(
   options: {
     persistedCode?: string | null;
     preferredMarketId?: string | null;
+    defaultGlobal?: boolean;
     timezone?: string;
     language?: string;
   } = {},
@@ -20,6 +21,7 @@ export function suggestMarketCode(
     (market) => market.id === options.preferredMarketId,
   );
   if (preferred) return preferred.code;
+  if (options.defaultGlobal) return "GLOBAL";
 
   const timezone = options.timezone?.toLowerCase() ?? "";
   const language = options.language?.toLowerCase() ?? "";

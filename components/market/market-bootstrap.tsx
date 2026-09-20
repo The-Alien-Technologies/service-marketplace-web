@@ -14,8 +14,12 @@ export function MarketBootstrap() {
     const preferredMarketId =
       user?.role === "ADMIN"
         ? user.adminMarketId
-        : (user?.selectedMarketId ?? user?.homeMarketId);
-    void load(preferredMarketId).catch(() => undefined);
+        : user?.role === "SUPER_ADMIN"
+          ? user.selectedMarketId
+          : (user?.selectedMarketId ?? user?.homeMarketId);
+    void load(preferredMarketId, user?.role === "SUPER_ADMIN").catch(
+      () => undefined,
+    );
   }, [
     hasHydrated,
     load,

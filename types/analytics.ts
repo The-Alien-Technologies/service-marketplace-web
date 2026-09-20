@@ -63,9 +63,15 @@ export type AdminAnalytics = {
     code: string;
     name: string;
     currency: string;
-    total: number;
-    currentMonth: number;
-    previousMonth: number;
+    grossVolume: number;
+    commission: number;
+    netRevenue: number;
+    payout: number;
+    currentMonthNetRevenue: number;
+    previousMonthNetRevenue: number;
+    growthPercent: number | null;
+    comparisonMonth: string;
+    previousComparisonMonth: string;
   }[];
   generatedAt: string;
   stats: {
@@ -98,8 +104,9 @@ export type AdminAnalytics = {
   };
   revenueChart: {
     name: string;
-    revenue: number;
+    grossVolume: number;
     commission: number;
+    netRevenue: number;
     payout: number;
   }[];
 };
