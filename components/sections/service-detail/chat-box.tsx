@@ -14,7 +14,7 @@ interface ChatBoxProps {
   onClose: () => void;
   providerId: string;
   providerName: string;
-  providerAvatar: string;
+  providerAvatar?: string;
   isOnline?: boolean;
   responseTime?: string;
 }

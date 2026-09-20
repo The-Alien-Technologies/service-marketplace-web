@@ -37,6 +37,7 @@ export default function ServiceDetailPage({
 
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAllReviews, setIsLoadingAllReviews] = useState(false);
   const [reviewData, setReviewData] = useState<{
     summary: ReviewSummaryType;
     reviews: ReviewType[];
@@ -72,6 +73,36 @@ export default function ServiceDetailPage({
     }
   }, [serviceId, t]);
 
+  const loadAllReviews = async () => {
+    if (reviewData.reviews.length >= reviewData.summary.total) return;
+    setIsLoadingAllReviews(true);
+    try {
+      const allReviews: ReviewType[] = [];
+      let page = 1;
+      let pages = 1;
+      do {
+        const result = await apiService.getServiceReviews(serviceId, {
+          page,
+          limit: 100,
+        });
+        allReviews.push(...result.data);
+        pages = result.pagination.pages;
+        page += 1;
+      } while (page <= pages);
+      setReviewData((current) => ({
+        summary: current.summary,
+        reviews: allReviews,
+      }));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("serviceLoadFailed"),
+      );
+      throw error;
+    } finally {
+      setIsLoadingAllReviews(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -102,7 +133,7 @@ export default function ServiceDetailPage({
       service.provider?.displayName ||
       `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
       common("provider"),
-    heroImage: service.coverImage || "/assets/temp/products/p1.jpg",
+    heroImage: service.coverImage || undefined,
     overviewDescription: service.overview,
     catalogueItems:
       service.images?.map((img) => ({
@@ -129,8 +160,7 @@ export default function ServiceDetailPage({
         `${r.client?.firstName ?? ""} ${r.client?.lastName ?? ""}`.trim() ||
         t("anonymous"),
       reviewerAvatar:
-        r.client?.avatar ||
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+        r.client?.avatar || undefined,
       rating: r.rating,
       date: r.createdAt,
       reviewText: r.comment ?? "",
@@ -145,7 +175,7 @@ export default function ServiceDetailPage({
         service.provider?.displayName ||
         `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
         common("provider"),
-      avatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
+      avatar: service.provider?.avatar || undefined,
       title: t("serviceProviderTitle"), // TODO: Add title to provider profile
       location: service.market?.name || service.currency,
       rating: reviewData.summary.average,
@@ -205,7 +235,12 @@ export default function ServiceDetailPage({
             />
 
             {/* Recent Reviews Section */}
-            <RecentReviews reviews={serviceData.recentReviews} />
+            <RecentReviews
+              reviews={serviceData.recentReviews}
+              totalReviews={reviewData.summary.total}
+              isLoadingAll={isLoadingAllReviews}
+              onViewAll={loadAllReviews}
+            />
           </div>
 
           {/* Right Column - Sidebar */}
@@ -243,7 +278,7 @@ export default function ServiceDetailPage({
           ).map((category) => ({
             id: category.id,
             name: category.name,
-            image: category.imageUrl || "/assets/temp/products/p1.jpg",
+            image: category.imageUrl || undefined,
           }))}
           title={t("popularService")}
           onCategoryClick={(category) => {

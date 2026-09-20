@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiService } from "@/lib/api";
-import { DisputeIssueType } from "@/types/dispute";
+import { Dispute, DisputeIssueType } from "@/types/dispute";
 import { toast } from "react-toastify";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -29,7 +29,7 @@ interface Props {
   orderNumber: string;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (dispute: Dispute) => void;
 }
 
 const ISSUE_TYPES: DisputeIssueType[] = [
@@ -66,9 +66,13 @@ export function RaiseDisputeModal({
     }
     setIsLoading(true);
     try {
-      await apiService.createDispute({ orderId, issueType, description });
+      const dispute = await apiService.createDispute({
+        orderId,
+        issueType,
+        description,
+      });
       toast.success(t("created"));
-      onSuccess?.();
+      onSuccess?.(dispute);
       onClose();
     } catch (err: any) {
       const msg =

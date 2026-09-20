@@ -49,10 +49,10 @@ export default function Home() {
         id: service.id,
         providerName: providerName,
         providerAvatar:
-          service.provider?.avatar || "/assets/temp/user/u1.jpg",
+          service.provider?.avatar || undefined,
         isPro: false,
         isOnline: false,
-        serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
+        serviceImage: service.coverImage || undefined,
         description: service.title,
         price: marketplace("from", {
           price: formatMoney(minPrice, service.currency, service.market?.locale),
@@ -107,7 +107,7 @@ export default function Home() {
     return categoriesToShow.map((cat) => ({
       id: cat.id,
       name: cat.name,
-      image: cat.imageUrl || "/assets/temp/products/p1.jpg", // Fallback image
+      image: cat.imageUrl || undefined,
     }));
   }, [featuredCategories, topLevelCategories]);
 

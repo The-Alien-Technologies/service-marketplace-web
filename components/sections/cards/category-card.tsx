@@ -1,10 +1,11 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { ImageIcon } from "lucide-react";
 
 export interface CategoryCardData {
   id: string;
   name: string;
-  image: string;
+  image?: string;
 }
 
 interface CategoryCardProps {
@@ -19,12 +20,19 @@ export function CategoryCard({ category, onClick }: CategoryCardProps) {
       onClick={onClick}
     >
       {/* Background Image */}
-      <Image
-        src={category.image}
-        alt={category.name}
-        fill
-        className="object-cover group-hover:scale-105 transition-transform duration-300"
-      />
+      {category.image ? (
+        <Image
+          src={category.image}
+          alt={category.name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200">
+          <ImageIcon className="h-16 w-16" aria-hidden="true" />
+          <span className="sr-only">No category image provided</span>
+        </div>
+      )}
 
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />

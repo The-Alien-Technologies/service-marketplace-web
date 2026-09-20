@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
-  getSortedRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -96,6 +95,8 @@ export default function UsersPage() {
           status: statusFilter || undefined,
           marketId,
           marketplaceOnly: dashboardSource,
+          sortBy: sorting[0]?.id,
+          orderBy: sorting[0]?.desc ? "desc" : sorting[0] ? "asc" : undefined,
         });
         setUsers(response.users);
         setPagination({
@@ -116,6 +117,7 @@ export default function UsersPage() {
       marketId,
       pagination.limit,
       roleFilter,
+      sorting,
       statusFilter,
       t,
     ],
@@ -230,7 +232,7 @@ export default function UsersPage() {
         ),
       }),
       columnHelper.accessor("email", {
-        id: "userEmail",
+        id: "email",
         header: "Email",
         cell: (info) => (
           <span className="text-gray-600">{info.getValue()}</span>
@@ -366,11 +368,11 @@ export default function UsersPage() {
     data: users,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
     },
     onSortingChange: setSorting,
+    manualSorting: true,
     manualPagination: true,
     pageCount: pagination.totalPages,
   });
@@ -470,14 +472,13 @@ export default function UsersPage() {
                               ? "text-right"
                               : ""
                           }`}
-                          onClick={header.column.getToggleSortingHandler()}
-                          style={{
-                            cursor: header.column.getCanSort()
-                              ? "pointer"
-                              : "default",
-                          }}
                         >
-                          <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 text-left disabled:cursor-default"
+                            onClick={header.column.getToggleSortingHandler()}
+                            disabled={!header.column.getCanSort()}
+                          >
                             {flexRender(
                               header.column.columnDef.header,
                               header.getContext(),
@@ -486,7 +487,7 @@ export default function UsersPage() {
                               asc: " ↑",
                               desc: " ↓",
                             }[header.column.getIsSorted() as string] ?? null}
-                          </div>
+                          </button>
                         </th>
                       ))}
                     </tr>

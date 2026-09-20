@@ -288,6 +288,10 @@ function OrderDetailsView({
     order.settlement?.status === "ELIGIBLE" ||
     order.settlement?.status === "RESERVED" ||
     order.settlement?.status === "PAID";
+  const hasOpenDispute =
+    order.dispute &&
+    order.dispute.status !== "RESOLVED" &&
+    order.dispute.status !== "CLOSED";
 
   return (
     <div className="space-y-8">
@@ -482,7 +486,7 @@ function OrderDetailsView({
                     </Button>
                   )}
 
-                {role === "USER" && settlementHeld && (
+                {role === "USER" && settlementHeld && !hasOpenDispute && (
                   <>
                     <Button
                       className="bg-[#15803d] hover:bg-[#14532d] text-white font-semibold min-w-[150px] rounded-lg"
@@ -504,7 +508,7 @@ function OrderDetailsView({
                   </>
                 )}
 
-                {role === "SERVICE_PROVIDER" && settlementHeld && (
+                {role === "SERVICE_PROVIDER" && settlementHeld && !hasOpenDispute && (
                   <Button
                     variant="outline"
                     className="border-gray-300 text-gray-800 hover:bg-gray-50"
@@ -566,6 +570,7 @@ function OrderDetailsView({
 
                 {role === "USER" &&
                   order.status === "COMPLETED" &&
+                  !order.review &&
                   settlementReleased && (
                     <Link href={`/orders/${order.id}/review`}>
                       <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
@@ -857,7 +862,15 @@ function OrderDetailsView({
         orderNumber={order.orderNumber}
         isOpen={isDisputeOpen}
         onClose={() => setIsDisputeOpen(false)}
-        onSuccess={() => {
+        onSuccess={(dispute) => {
+          setOrder((current) =>
+            current
+              ? {
+                  ...current,
+                  dispute: { id: dispute.id, status: dispute.status },
+                }
+              : current,
+          );
           setIsDisputeOpen(false);
           toast.info(t("heldDuringDispute"));
         }}

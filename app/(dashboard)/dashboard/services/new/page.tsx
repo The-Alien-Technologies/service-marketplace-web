@@ -864,7 +864,7 @@ export default function AddServicePage() {
                           className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
                           onClick={() => togglePlanExpansion(plan.id)}
                         >
-                          {common("save")}
+                          {common("done")}
                         </Button>
                       </div>
                     </div>

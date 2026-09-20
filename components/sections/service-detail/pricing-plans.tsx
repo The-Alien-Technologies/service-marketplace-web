@@ -32,7 +32,7 @@ interface PricingPlan {
 interface PricingPlansProps {
   plans: PricingPlan[];
   providerName: string;
-  providerAvatar: string;
+  providerAvatar?: string;
   service: {
     id: string;
     title: string;

@@ -35,6 +35,11 @@ export type Order = {
   paidAt?: string | null;
   commissionRate?: number | string;
   settlement?: OrderSettlement | null;
+  review?: { id: string } | null;
+  dispute?: {
+    id: string;
+    status: "OPEN" | "UNDER_REVIEW" | "INVESTIGATING" | "RESOLVED" | "CLOSED";
+  } | null;
   createdAt: string;
   updatedAt: string;
   client?: {

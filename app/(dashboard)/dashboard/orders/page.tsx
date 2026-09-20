@@ -7,8 +7,6 @@ import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -51,45 +49,20 @@ import { marketDisplayName } from "@/lib/market-display";
 import { useMarketStore } from "@/store/market-store";
 import { exportCsv } from "@/lib/csv";
 
-// --- Types ---
-
-type CashoutRequest = {
-  id: string;
-  provider: {
-    name: string;
-    avatar: string;
-  };
-  amount: number;
-  currency: string;
-  method: string;
-  status: "Completed" | "Pending" | "Failed";
-  date: string;
-};
-
-// --- Mock Data for Admin ---
-
-const cashoutRequests: CashoutRequest[] = [
-  {
-    id: "CSH-001",
-    provider: {
-      name: "Olivia Rhye",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    amount: 1000.0,
-    currency: "GHS",
-    method: "Paystack",
-    status: "Completed",
-    date: "15 Mar, 2025",
-  },
-];
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 const ADMIN_ORDER_TABS = ["Orders", "Revenue", "Transactions"];
 
 // --- Column Helpers ---
 const orderColumnHelper = createColumnHelper<Order>();
 const transactionColumnHelper = createColumnHelper<AdminPaymentTransaction>();
-const cashoutRequestColumnHelper = createColumnHelper<CashoutRequest>();
 
 const orderColumns = [
   orderColumnHelper.accessor("orderNumber", {
@@ -97,6 +70,7 @@ const orderColumns = [
     cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
   }),
   orderColumnHelper.accessor("service.title", {
+    id: "service",
     header: "Service",
     cell: (info) => (
       <span
@@ -108,6 +82,7 @@ const orderColumns = [
     ),
   }),
   orderColumnHelper.accessor("service.category.name", {
+    id: "category",
     header: "Category",
     cell: (info) => (
       <span className="text-gray-500 text-sm">{info.getValue()}</span>
@@ -123,15 +98,21 @@ const orderColumns = [
       return (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 relative">
-            <Image
-              src={
-                provider.avatar ||
-                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-              }
-              alt={provider.displayName || "Provider"}
-              fill
-              className="object-cover"
-            />
+            {provider.avatar ? (
+              <Image
+                src={provider.avatar}
+                alt={provider.displayName || "Provider"}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-green-700 text-xs font-bold text-white">
+                {initials(
+                  provider.displayName ||
+                    `${provider.firstName} ${provider.lastName}`,
+                )}
+              </div>
+            )}
           </div>
           <span className="font-medium text-gray-900 text-sm">
             {provider.displayName ||
@@ -228,6 +209,7 @@ const createRevenueColumns = (labels: {
     cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
   }),
   orderColumnHelper.accessor("service.title", {
+    id: "service",
     header: labels.service,
     cell: (info) => (
       <span className="block max-w-[220px] truncate text-gray-700">
@@ -236,21 +218,25 @@ const createRevenueColumns = (labels: {
     ),
   }),
   orderColumnHelper.accessor("settlement.grossAmount", {
+    id: "grossAmount",
     header: labels.gross,
     cell: (info) =>
       formatMoney(info.getValue() || 0, info.row.original.currency),
   }),
   orderColumnHelper.accessor("settlement.refundedAmount", {
+    id: "refundedAmount",
     header: labels.refunded,
     cell: (info) =>
       formatMoney(info.getValue() || 0, info.row.original.currency),
   }),
   orderColumnHelper.accessor("settlement.commissionAmount", {
+    id: "commissionAmount",
     header: labels.commission,
     cell: (info) =>
       formatMoney(info.getValue() || 0, info.row.original.currency),
   }),
   orderColumnHelper.accessor("settlement.retainedAmount", {
+    id: "retainedAmount",
     header: labels.netRevenue,
     cell: (info) => (
       <span className="font-semibold text-green-800">
@@ -302,6 +288,7 @@ const transactionColumns = [
     },
   }),
   transactionColumnHelper.accessor("order.service.title", {
+    id: "service",
     header: "Service",
     cell: (info) => (
       <span
@@ -359,35 +346,6 @@ const transactionColumns = [
   }),
 ];
 
-const cashoutRequestColumns = [
-  cashoutRequestColumnHelper.accessor("id", {
-    header: "Request ID",
-    cell: (info) => <span className="text-gray-600">#{info.getValue()}</span>,
-  }),
-  cashoutRequestColumnHelper.accessor("provider.name", {
-    header: "Provider",
-    cell: (info) => (
-      <span className="text-gray-900 font-medium">{info.getValue()}</span>
-    ),
-  }),
-  cashoutRequestColumnHelper.accessor("amount", {
-    header: "Amount",
-    cell: (info) => (
-      <span className="text-gray-900">
-        {formatMoney(info.getValue(), info.row.original.currency)}
-      </span>
-    ),
-  }),
-  cashoutRequestColumnHelper.accessor("status", {
-    header: "Status",
-    cell: (info) => (
-      <span className="text-sm px-2 py-1 bg-green-50 text-green-700 rounded-full">
-        {info.getValue()}
-      </span>
-    ),
-  }),
-];
-
 // --- Admin Orders Component ---
 
 function AdminOrders() {
@@ -416,6 +374,7 @@ function AdminOrders() {
     [],
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -441,6 +400,8 @@ function AdminOrders() {
             limit: pagination.pageSize,
             search: globalFilter,
             marketId,
+            sortBy: sorting[0]?.id,
+            orderBy: sorting[0]?.desc ? "desc" : sorting[0] ? "asc" : undefined,
           });
           setOrders(result.data);
           setPageCount(result.pagination.pages);
@@ -467,6 +428,7 @@ function AdminOrders() {
     paidOnly,
     pagination.pageIndex,
     pagination.pageSize,
+    sorting,
     t,
   ]);
 
@@ -481,6 +443,8 @@ function AdminOrders() {
           limit: pagination.pageSize,
           search: globalFilter,
           marketId,
+          sortBy: sorting[0]?.id,
+          orderBy: sorting[0]?.desc ? "desc" : sorting[0] ? "asc" : undefined,
         });
         setTransactions(result.data);
         setPageCount(result.pagination.pages);
@@ -499,17 +463,16 @@ function AdminOrders() {
     marketId,
     pagination.pageIndex,
     pagination.pageSize,
+    sorting,
     t,
   ]);
 
   const currentData = useMemo(() => {
-    if (activeTab === "Cashout Request") return cashoutRequests;
     if (activeTab === "Transactions") return transactions;
     return orders;
   }, [activeTab, orders, transactions]);
 
   const currentColumns = useMemo(() => {
-    if (activeTab === "Cashout Request") return cashoutRequestColumns;
     if (activeTab === "Transactions") return transactionColumns;
     if (activeTab === "Revenue") {
       return createRevenueColumns({
@@ -539,8 +502,6 @@ function AdminOrders() {
     columns: currentColumns as ColumnDef<unknown, any>[],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       globalFilter,
@@ -552,38 +513,95 @@ function AdminOrders() {
     pageCount,
     manualPagination: true,
     manualFiltering: true,
-    onSortingChange: setSorting,
+    manualSorting: true,
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      setPagination((current) => ({ ...current, pageIndex: 0 }));
+    },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
   });
 
-  const handleExport = () => {
-    const visibleRows = table.getRowModel().rows.map((row) => row.original);
-    const exportRows = visibleRows.map((item: any) => {
-      if (activeTab === "Transactions") {
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const allRows: unknown[] = [];
+      let page = 1;
+      let pages = 1;
+      do {
+        const result =
+          activeTab === "Transactions"
+            ? await apiService.getAdminPayments({
+                page,
+                limit: 100,
+                search: globalFilter,
+                marketId,
+                sortBy: sorting[0]?.id,
+                orderBy: sorting[0]?.desc
+                  ? "desc"
+                  : sorting[0]
+                    ? "asc"
+                    : undefined,
+              })
+            : await apiService.getAdminOrders({
+                status: dashboardStatus,
+                paidOnly,
+                settledOnly: activeTab === "Revenue",
+                page,
+                limit: 100,
+                search: globalFilter,
+                marketId,
+                sortBy: sorting[0]?.id,
+                orderBy: sorting[0]?.desc
+                  ? "desc"
+                  : sorting[0]
+                    ? "asc"
+                    : undefined,
+              });
+        allRows.push(...result.data);
+        pages = result.pagination.pages;
+        page += 1;
+      } while (page <= pages);
+
+      const exportRows = allRows.map((item: any) => {
+        if (activeTab === "Transactions") {
+          return {
+            reference: item.reference,
+            user:
+              item.client?.displayName ||
+              [item.client?.firstName, item.client?.lastName]
+                .filter(Boolean)
+                .join(" ") ||
+              item.client?.email,
+            amount: item.amount,
+            currency: item.currency,
+            status: item.status,
+            channel: item.channel,
+            createdAt: item.createdAt,
+          };
+        }
         return {
-          reference: item.reference,
-          user: item.user?.displayName || item.user?.email,
-          amount: item.amount,
+          orderNumber: item.orderNumber,
+          service: item.service?.title,
+          client: item.client?.displayName,
+          provider:
+            item.provider?.displayName || item.service?.provider?.displayName,
+          total: item.total,
           currency: item.currency,
           status: item.status,
-          channel: item.channel,
+          paymentStatus: item.paymentStatus,
           createdAt: item.createdAt,
         };
-      }
-      return {
-        orderNumber: item.orderNumber,
-        service: item.service?.title,
-        client: item.client?.displayName,
-        provider: item.provider?.displayName || item.service?.provider?.displayName,
-        total: item.total,
-        currency: item.currency,
-        status: item.status,
-        paymentStatus: item.paymentStatus,
-        createdAt: item.createdAt,
-      };
-    });
-    exportCsv(`pavodah-${activeTab.toLowerCase().replace(/\s+/g, "-")}.csv`, exportRows);
+      });
+      exportCsv(
+        `pavodah-${activeTab.toLowerCase().replace(/\s+/g, "-")}.csv`,
+        exportRows,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("loadFailed"));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -605,6 +623,7 @@ function AdminOrders() {
               onClick={() => {
                 setActiveTab(tab);
                 setGlobalFilter("");
+                setSorting([]);
                 setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 const params = new URLSearchParams(searchParams.toString());
                 params.set("tab", tab);
@@ -674,9 +693,13 @@ function AdminOrders() {
             variant="outline"
             className="w-full text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2 md:w-auto"
             onClick={handleExport}
-            disabled={table.getRowModel().rows.length === 0}
+            disabled={table.getRowModel().rows.length === 0 || isExporting}
           >
-            <Download className="w-4 h-4" />
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
             {t("exportData")}
           </Button>
         </div>
@@ -703,16 +726,13 @@ function AdminOrders() {
                           ? "text-right"
                           : "",
                       )}
-                      onClick={header.column.getToggleSortingHandler()}
-                      style={{
-                        cursor: header.column.getCanSort()
-                          ? "pointer"
-                          : "default",
-                      }}
                     >
-                      <div
+                      <button
+                        type="button"
+                        onClick={header.column.getToggleSortingHandler()}
+                        disabled={!header.column.getCanSort()}
                         className={cn(
-                          "flex items-center gap-1",
+                          "flex items-center gap-1 text-left disabled:cursor-default",
                           (header.column.columnDef.meta as any)?.align ===
                             "right"
                             ? "justify-end"
@@ -723,7 +743,7 @@ function AdminOrders() {
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
-                      </div>
+                      </button>
                     </th>
                   ))}
                 </tr>
@@ -1182,12 +1202,9 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 relative">
-                      {otherParty ? (
+                      {otherParty?.avatar ? (
                         <Image
-                          src={
-                            otherParty.avatar ||
-                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                          }
+                          src={otherParty.avatar}
                           alt={
                             otherParty.displayName ||
                             otherParty.firstName ||
@@ -1196,6 +1213,13 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                           fill
                           className="object-cover"
                         />
+                      ) : otherParty ? (
+                        <div className="flex h-full w-full items-center justify-center bg-green-700 text-xs font-bold text-white">
+                          {initials(
+                            otherParty.displayName ||
+                              `${otherParty.firstName} ${otherParty.lastName}`,
+                          )}
+                        </div>
                       ) : (
                         <div className="w-full h-full bg-gray-200" />
                       )}
@@ -1309,6 +1333,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
 
                     {order.status === "COMPLETED" &&
                       role === "USER" &&
+                      !order.review &&
                       order.settlement &&
                       ["ELIGIBLE", "RESERVED", "PAID"].includes(
                         order.settlement.status,
@@ -1323,6 +1348,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
                     {/* Raise Dispute — users only, completed orders */}
                     {order.status === "COMPLETED" &&
                       role === "USER" &&
+                      !order.dispute &&
                       (!order.settlement ||
                         (order.settlement.status === "HELD" &&
                           !order.settlement.acceptedAt)) && (
@@ -1335,6 +1361,7 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
 
                     {order.status === "COMPLETED" &&
                       role === "USER" &&
+                      !order.dispute &&
                       (!order.settlement ||
                         (order.settlement.status === "HELD" &&
                           !order.settlement.acceptedAt)) && (
@@ -1505,6 +1532,18 @@ function UserOrdersList({ role }: { role: "USER" | "SERVICE_PROVIDER" }) {
           orderNumber={disputeTarget.orderNumber}
           isOpen={!!disputeTarget}
           onClose={() => setDisputeTarget(null)}
+          onSuccess={(dispute) => {
+            setOrders((current) =>
+              current.map((order) =>
+                order.id === dispute.orderId
+                  ? {
+                      ...order,
+                      dispute: { id: dispute.id, status: dispute.status },
+                    }
+                  : order,
+              ),
+            );
+          }}
         />
       )}
     </div>

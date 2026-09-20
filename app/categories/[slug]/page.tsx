@@ -196,10 +196,10 @@ export default function CategoryPage({
                   `${service.provider?.firstName || ""} ${service.provider?.lastName || ""}`.trim() ||
                   common("provider"),
                 providerAvatar:
-                  service.provider?.avatar || "/assets/temp/user/u1.jpg",
+                  service.provider?.avatar || undefined,
                 isPro: false, // TODO: Add to API
                 serviceImage:
-                  service.coverImage || "/assets/temp/products/p1.jpg",
+                  service.coverImage || undefined,
                 description: service.title,
                 price: service.plans?.[0]?.price
                   ? t("from", {

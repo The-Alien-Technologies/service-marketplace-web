@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Star, ChevronDown } from "lucide-react";
+import { Star, ChevronDown, Loader2 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
 interface Review {
   id: string;
   reviewerName: string;
-  reviewerAvatar: string;
+  reviewerAvatar?: string;
   rating: number;
   date: string;
   reviewText: string;
@@ -20,11 +20,17 @@ interface Review {
 interface RecentReviewsProps {
   reviews: Review[];
   initialVisible?: number;
+  totalReviews?: number;
+  isLoadingAll?: boolean;
+  onViewAll?: () => Promise<void>;
 }
 
 export function RecentReviews({
   reviews,
   initialVisible = 6,
+  totalReviews = reviews.length,
+  isLoadingAll = false,
+  onViewAll,
 }: RecentReviewsProps) {
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
@@ -33,13 +39,20 @@ export function RecentReviews({
   const [showAll, setShowAll] = useState(false);
 
   const visibleReviews = showAll ? reviews : reviews.slice(0, visibleCount);
-  const hasMore = reviews.length > visibleCount;
+  const hasMore = totalReviews > visibleCount;
 
-  const handleShowMore = () => {
+  const handleShowMore = async () => {
     if (showAll) {
       setShowAll(false);
       setVisibleCount(initialVisible);
     } else {
+      if (onViewAll && reviews.length < totalReviews) {
+        try {
+          await onViewAll();
+        } catch {
+          return;
+        }
+      }
       setShowAll(true);
     }
   };
@@ -65,13 +78,24 @@ export function RecentReviews({
             {/* Profile Picture */}
             <div className="flex-shrink-0">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-                <Image
-                  src={review.reviewerAvatar}
-                  alt={review.reviewerName}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
+                {review.reviewerAvatar ? (
+                  <Image
+                    src={review.reviewerAvatar}
+                    alt={review.reviewerName}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-green-700 text-sm font-bold text-white">
+                    {review.reviewerName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -137,14 +161,19 @@ export function RecentReviews({
         <div className="mt-6">
           <button
             onClick={handleShowMore}
+            disabled={isLoadingAll}
             className="flex items-center gap-2 text-brand-600 hover:text-brand-700 dark:text-brand-500 dark:hover:text-brand-400 font-medium text-sm transition-colors"
           >
             <span>{showAll ? t("showLess") : common("viewAll")}</span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                showAll ? "rotate-180" : ""
-              }`}
-            />
+            {isLoadingAll ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  showAll ? "rotate-180" : ""
+                }`}
+              />
+            )}
           </button>
         </div>
       )}

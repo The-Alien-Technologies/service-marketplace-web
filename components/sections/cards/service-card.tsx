@@ -1,14 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
+import { ImageIcon } from "lucide-react";
 
 export interface ServiceCardData {
   id: string;
   providerName: string;
-  providerAvatar: string;
+  providerAvatar?: string;
   isPro: boolean;
   isOnline?: boolean;
-  serviceImage: string;
+  serviceImage?: string;
   description: string;
   price: string;
   rating: number;
@@ -40,18 +41,25 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
     >
       {/* Service Image with Overlay */}
       <div className="relative h-[340px] overflow-hidden rounded-[20px]">
-        <Image
-          src={service.serviceImage}
-          alt={service.description}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        {service.serviceImage ? (
+          <Image
+            src={service.serviceImage}
+            alt={service.description}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300">
+            <ImageIcon className="h-12 w-12" aria-hidden="true" />
+            <span className="sr-only">No service image provided</span>
+          </div>
+        )}
 
         {/* Provider Info Header Overlay */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
           <div className="flex items-center space-x-2.5 bg-gray-600/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full px-3 py-1.5 min-h-[36px]">
             <div className="relative w-6 h-6 flex-shrink-0 flex items-center justify-center">
-              {!avatarError ? (
+              {service.providerAvatar && !avatarError ? (
                 <>
                   <Image
                     src={service.providerAvatar}

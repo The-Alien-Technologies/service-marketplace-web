@@ -876,17 +876,10 @@ export default function EditServicePage() {
                           </Button>
                         )}
                         <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => togglePlanExpansion(plan.id)}
-                        >
-                          {common("cancel")}
-                        </Button>
-                        <Button
                           className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
                           onClick={() => togglePlanExpansion(plan.id)}
                         >
-                          {common("save")}
+                          {common("done")}
                         </Button>
                       </div>
                     </div>
@@ -1055,13 +1048,6 @@ export default function EditServicePage() {
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => toggleAddonExpansion(addon.id)}
-                          >
-                            {common("cancel")}
-                          </Button>
-                          <Button
                             className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
                             onClick={() => {
                               if (!addon.title.trim()) {
@@ -1076,10 +1062,9 @@ export default function EditServicePage() {
                                 return;
                               }
                               toggleAddonExpansion(addon.id);
-                              toast.success(t("addonSaved"));
                             }}
                           >
-                            {common("save")}
+                            {common("done")}
                           </Button>
                         </div>
                       </div>

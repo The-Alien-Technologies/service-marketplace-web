@@ -49,10 +49,10 @@ export default function ServicesBrowsePage() {
       return {
         id: service.id,
         providerName,
-        providerAvatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
+        providerAvatar: service.provider?.avatar || undefined,
         isPro: false,
         isOnline: false,
-        serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
+        serviceImage: service.coverImage || undefined,
         description: service.title,
         price: marketplace("from", {
           price: formatMoney(price, service.currency, service.market?.locale),

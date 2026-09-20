@@ -24,7 +24,7 @@ interface ChatState {
   // Actions
   connect: () => void;
   disconnect: () => void;
-  fetchConversations: () => Promise<void>;
+  fetchConversations: (search?: string) => Promise<void>;
   setActiveConversation: (conversationId: string) => Promise<void>;
   setConversationVisible: (visible: boolean) => void;
   sendMessage: (content: string) => void;
@@ -178,13 +178,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  fetchConversations: async () => {
+  fetchConversations: async (search = "") => {
     set({ isLoading: true });
     try {
       // In a real scenario, you'd add this method to your ApiService
       // For now, doing a direct fetch using the stored token
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${SOCKET_URL}/api/chat/conversations`, {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("search", search.trim());
+      const query = params.size ? `?${params.toString()}` : "";
+      const res = await fetch(`${SOCKET_URL}/api/chat/conversations${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       throwIfSessionExpired(res.status, Boolean(token));

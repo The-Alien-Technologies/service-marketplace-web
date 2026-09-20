@@ -691,6 +691,8 @@ class ApiService {
     status?: string;
     marketId?: string;
     marketplaceOnly?: boolean;
+    sortBy?: string;
+    orderBy?: "asc" | "desc";
   }): Promise<{
     users: User[];
     total: number;
@@ -706,6 +708,8 @@ class ApiService {
     if (options?.status) params.append("status", options.status);
     if (options?.marketId) params.append("marketId", options.marketId);
     if (options?.marketplaceOnly) params.append("marketplaceOnly", "true");
+    if (options?.sortBy) params.append("sortBy", options.sortBy);
+    if (options?.orderBy) params.append("orderBy", options.orderBy);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -1411,6 +1415,8 @@ class ApiService {
     limit?: number;
     search?: string;
     marketId?: string;
+    sortBy?: string;
+    orderBy?: "asc" | "desc";
   }): Promise<{
     data: AdminPaymentTransaction[];
     pagination: {
@@ -1425,6 +1431,8 @@ class ApiService {
     if (options?.limit) params.set("limit", String(options.limit));
     if (options?.search) params.set("search", options.search);
     if (options?.marketId) params.set("marketId", options.marketId);
+    if (options?.sortBy) params.set("sortBy", options.sortBy);
+    if (options?.orderBy) params.set("orderBy", options.orderBy);
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
       data: AdminPaymentTransaction[];
@@ -1670,6 +1678,8 @@ class ApiService {
     marketId?: string;
     paidOnly?: boolean;
     settledOnly?: boolean;
+    sortBy?: string;
+    orderBy?: "asc" | "desc";
   }): Promise<{
     data: Order[];
     pagination: {
@@ -1687,6 +1697,8 @@ class ApiService {
     if (options?.marketId) params.append("marketId", options.marketId);
     if (options?.paidOnly) params.append("paidOnly", "true");
     if (options?.settledOnly) params.append("settledOnly", "true");
+    if (options?.sortBy) params.append("sortBy", options.sortBy);
+    if (options?.orderBy) params.append("orderBy", options.orderBy);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -2208,11 +2220,12 @@ class ApiService {
     orderId: string;
     issueType: string;
     description: string;
-  }) {
-    return this.request<any>("/disputes", {
+  }): Promise<Dispute> {
+    const response = await this.request<Dispute>("/disputes", {
       method: "POST",
       body: JSON.stringify(data),
     });
+    return response.data;
   }
 
   async getAdminDisputes(filters?: {

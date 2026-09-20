@@ -6,7 +6,7 @@ import { useFormatter, useTranslations } from "next-intl";
 
 interface ServiceProviderBadgeProps {
   providerName: string;
-  providerAvatar: string;
+  providerAvatar?: string;
   providerTitle: string;
   location: string;
   rating: number;
@@ -31,13 +31,24 @@ export function ServiceProviderBadge({
         {/* Profile Picture */}
         <div className="relative flex-shrink-0">
           <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-            <Image
-              src={providerAvatar}
-              alt={providerName}
-              width={56}
-              height={56}
-              className="w-full h-full object-cover"
-            />
+            {providerAvatar ? (
+              <Image
+                src={providerAvatar}
+                alt={providerName}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-green-700 text-sm font-bold text-white">
+                {providerName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            )}
           </div>
           {/* Online Indicator */}
           {isOnline && (

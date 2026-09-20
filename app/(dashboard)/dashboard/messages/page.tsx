@@ -53,12 +53,18 @@ function MessagesContent() {
   useEffect(() => {
     clearActiveConversation();
     connect();
-    fetchConversations();
     return () => {
       clearActiveConversation();
       disconnect();
     };
   }, [connect, fetchConversations, disconnect, clearActiveConversation]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchConversations(searchQuery);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [fetchConversations, searchQuery]);
 
   useEffect(() => {
     const syncVisibility = () => {
@@ -134,15 +140,6 @@ function MessagesContent() {
     }
   };
 
-  const filteredConversations = conversations.filter((conversation) => {
-    const otherUser =
-      conversation.userId === user?.id
-        ? conversation.provider
-        : conversation.user;
-    const name = `${otherUser?.firstName || ""} ${otherUser?.lastName || ""}`;
-    return name.toLowerCase().includes(searchQuery.trim().toLowerCase());
-  });
-
   return (
     <div className="flex h-[calc(100dvh-5.5rem)] min-h-[28rem] overflow-hidden rounded-xl border border-gray-200 bg-white md:h-[calc(100vh-8rem)] md:flex-row">
       {/* Sidebar List */}
@@ -166,7 +163,7 @@ function MessagesContent() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map((chat) => {
+          {conversations.map((chat) => {
             const otherUser =
               chat.userId === user?.id ? chat.provider : chat.user;
             const lastMessage =
@@ -228,11 +225,9 @@ function MessagesContent() {
               </button>
             );
           })}
-          {filteredConversations.length === 0 && (
+          {conversations.length === 0 && (
             <p className="px-6 py-10 text-center text-sm text-gray-500">
-              {conversations.length === 0
-                ? t("noConversations")
-                : t("noSearchMatches")}
+              {searchQuery.trim() ? t("noSearchMatches") : t("noConversations")}
             </p>
           )}
         </div>
