@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import { Category } from '@/types/auth';
 import { Search, Monitor, Palette, Home, Type, TrendingUp, Zap, Camera } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 
 // Icon mapping for categories (can be extended based on category names)
 const categoryIcons: { [key: string]: any } = {
@@ -39,6 +40,8 @@ const getCategoryIcon = (categoryName: string) => {
 };
 
 export function ProviderSkillsForm() {
+  const t = useTranslations('Onboarding');
+  const common = useTranslations('Common');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,14 +59,14 @@ export function ProviderSkillsForm() {
         setCategories(response.categories || []);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        toast.error('Failed to load service categories');
+        toast.error(t('categoriesLoadFailed'));
       } finally {
         setIsLoadingCategories(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [t]);
 
   // Filter categories based on search query
   const filteredCategories = categories.filter(category =>
@@ -80,7 +83,7 @@ export function ProviderSkillsForm() {
 
   const handleNext = async () => {
     if (selectedCategories.length === 0) {
-      toast.error('Please select at least one service category');
+      toast.error(t('categoryRequired'));
       return;
     }
 
@@ -89,11 +92,11 @@ export function ProviderSkillsForm() {
       // Save provider skills/services
       await apiService.updateInterests(selectedCategories, 'SERVICE');
       
-      toast.success('Skills saved successfully!');
+      toast.success(t('skillsSaved'));
       nextProviderStep();
     } catch (error) {
       console.error('Failed to save skills:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save skills';
+      const errorMessage = error instanceof Error ? error.message : t('skillsSaveFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -105,7 +108,7 @@ export function ProviderSkillsForm() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
@@ -120,14 +123,14 @@ export function ProviderSkillsForm() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-6">
-          Let's finish setting up your account
+          {t('finishSetup')}
         </h1>
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Skills & Services
+            {t('skillsTitle')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Select Categories
+            {t('selectCategories')}
           </p>
         </div>
       </div>
@@ -137,7 +140,7 @@ export function ProviderSkillsForm() {
         <div className="relative">
           <Input
             type="text"
-            placeholder="Search categories"
+            placeholder={t('searchCategories')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-12"
@@ -150,21 +153,21 @@ export function ProviderSkillsForm() {
       <div className="mb-8">
         {isLoadingCategories ? (
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading categories...</span>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-200 border-t-green-600"></div>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('loadingCategories')}</span>
           </div>
         ) : filteredCategories.length === 0 ? (
           <div className="flex justify-center items-center py-8">
             <div className="text-center">
               <p className="text-gray-600 dark:text-gray-400 mb-2">
-                {searchQuery ? 'No categories match your search' : 'No service categories available'}
+                {searchQuery ? t('noCategoryMatches') : t('noCategories')}
               </p>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="text-sm text-green-600 hover:text-green-700"
                 >
-                  Clear search
+                  {t('clearSearch')}
                 </button>
               )}
             </div>
@@ -228,7 +231,7 @@ export function ProviderSkillsForm() {
           onClick={handlePrevious}
           className="text-gray-600 hover:text-gray-700"
         >
-          ← Previous
+          ← {common('previous')}
         </Button>
         
         <Button
@@ -236,7 +239,7 @@ export function ProviderSkillsForm() {
           disabled={selectedCategories.length === 0 || isLoading || isLoadingCategories}
           className="bg-green-600 hover:bg-green-700 text-white font-medium px-6"
         >
-          {isLoading ? 'Saving...' : isLoadingCategories ? 'Loading...' : 'Next →'}
+          {isLoading ? common('saving') : isLoadingCategories ? common('loading') : `${t('next')} →`}
         </Button>
       </div>
     </div>

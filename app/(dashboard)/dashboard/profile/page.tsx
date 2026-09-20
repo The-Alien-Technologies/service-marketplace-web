@@ -30,8 +30,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
-import { User } from "@/types/auth";
 import { toast } from "react-toastify";
+import {
+  getSupportedLanguage,
+  SUPPORTED_LANGUAGES,
+} from "@/lib/languages";
+import {useTranslations} from "next-intl";
 
 // Inline Switch Component
 function Switch({
@@ -66,6 +70,8 @@ function Switch({
 }
 
 export default function ProfileSettingsPage() {
+  const t = useTranslations("Profile");
+  const auth = useTranslations("Auth");
   const { user: storedUser, setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(false);
@@ -100,6 +106,13 @@ export default function ProfileSettingsPage() {
 
   // Fetch full profile data
   useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (["general", "password", "preferences"].includes(requestedTab || "")) {
+      setActiveTab(requestedTab!);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
@@ -129,7 +142,6 @@ export default function ProfileSettingsPage() {
   const primaryAddress =
     storedUser?.addresses?.find((a) => a.isPrimary) ||
     storedUser?.addresses?.[0];
-  const userInterests = storedUser?.interests || [];
   const verificationDocs = storedUser?.verificationDocuments || [];
 
   // Handlers
@@ -141,11 +153,11 @@ export default function ProfileSettingsPage() {
       setIsLoading(true);
       const { user: updatedUser } = await apiService.updateUserProfile(data);
       setUser(updatedUser);
-      toast.success("Profile updated successfully");
+      toast.success(t("updated"));
       if (section === "personal") setIsEditingPersonal(false);
       if (section === "professional") setIsEditingProfessional(false);
     } catch (error) {
-      toast.error((error as Error).message || "Failed to update profile");
+      toast.error((error as Error).message || t("updateFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -165,9 +177,9 @@ export default function ProfileSettingsPage() {
       const { user: updatedUser } =
         await apiService.updateUserProfile(updateData);
       setUser(updatedUser);
-      toast.success("Preference updated");
-    } catch (error) {
-      toast.error("Failed to update preference");
+      toast.success(t("preferenceUpdated"));
+    } catch {
+      toast.error(t("preferenceFailed"));
     }
   };
 
@@ -178,9 +190,9 @@ export default function ProfileSettingsPage() {
       setIsLoading(true);
       await apiService.changePassword(passwordForm.old, passwordForm.new);
       setPasswordForm({ old: "", new: "", confirm: "" });
-      toast.success("Password updated successfully");
+      toast.success(t("passwordUpdated"));
     } catch (error) {
-      toast.error((error as Error).message || "Failed to update password");
+      toast.error((error as Error).message || t("passwordFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -198,31 +210,30 @@ export default function ProfileSettingsPage() {
   }
 
   if (!storedUser)
-    return <div className="p-8">Please log in to view profile.</div>;
+    return <div className="p-8">{t("loginRequired")}</div>;
 
   return (
     <div className="space-y-8 pb-12 max-w-5xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
-          Manage your personal info, professional details, and account
-          preferences.
+          {t("subtitle")}
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-gray-100 pb-1 overflow-x-auto">
         {[
-          { id: "general", label: "General settings" },
-          { id: "password", label: "Change password" },
-          { id: "preferences", label: "Preferences & Notifications" },
+          { id: "general", label: t("general") },
+          { id: "password", label: t("changePassword") },
+          { id: "preferences", label: t("preferences") },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap",
+              "flex-none px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap",
               activeTab === tab.id
                 ? "text-green-700 bg-green-50"
                 : "text-gray-500 hover:text-gray-900 hover:bg-gray-50",
@@ -237,7 +248,7 @@ export default function ProfileSettingsPage() {
       {activeTab === "general" && (
         <>
           {/* Avatar Section */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
             <div className="w-20 h-20 rounded-full bg-gray-200 overflow-hidden relative border-4 border-white shadow-sm">
               {storedUser.avatar ? (
                 <Image
@@ -256,7 +267,7 @@ export default function ProfileSettingsPage() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <Button
                 variant="outline"
                 className="text-gray-700 border-gray-200 h-9 px-4 rounded-lg bg-white"
@@ -273,10 +284,10 @@ export default function ProfileSettingsPage() {
           </div>
 
           {/* Personal Information */}
-          <div className="bg-gray-50/50 rounded-xl p-8 space-y-6">
+          <div className="space-y-6 rounded-xl bg-gray-50/50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-bold text-gray-900">
-                Personal Information
+                {t("personalInformation")}
               </h3>
               {!isEditingPersonal ? (
                 <button
@@ -349,8 +360,8 @@ export default function ProfileSettingsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between max-w-md">
-                <div className="flex items-center gap-3 w-full">
+              <div className="grid max-w-md grid-cols-1 items-start gap-1.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <Phone className="w-5 h-5 text-gray-400 shrink-0" />
                   {isEditingPersonal ? (
                     <Input
@@ -374,7 +385,7 @@ export default function ProfileSettingsPage() {
                 {!isEditingPersonal && (
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "ml-8 shrink-0 text-xs font-medium sm:ml-0 sm:pt-0.5",
                       storedUser.phoneVerified
                         ? "text-green-600"
                         : "text-amber-600",
@@ -385,16 +396,16 @@ export default function ProfileSettingsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between max-w-md">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-900 font-medium">
+              <div className="grid max-w-md grid-cols-1 items-start gap-1.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Mail className="h-5 w-5 shrink-0 text-gray-400" />
+                  <span className="min-w-0 break-words text-sm font-medium text-gray-900">
                     {storedUser.email}
                   </span>
                 </div>
                 <span
                   className={cn(
-                    "text-xs font-medium",
+                    "ml-8 shrink-0 text-xs font-medium sm:ml-0 sm:pt-0.5",
                     storedUser.emailVerified
                       ? "text-green-600"
                       : "text-amber-600",
@@ -404,9 +415,9 @@ export default function ProfileSettingsPage() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-gray-400" />
-                <span className="text-sm text-gray-900 font-medium">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 shrink-0 text-gray-400" />
+                <span className="min-w-0 break-words text-sm font-medium text-gray-900">
                   {primaryAddress
                     ? primaryAddress.formattedAddress
                     : "No address added"}
@@ -420,7 +431,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">
-                Professional Information
+                {t("professionalDetails")}
               </h3>
               {!isEditingProfessional ? (
                 <button
@@ -600,7 +611,7 @@ export default function ProfileSettingsPage() {
 
       {/* --- Change Password Tab --- */}
       {activeTab === "password" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-4">
+        <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-2 lg:gap-12">
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-900">
@@ -740,7 +751,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                In-app Notifications
+                {t("inAppNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.notificationsEnabled ?? true}
@@ -771,7 +782,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                Email Notifications
+                {t("emailNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.emailNotificationsEnabled ?? true}
@@ -783,9 +794,8 @@ export default function ProfileSettingsPage() {
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
                 {[
-                  "Daily summary (digest)",
-                  "Real-time updates (instant alerts)",
-                  "Important account alerts only",
+                  "Transactional updates for orders, payments, disputes, payouts, and messages",
+                  "Security alerts for important account changes",
                 ].map((item) => (
                   <li
                     key={item}
@@ -802,7 +812,7 @@ export default function ProfileSettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-medium text-gray-700">
-                SMS Notifications
+                {t("smsNotifications")}
               </h3>
               <Switch
                 checked={storedUser?.smsNotificationsEnabled ?? false}
@@ -814,7 +824,7 @@ export default function ProfileSettingsPage() {
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
                 {[
-                  "Critical updates only (Order accepted/declined, payment received)",
+                  "Critical payment, refund, payout, dispute, and security updates only",
                 ].map((item) => (
                   <li
                     key={item}
@@ -830,10 +840,12 @@ export default function ProfileSettingsPage() {
 
           <div className="space-y-4 max-w-md">
             <h3 className="text-sm font-medium text-gray-700">
-              Language Preference
+              {t("languagePreference")}
             </h3>
             <Select
-              defaultValue={storedUser?.preferredLanguage || "en-gb"}
+              value={
+                getSupportedLanguage(storedUser?.preferredLanguage).value
+              }
               onValueChange={(val) =>
                 handlePreferenceUpdate("preferredLanguage", val)
               }
@@ -841,25 +853,27 @@ export default function ProfileSettingsPage() {
               <SelectTrigger className="bg-white">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-gray-500" />
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={auth("selectLanguage")} />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="en-gb">English-GB</SelectItem>
-                <SelectItem value="en-us">English-US</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
+                {SUPPORTED_LANGUAGES.map((language) => (
+                  <SelectItem key={language.value} value={language.value}>
+                    {language.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-red-500 flex items-center gap-2">
-              Delete Account <Trash2 className="w-4 h-4" />
+              {t("deleteAccount")} <Trash2 className="w-4 h-4" />
             </h3>
             <div className="bg-gray-50/50 rounded-xl p-6">
               <ul className="space-y-3">
                 {[
-                  "When you delete your account, you lose access to account services, and we permanently delete your personal data.",
+                  t("deleteWarning"),
                 ].map((item) => (
                   <li
                     key={item}

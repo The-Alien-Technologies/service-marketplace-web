@@ -1,13 +1,37 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "tryoom-dev.s3.us-east-1.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "pavodahdb.s3.us-east-1.amazonaws.com",
         pathname: "/**",
-      }, 
+      },
+      {
+        protocol: "https",
+        hostname: "pavodah-dev.s3.us-east-1.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pavodah.s3.us-east-1.amazonaws.com",
+        pathname: "/**",
+      },
       {
         protocol: "https",
         hostname: "i.pinimg.com",
@@ -32,4 +56,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

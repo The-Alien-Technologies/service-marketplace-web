@@ -42,10 +42,13 @@ import Image from "next/image";
 import { apiService } from "@/lib/api";
 import { User } from "@/types/auth";
 import { toast } from "react-toastify";
+import { useTranslations } from "next-intl";
 
 const columnHelper = createColumnHelper<User>();
 
 export default function UsersPage() {
+  const t = useTranslations("AdminOps");
+  const common = useTranslations("Common");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [users, setUsers] = useState<User[]>([]);
@@ -86,7 +89,7 @@ export default function UsersPage() {
         totalPages: response.totalPages,
       });
     } catch (error) {
-      toast.error("Failed to fetch users");
+      toast.error(t("usersLoadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -109,10 +112,10 @@ export default function UsersPage() {
     try {
       setIsDeleting(true);
       await apiService.deleteUser(userToDelete);
-      toast.success("User deleted successfully");
+      toast.success(t("userDeleted"));
       fetchUsers(pagination.page);
     } catch (error) {
-      toast.error("Failed to delete user");
+      toast.error(t("userDeleteFailed"));
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -125,10 +128,10 @@ export default function UsersPage() {
     try {
       setIsUpdatingStatus(true);
       await apiService.updateUserStatus(userToUpdate.id, newStatus);
-      toast.success("User status updated successfully");
+      toast.success(t("userStatusUpdated"));
       fetchUsers(pagination.page);
     } catch (error) {
-      toast.error("Failed to update user status");
+      toast.error(t("userStatusFailed"));
     } finally {
       setIsUpdatingStatus(false);
       setStatusDialogOpen(false);
@@ -225,6 +228,12 @@ export default function UsersPage() {
           if (status === "ACTIVE") {
             badgeStyles = "bg-green-50 text-green-700 border-green-200";
             dotStyles = "bg-green-500";
+          } else if (status === "PENDING") {
+            badgeStyles = "bg-amber-50 text-amber-800 border-amber-200";
+            dotStyles = "bg-amber-500";
+          } else if (status === "REJECTED") {
+            badgeStyles = "bg-red-50 text-red-700 border-red-200";
+            dotStyles = "bg-red-500";
           } else if (status === "SUSPENDED") {
             badgeStyles = "bg-orange-50 text-orange-700 border-orange-200";
             dotStyles = "bg-orange-500";
@@ -267,11 +276,11 @@ export default function UsersPage() {
         header: "Date of Joining",
         cell: (info) => (
           <span className="text-gray-600">
-            {new Date(info.getValue()).toLocaleDateString("en-US", {
+            {info.getValue() ? new Date(info.getValue()!).toLocaleDateString("en-US", {
               day: "numeric",
               month: "short",
               year: "numeric",
-            })}
+            }) : "—"}
           </span>
         ),
       }),
@@ -294,14 +303,26 @@ export default function UsersPage() {
                   >
                     Suspend User
                   </DropdownMenuItem>
-                ) : (
+                ) : row.original.status === "SUSPENDED" ? (
                   <DropdownMenuItem
                     className="text-green-600"
                     onClick={() => openStatusDialog(row.original, "ACTIVE")}
                   >
                     Activate User
                   </DropdownMenuItem>
-                )}
+                ) : row.original.role === "SERVICE_PROVIDER" &&
+                  ((row.original.status === "PENDING" &&
+                    row.original.providerApplicationSubmittedAt) ||
+                    row.original.status === "REJECTED") ? (
+                  <DropdownMenuItem
+                    className="text-green-700"
+                    onClick={() => {
+                      window.location.href = `/dashboard/provider-applications?application=${row.original.id}`;
+                    }}
+                  >
+                    Review application
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={() => openDeleteDialog(row.original.id)}
@@ -338,26 +359,26 @@ export default function UsersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("usersTitle")}</h1>
         <p className="text-gray-500">
-          View and manage all clients, freelancers, and admins on the platform.
+          {t("usersSubtitle")}
         </p>
       </div>
 
       {/* Filters and Search */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
-            placeholder="Search by name or email..."
+            placeholder={t("searchUsers")}
             className="pl-10"
             value={globalFilter ?? ""}
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex w-full items-center gap-2 sm:w-auto">
           <Filter className="w-4 h-4" />
-          Filters
+          {t("filters")}
         </Button>
       </div>
 
@@ -369,7 +390,8 @@ export default function UsersPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left">
+            <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[760px] w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -413,7 +435,7 @@ export default function UsersPage() {
                       colSpan={7}
                       className="px-6 py-12 text-center text-gray-500"
                     >
-                      No users found
+                      {t("noUsers")}
                     </td>
                   </tr>
                 ) : (
@@ -435,9 +457,10 @@ export default function UsersPage() {
                 )}
               </tbody>
             </table>
+            </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-4 sm:px-6">
               <Button
                 variant="outline"
                 size="sm"
@@ -446,7 +469,7 @@ export default function UsersPage() {
                 disabled={pagination.page <= 1}
               >
                 <ChevronLeft className="w-4 h-4" />
-                Previous
+                {common("previous")}
               </Button>
               <div className="flex items-center gap-1">
                 <Button
@@ -467,7 +490,7 @@ export default function UsersPage() {
                 onClick={() => fetchUsers(pagination.page + 1)}
                 disabled={pagination.page >= pagination.totalPages}
               >
-                Next
+                {common("next")}
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -484,11 +507,10 @@ export default function UsersPage() {
             </div>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-900 text-center">
-                Delete User
+                {t("deleteUser")}
               </DialogTitle>
               <DialogDescription className="text-center text-gray-500 mt-2">
-                Are you sure you want to delete this user? This action cannot be
-                undone.
+                {t("deleteUserBody")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -499,7 +521,7 @@ export default function UsersPage() {
               onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className="flex-1 bg-red-600 hover:bg-red-700 text-white"
@@ -507,7 +529,7 @@ export default function UsersPage() {
               disabled={isDeleting}
             >
               {isDeleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Delete
+              {common("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -530,12 +552,12 @@ export default function UsersPage() {
             </div>
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-gray-900 text-center">
-                {newStatus === "SUSPENDED" ? "Suspend User" : "Activate User"}
+                {newStatus === "SUSPENDED" ? t("suspendUser") : t("activateUser")}
               </DialogTitle>
               <DialogDescription className="text-center text-gray-500 mt-2">
                 {newStatus === "SUSPENDED"
-                  ? "This user will be suspended and won't be able to access the platform."
-                  : "This user will be reactivated and can access the platform again."}
+                  ? t("suspendBody")
+                  : t("activateBody")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -546,7 +568,7 @@ export default function UsersPage() {
               onClick={() => setStatusDialogOpen(false)}
               disabled={isUpdatingStatus}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               className={`flex-1 text-white ${
@@ -560,7 +582,7 @@ export default function UsersPage() {
               {isUpdatingStatus && (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               )}
-              {newStatus === "SUSPENDED" ? "Suspend" : "Activate"}
+              {newStatus === "SUSPENDED" ? t("suspend") : t("activate")}
             </Button>
           </DialogFooter>
         </DialogContent>

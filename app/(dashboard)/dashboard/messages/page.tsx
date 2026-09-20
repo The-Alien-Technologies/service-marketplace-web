@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   Search,
   Send,
-  MoreVertical,
   CheckCheck,
   Smile,
   Paperclip,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { cn } from "@/lib/utils";
@@ -17,10 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/store/chat-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
 
-export default function MessagesPage() {
+function MessagesContent() {
+  const t = useTranslations("Messaging");
+  const format = useFormatter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const {
     connect,
@@ -29,19 +34,24 @@ export default function MessagesPage() {
     conversations,
     activeConversation,
     setActiveConversation,
+    setConversationVisible,
     clearActiveConversation,
     messages,
     sendMessage,
     uploadFile,
+    isConnected,
   } = useChatStore();
 
   const [inputText, setInputText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const deepLinkHandledRef = useRef<string | null>(null);
 
   useEffect(() => {
+    clearActiveConversation();
     connect();
     fetchConversations();
     return () => {
@@ -49,6 +59,35 @@ export default function MessagesPage() {
       disconnect();
     };
   }, [connect, fetchConversations, disconnect, clearActiveConversation]);
+
+  useEffect(() => {
+    const syncVisibility = () => {
+      setConversationVisible(document.visibilityState === "visible");
+    };
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", syncVisibility);
+      setConversationVisible(false);
+    };
+  }, [setConversationVisible]);
+
+  useEffect(() => {
+    const conversationId = searchParams.get("conversation");
+    if (
+      !conversationId ||
+      deepLinkHandledRef.current === conversationId ||
+      conversations.length === 0
+    ) {
+      return;
+    }
+    if (
+      conversations.some((conversation) => conversation.id === conversationId)
+    ) {
+      deepLinkHandledRef.current = conversationId;
+      void setActiveConversation(conversationId);
+    }
+  }, [conversations, searchParams, setActiveConversation]);
 
   // Close emoji picker on outside click
   useEffect(() => {
@@ -95,27 +134,43 @@ export default function MessagesPage() {
     }
   };
 
+  const filteredConversations = conversations.filter((conversation) => {
+    const otherUser =
+      conversation.userId === user?.id
+        ? conversation.provider
+        : conversation.user;
+    const name = `${otherUser?.firstName || ""} ${otherUser?.lastName || ""}`;
+    return name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+  });
+
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col md:flex-row bg-white rounded-xl overflow-hidden border border-gray-200">
+    <div className="flex h-[calc(100dvh-5.5rem)] min-h-[28rem] overflow-hidden rounded-xl border border-gray-200 bg-white md:h-[calc(100vh-8rem)] md:flex-row">
       {/* Sidebar List */}
-      <div className="w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col bg-white">
-        <div className="p-6 pb-2">
-          <h1 className="text-xl font-bold text-gray-900 mb-4">Messages</h1>
+      <div
+        className={cn(
+          "w-full flex-col border-r border-gray-200 bg-white md:w-80 lg:w-96",
+          activeConversation ? "hidden md:flex" : "flex",
+        )}
+      >
+        <div className="p-4 pb-2 sm:p-6 sm:pb-2">
+          <h1 className="text-xl font-bold text-gray-900 mb-4">{t("title")}</h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search for chat"
+              placeholder={t("searchChats")}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-9 bg-white border-gray-200 rounded-lg"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {conversations.map((chat) => {
+          {filteredConversations.map((chat) => {
             const otherUser =
               chat.userId === user?.id ? chat.provider : chat.user;
             const lastMessage =
-              chat.messages?.[0]?.content || "No messages yet";
+              chat.messages?.[0]?.content || t("noMessages");
             const isImage = IMAGE_EXTENSIONS.test(lastMessage);
 
             return (
@@ -123,9 +178,9 @@ export default function MessagesPage() {
                 key={chat.id}
                 onClick={() => setActiveConversation(chat.id)}
                 className={cn(
-                  "w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-l-4 border-transparent",
+                  "w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left",
                   activeConversation?.id === chat.id
-                    ? "bg-green-50/50 border-green-600"
+                    ? "bg-green-50 ring-1 ring-inset ring-green-200"
                     : "",
                 )}
               >
@@ -153,24 +208,43 @@ export default function MessagesPage() {
                       {otherUser?.firstName} {otherUser?.lastName}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {new Date(chat.updatedAt).toLocaleTimeString([], {
+                      {format.dateTime(new Date(chat.updatedAt), {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">
-                    {isImage ? "📎 Image" : lastMessage}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm text-gray-500">
+                      {isImage ? `📎 ${t("imageAttachment")}` : lastMessage}
+                    </p>
+                    {chat.unreadCount > 0 && (
+                      <span className="flex min-h-5 min-w-5 items-center justify-center rounded-full bg-green-700 px-1.5 text-[11px] font-bold text-white">
+                        {chat.unreadCount > 99 ? "99+" : format.number(chat.unreadCount)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </button>
             );
           })}
+          {filteredConversations.length === 0 && (
+            <p className="px-6 py-10 text-center text-sm text-gray-500">
+              {conversations.length === 0
+                ? t("noConversations")
+                : t("noSearchMatches")}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-gray-50/30">
+      <div
+        className={cn(
+          "flex-1 flex-col bg-gray-50/30",
+          activeConversation ? "flex" : "hidden md:flex",
+        )}
+      >
         {activeConversation ? (
           (() => {
             const otherUser =
@@ -180,8 +254,16 @@ export default function MessagesPage() {
             return (
               <>
                 {/* Header */}
-                <div className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex min-h-16 items-center justify-between border-b border-gray-200 bg-white px-3 py-2 sm:px-6">
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={clearActiveConversation}
+                      aria-label={t("backToConversations")}
+                      className="-ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 md:hidden"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                         {otherUser?.avatar ? (
@@ -200,17 +282,14 @@ export default function MessagesPage() {
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="truncate font-bold text-gray-900">
                       {otherUser?.firstName} {otherUser?.lastName}
                     </span>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="w-5 h-5 text-gray-500" />
-                  </Button>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto flex flex-col-reverse p-6">
+                <div className="flex flex-1 flex-col-reverse overflow-y-auto p-3 sm:p-6">
                   <div className="space-y-6 flex flex-col justify-end min-h-full">
                     {messages.map((msg) => {
                       const isMe = msg.senderId === user?.id;
@@ -239,7 +318,7 @@ export default function MessagesPage() {
                               >
                                 <Image
                                   src={msg.content}
-                                  alt="shared image"
+                                  alt={t("sharedImage")}
                                   width={200}
                                   height={200}
                                   className="rounded-lg object-cover max-h-48 w-auto"
@@ -255,7 +334,7 @@ export default function MessagesPage() {
                                 isMe ? "text-green-100" : "text-gray-400",
                               )}
                             >
-                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                              {format.dateTime(new Date(msg.createdAt), {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
@@ -276,13 +355,13 @@ export default function MessagesPage() {
                   {showEmojiPicker && (
                     <div
                       ref={emojiPickerRef}
-                      className="absolute bottom-16 left-4 z-50"
+                      className="absolute bottom-16 left-2 z-50 max-w-[calc(100%-1rem)] overflow-x-auto sm:left-4"
                     >
                       <EmojiPicker
                         onEmojiClick={handleEmojiClick}
                         theme={Theme.AUTO}
-                        height={350}
-                        width={320}
+                        height={320}
+                        width={280}
                       />
                     </div>
                   )}
@@ -303,6 +382,7 @@ export default function MessagesPage() {
                       size="icon"
                       className="text-gray-400 hover:text-gray-600 mb-0.5"
                       onClick={() => setShowEmojiPicker((v) => !v)}
+                      aria-label={t("chooseEmoji")}
                     >
                       <Smile className="w-6 h-6" />
                     </Button>
@@ -313,22 +393,28 @@ export default function MessagesPage() {
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Type here..."
-                        className="flex-1 bg-transparent border-0 outline-none text-sm text-gray-900 placeholder:text-gray-400"
+                        maxLength={5000}
+                        placeholder={t("typeMessage")}
+                        className="min-h-11 flex-1 border-0 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-500 sm:text-sm"
                       />
                       <div className="flex items-center gap-2 text-gray-400">
                         {/* Send */}
                         <button
+                          type="button"
                           onClick={handleSend}
-                          className="hover:text-gray-600"
+                          disabled={!isConnected || !inputText.trim()}
+                          className="hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label={t("sendMessage")}
                         >
                           <Send className="w-5 h-5 -rotate-45" />
                         </button>
                         {/* File upload */}
                         <button
+                          type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploading}
-                          className="hover:text-gray-600 disabled:opacity-50"
+                          disabled={isUploading || !isConnected}
+                          className="hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={t("attachFile")}
                         >
                           {isUploading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -349,12 +435,23 @@ export default function MessagesPage() {
               <div className="w-8 h-8 bg-gray-400 rounded-full" />
             </div>
             <p className="text-gray-500 font-medium">
-              Client messages will appear here. Chat to discuss requirements,
-              updates, and orders.
+              {t("emptySelection")}
             </p>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-[calc(100dvh-5.5rem)] min-h-[28rem] animate-pulse rounded-xl border border-gray-200 bg-white md:h-[calc(100vh-8rem)]" />
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }

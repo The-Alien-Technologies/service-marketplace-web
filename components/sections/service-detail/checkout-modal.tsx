@@ -4,6 +4,7 @@ import { X, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOrderStore } from "@/store/order-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface AddOn {
   id: string;
@@ -26,7 +27,7 @@ interface CheckoutModalProps {
     title: string;
     providerId: string;
     addons?: {
-      id: string;
+      id?: string;
       title: string;
       description?: string;
       price: number | string;
@@ -42,6 +43,9 @@ export function CheckoutModal({
   service,
   serviceId,
 }: CheckoutModalProps) {
+  const t = useTranslations("Checkout");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const [isAddOnsExpanded, setIsAddOnsExpanded] = useState(true);
@@ -51,12 +55,12 @@ export function CheckoutModal({
   const availableAddOns: AddOn[] =
     service?.addons?.map(
       (addon: {
-        id: string;
+        id?: string;
         title: string;
         description?: string;
         price: number | string;
       }) => ({
-        id: addon.id,
+        id: addon.id ?? "",
         name: addon.title,
         description: addon.description || "",
         price: Number(addon.price),
@@ -108,6 +112,9 @@ export function CheckoutModal({
         id: selectedPlan.id,
         name: selectedPlan.name,
         price: planPrice,
+        inclusions: selectedPlan.features
+          .map((feature) => feature.text)
+          .join("\n"),
       },
       addOns: selectedAddOnsData,
       addOnsTotal,
@@ -138,10 +145,11 @@ export function CheckoutModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            My Order
+            {t("myOrder")}
           </h2>
           <button
             onClick={onClose}
+            aria-label={common("close")}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -153,7 +161,7 @@ export function CheckoutModal({
           {/* Selected Plan */}
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Selected plan
+              {t("selectedPlan")}
             </h3>
             <div className="border-2 border-brand-900 bg-brand-50 dark:bg-brand-900/10 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
@@ -214,7 +222,7 @@ export function CheckoutModal({
               className="w-full flex items-center justify-between mb-4"
             >
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Add-ons
+                {t("addOns")}
               </h3>
               {isAddOnsExpanded ? (
                 <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -262,7 +270,7 @@ export function CheckoutModal({
                         </div>
                       </div>
                       <div className="font-bold text-gray-900 dark:text-white text-sm ml-4 flex-shrink-0">
-                        GHS {addOn.price}
+                        {format.number(addOn.price, "currency")}
                       </div>
                     </button>
                   );
@@ -275,21 +283,20 @@ export function CheckoutModal({
           <div className="border-t border-gray-200 dark:border-gray-700 pt-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-base font-bold text-gray-900 dark:text-white">
-                Order summary
+                {t("orderSummary")}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                Order ID: #
-                {Math.random().toString(36).substr(2, 9).toUpperCase()}
+                {t("orderId", { id: serviceId.slice(0, 9).toUpperCase() })}
               </span>
             </div>
 
             <div className="mb-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Subtotal
+                  {t("subtotal")}
                 </span>
                 <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  GHS {subtotal.toFixed(2)}
+                  {format.number(subtotal, "currency")}
                 </span>
               </div>
             </div>
@@ -308,8 +315,7 @@ export function CheckoutModal({
                 />
               </svg>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                You won&apos;t be charged until the freelancer accepts your
-                order.
+                {t("acceptanceNotice")}
               </p>
             </div>
           </div>
@@ -335,13 +341,13 @@ export function CheckoutModal({
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-              Back to plans
+              {t("backToPlans")}
             </button>
             <button
               onClick={handleContinue}
               className="flex-1 px-4 py-3 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors"
             >
-              Continue (GHS {subtotal.toFixed(2)})
+              {t("continueAmount", { amount: format.number(subtotal, "currency") })}
             </button>
           </div>
         </div>

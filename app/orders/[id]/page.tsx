@@ -8,6 +8,7 @@ import {
   progressStages,
   type OrderWithSummary,
 } from "@/lib/orders-data";
+import {useFormatter, useTranslations} from "next-intl";
 
 interface OrderDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -19,6 +20,9 @@ function getStatusLabel(status: OrderWithSummary["status"]) {
 }
 
 export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
+  const t = useTranslations("Orders");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { id } = use(params);
 
   const order = mockOrders.find((o) => o.id === id);
@@ -29,7 +33,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
         <Header />
         <main className="px-4 sm:px-6 lg:px-8 py-16">
           <p className="text-center text-gray-600 dark:text-gray-300">
-            Order not found.
+            {t("notFound")}
           </p>
         </main>
       </div>
@@ -37,6 +41,10 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
   }
 
   const isDeclined = order.status === "declined";
+  const statusLabel = (status: OrderWithSummary["status"] | string) =>
+    t(status === "in-progress" ? "inProgress" : status as "awaiting" | "completed" | "declined");
+  const stageLabel = (index: number) =>
+    t(index === 0 ? "stagePlaced" : index === 1 ? "stageProgress" : "stageDelivered");
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -44,7 +52,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
 
       <main className="px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          My orders
+          {t("title")}
         </h1>
 
         {/* Status tabs (shared top section) */}
@@ -52,10 +60,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-1 py-1">
             {["awaiting", "in-progress", "completed", "declined"].map(
               (statusKey) => {
-                const label =
-                  statusKey === "in-progress"
-                    ? "In-progress"
-                    : statusKey.charAt(0).toUpperCase() + statusKey.slice(1);
+                const label = statusLabel(statusKey);
 
                 const isActive = order.status === statusKey;
 
@@ -83,13 +88,13 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
             href="/orders"
             className="hover:text-gray-700 dark:hover:text-gray-200"
           >
-            My orders
+            {t("title")}
           </Link>
           <span>/</span>
-          <span className="capitalize">{getStatusLabel(order.status)}</span>
+          <span>{statusLabel(order.status)}</span>
           <span>/</span>
           <span className="text-gray-900 dark:text-white font-medium">
-            Order ID: #{order.orderId}
+            {t("orderId", {id: order.orderId})}
           </span>
         </nav>
 
@@ -110,7 +115,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
               href={`/services/${order.id}`}
               className="text-brand-600 dark:text-brand-500 hover:text-brand-700 dark:hover:text-brand-400 text-sm"
             >
-              view profile
+              {t("viewProfile")}
             </Link>
           </div>
         </div>
@@ -119,65 +124,65 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
           {/* Left side - summary + progress */}
           <div className="space-y-6">
             {/* Order meta */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-wrap text-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  Order ID: #{order.orderId}
+                  {t("orderId", {id: order.orderId})}
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
                   {order.serviceCategory}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 text-xs font-medium text-orange-700 border border-orange-100">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                  {getStatusLabel(order.status)}
+                  {statusLabel(order.status)}
                 </span>
               </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-sm text-gray-500 dark:text-gray-400 sm:shrink-0">
                 {order.date}
               </span>
             </div>
 
             {/* Order summary card */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-700 sm:px-6">
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                    Order summary
+                    {t("orderSummary")}
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Order ID: #{order.orderId}
+                    {t("orderId", {id: order.orderId})}
                   </p>
                 </div>
               </div>
-              <div className="px-6 py-4 text-sm">
+              <div className="px-4 py-4 text-sm sm:px-6">
                 <div className="flex justify-between py-1.5">
                   <span className="text-gray-500 dark:text-gray-400">
-                    Subtotal (Basic plan)
+                    {t("basicPlanSubtotal")}
                   </span>
                   <span className="text-gray-900 dark:text-white">
-                    GHS {order.orderSummary.subtotal.toFixed(2)}
+                    {format.number(order.orderSummary.subtotal, {style: "currency", currency: "GHS"})}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5">
                   <span className="text-gray-500 dark:text-gray-400">
-                    Add-ons
+                    {t("addOns")}
                   </span>
                   <span className="text-gray-900 dark:text-white">
-                    GHS {order.orderSummary.addOns.toFixed(2)}
+                    {format.number(order.orderSummary.addOns, {style: "currency", currency: "GHS"})}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5">
                   <span className="text-gray-500 dark:text-gray-400">
-                    Coupon discount
+                    {t("couponDiscount")}
                   </span>
                   <span className="text-red-600 dark:text-red-400">
-                    -GHS {order.orderSummary.couponDiscount.toFixed(2)}
+                    -{format.number(order.orderSummary.couponDiscount, {style: "currency", currency: "GHS"})}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3 flex justify-between font-semibold">
-                  <span className="text-gray-900 dark:text-white">Total</span>
+                  <span className="text-gray-900 dark:text-white">{common("total")}</span>
                   <span className="text-gray-900 dark:text-white">
-                    GHS {order.orderSummary.total.toFixed(2)}
+                    {format.number(order.orderSummary.total, {style: "currency", currency: "GHS"})}
                   </span>
                 </div>
               </div>
@@ -195,7 +200,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                   }}
                 />
               </div>
-              <div className="flex justify-between mt-2">
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                 {progressStages.map((stage, index) => (
                   <span
                     key={stage}
@@ -205,7 +210,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                         : "text-gray-500 dark:text-gray-400"
                     }`}
                   >
-                    {stage}
+                    {stageLabel(index)}
                   </span>
                 ))}
               </div>
@@ -214,31 +219,31 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
 
           {/* Right side - actions / note */}
           <div className="space-y-4">
-            <div className="flex flex-wrap justify-end gap-3">
+            <div className="flex flex-wrap gap-3 sm:justify-end">
               {isDeclined ? (
                 <>
                   <button
                     className="px-4 py-2 bg-gray-300 text-white rounded-lg font-medium text-sm cursor-not-allowed"
                     disabled
                   >
-                    Raise dispute
+                    {t("raiseDispute")}
                   </button>
                   <button
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 rounded-lg font-medium text-sm cursor-not-allowed"
                     disabled
                   >
                     <Mail className="w-4 h-4" />
-                    Message Freelancer
+                    {t("messageProvider")}
                   </button>
                 </>
               ) : (
                 <>
                   <button className="px-4 py-2 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition-colors">
-                    Cancel Order
+                    {t("cancelOrder")}
                   </button>
                   <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <Mail className="w-4 h-4" />
-                    Message Freelancer
+                    {t("messageProvider")}
                   </button>
                 </>
               )}
@@ -249,13 +254,11 @@ export default function OrderDetailsPage({ params }: OrderDetailsPageProps) {
                 <div className="flex items-center gap-2 mb-2">
                   <Info className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    Important note
+                    {t("importantNote")}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  The freelancer has declined your order. Don&apos;t worry —
-                  your payment has not been charged. You can choose another
-                  professional or explore similar services.
+                  {t("declinedNote")}
                 </p>
               </div>
             )}

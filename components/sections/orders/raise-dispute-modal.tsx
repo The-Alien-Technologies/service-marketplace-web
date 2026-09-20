@@ -19,9 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiService } from "@/lib/api";
-import { ISSUE_TYPE_LABELS, DisputeIssueType } from "@/types/dispute";
+import { DisputeIssueType } from "@/types/dispute";
 import { toast } from "react-toastify";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Props {
   orderId: string;
@@ -31,10 +32,14 @@ interface Props {
   onSuccess?: () => void;
 }
 
-const ISSUE_TYPES = Object.entries(ISSUE_TYPE_LABELS) as [
-  DisputeIssueType,
-  string,
-][];
+const ISSUE_TYPES: DisputeIssueType[] = [
+  "LATE_DELIVERY",
+  "NON_DELIVERY",
+  "QUALITY_ISSUE",
+  "PAYMENT_DISPUTE",
+  "MISCOMMUNICATION",
+  "OTHER",
+];
 
 export function RaiseDisputeModal({
   orderId,
@@ -43,6 +48,8 @@ export function RaiseDisputeModal({
   onClose,
   onSuccess,
 }: Props) {
+  const t = useTranslations("Disputes");
+  const common = useTranslations("Common");
   const [issueType, setIssueType] = useState<DisputeIssueType | "">("");
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -50,20 +57,24 @@ export function RaiseDisputeModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!issueType) {
-      toast.error("Please select an issue type");
+      toast.error(t("issueRequired"));
+      return;
+    }
+    if (!description.trim()) {
+      toast.error(t("descriptionRequired"));
       return;
     }
     setIsLoading(true);
     try {
       await apiService.createDispute({ orderId, issueType, description });
-      toast.success("Dispute raised successfully. Our team will review it.");
+      toast.success(t("created"));
       onSuccess?.();
       onClose();
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ??
         err?.message ??
-        "Failed to raise dispute";
+        t("createFailed");
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -79,31 +90,50 @@ export function RaiseDisputeModal({
               <AlertTriangle className="w-4 h-4 text-red-600" />
             </div>
             <DialogTitle className="text-lg font-bold text-gray-900">
-              Raise a Dispute
+              {t("raiseTitle")}
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm text-gray-500">
-            Order <strong className="text-gray-700">#{orderNumber}</strong> —
-            our support team will review your dispute and contact both parties.
+            {t.rich("orderReview", {
+              number: orderNumber,
+              strong: (chunks) => (
+                <strong className="text-gray-700">{chunks}</strong>
+              ),
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Issue type
+            <label
+              htmlFor="dispute-issue-type"
+              className="text-sm font-medium text-gray-700"
+            >
+              {t("issueType")}
             </label>
             <Select
               value={issueType}
               onValueChange={(v) => setIssueType(v as DisputeIssueType)}
             >
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="Select the issue type" />
+              <SelectTrigger id="dispute-issue-type" className="bg-white">
+                <SelectValue placeholder={t("selectIssue")} />
               </SelectTrigger>
               <SelectContent>
-                {ISSUE_TYPES.map(([value, label]) => (
+                {ISSUE_TYPES.map((value) => (
                   <SelectItem key={value} value={value}>
-                    {label}
+                    {t(
+                      value === "LATE_DELIVERY"
+                        ? "issueLateDelivery"
+                        : value === "NON_DELIVERY"
+                          ? "issueNonDelivery"
+                        : value === "QUALITY_ISSUE"
+                          ? "issueQuality"
+                          : value === "PAYMENT_DISPUTE"
+                            ? "issuePayment"
+                            : value === "MISCOMMUNICATION"
+                              ? "issueCommunication"
+                              : "issueOther",
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -111,12 +141,18 @@ export function RaiseDisputeModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">
-              Describe the issue{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+            <label
+              htmlFor="dispute-description"
+              className="text-sm font-medium text-gray-700"
+            >
+              {t("describe")}{" "}
+              <span className="text-red-600" aria-hidden="true">
+                *
+              </span>
             </label>
             <Textarea
-              placeholder="Please describe the issue in detail so we can resolve it quickly..."
+              id="dispute-description"
+              placeholder={t("descriptionPlaceholder")}
               className="bg-white resize-none min-h-[120px]"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -128,8 +164,7 @@ export function RaiseDisputeModal({
           </div>
 
           <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700">
-            Disputes are reviewed within 2–3 business days. You may be contacted
-            via email or phone for more information.
+            {t("reviewTime")}
           </div>
 
           <DialogFooter className="flex gap-3 sm:justify-between">
@@ -140,15 +175,15 @@ export function RaiseDisputeModal({
               onClick={onClose}
               disabled={isLoading}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               type="submit"
               className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
-              disabled={isLoading || !issueType}
+              disabled={isLoading || !issueType || !description.trim()}
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit Dispute
+              {t("submit")}
             </Button>
           </DialogFooter>
         </form>

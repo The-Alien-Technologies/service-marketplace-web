@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 import { apiService } from '@/lib/api';
@@ -8,14 +8,20 @@ import { useAuthStore } from '@/store/auth-store';
 import { toast } from 'react-toastify';
 import { getOnboardingStatus } from '@/lib/field-based-onboarding';
 import { mapBackendStepToFrontendStep } from '@/types/auth';
+import { User } from '@/types/auth';
+import { getProviderEntryRoute } from '@/lib/provider-access';
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const callbackStarted = useRef(false);
   const [isProcessing, setIsProcessing] = useState(true);
   const { setUser, hideAuth, setUserAuthStep, setProviderAuthStep } = useAuthStore();
 
   useEffect(() => {
+    if (callbackStarted.current) return;
+    callbackStarted.current = true;
+
     const handleCallback = async () => {
       try {
         // Wait a moment for Better Auth to process the callback
@@ -27,8 +33,6 @@ export default function AuthCallback() {
         if (!session?.user) {
           throw new Error('No session found after Google authentication');
         }
-
-        console.log({session});
 
         // Extract user information from Better Auth session
         const googleUser = session.user;
@@ -56,7 +60,7 @@ export default function AuthCallback() {
         console.log('Intended user role:', intendedRole);
 
         // Send the actual Google access token to our backend for validation with Google's servers
-        const result = await apiService.socialAuth('google', tokenResult.data.accessToken, tokenResult.data.idToken, intendedRole);
+        await apiService.socialAuth('google', tokenResult.data.accessToken, tokenResult.data.idToken, intendedRole);
         
         // Get user profile after successful authentication
         const profileResult = await apiService.getProfile();
@@ -64,10 +68,8 @@ export default function AuthCallback() {
         
         // Handle onboarding flow
         // Note: Google users start with 'USER' role by default and can change to 'SERVICE_PROVIDER' during onboarding
-        await handleOnboardingFlow(profileResult.user);
-        
-        // Redirect to home page
-        router.push('/');
+        const destination = await handleOnboardingFlow(profileResult.user);
+        router.push(destination);
         
       } catch (error) {
         console.error('OAuth callback error:', error);
@@ -78,7 +80,7 @@ export default function AuthCallback() {
       }
     };
 
-    const handleOnboardingFlow = async (user: any) => {
+    const handleOnboardingFlow = async (user: User): Promise<string> => {
       try {
         // Check comprehensive onboarding status using field-based validation
         const onboardingStatus = await getOnboardingStatus();
@@ -91,7 +93,7 @@ export default function AuthCallback() {
           } else {
             setUserAuthStep('onboarding-personalize');
           }
-          return;
+          return '/';
         }
       
         if (!onboardingStatus.isComplete) {
@@ -129,10 +131,14 @@ export default function AuthCallback() {
               setUserAuthStep('onboarding-personalize');
             }
           }
+          return '/';
         } else {
           // Onboarding is complete
           toast.success('Welcome! You have successfully signed in with Google.');
           hideAuth();
+          return user.role === 'SERVICE_PROVIDER'
+            ? getProviderEntryRoute(user)
+            : '/';
         }
       } catch (onboardingError) {
         console.error('Error checking onboarding status:', onboardingError);
@@ -143,11 +149,12 @@ export default function AuthCallback() {
         } else {
           setUserAuthStep('onboarding-personalize');
         }
+        return '/';
       }
     };
 
     handleCallback();
-  }, [router, setUser, hideAuth, setUserAuthStep, setProviderAuthStep]);
+  }, [router, searchParams, setUser, hideAuth, setUserAuthStep, setProviderAuthStep]);
 
   if (isProcessing) {
     return (
@@ -172,4 +179,12 @@ export default function AuthCallback() {
   }
 
   return null;
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense>
+      <AuthCallbackInner />
+    </Suspense>
+  );
 }

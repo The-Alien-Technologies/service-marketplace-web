@@ -7,6 +7,7 @@ import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { useChatStore } from "@/store/chat-store";
 import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ChatBoxProps {
   isOpen: boolean;
@@ -18,14 +19,6 @@ interface ChatBoxProps {
   responseTime?: string;
 }
 
-const quickMessages = [
-  "How long would this project take to complete?",
-  "Hi, are you available to take on a project right now?",
-  "Can you share some recent projects you've worked on?",
-  "What's the earliest you can start?",
-  "Are you available on Weekends"
-];
-
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
 
 export function ChatBox({
@@ -35,8 +28,19 @@ export function ChatBox({
   providerName,
   providerAvatar,
   isOnline = true,
-  responseTime = "30mins",
+  responseTime,
 }: ChatBoxProps) {
+  const t = useTranslations("Messaging");
+  const marketplace = useTranslations("Marketplace");
+  const common = useTranslations("Common");
+  const format = useFormatter();
+  const quickMessages = [
+    t("quickDuration"),
+    t("quickAvailable"),
+    t("quickProjects"),
+    t("quickStart"),
+    t("quickWeekends"),
+  ];
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -49,6 +53,7 @@ export function ChatBox({
     connect,
     startCustomConversation,
     setActiveConversation,
+    setConversationVisible,
     sendMessage,
     uploadFile,
     messages,
@@ -58,24 +63,42 @@ export function ChatBox({
   } = useChatStore();
 
   useEffect(() => {
-    if (isOpen) {
-      connect();
-      const initChat = async () => {
-        const convId = await startCustomConversation(providerId);
-        if (convId) {
-          await setActiveConversation(convId);
-        }
-      };
-      initChat();
-    } else {
+    if (!isOpen) {
+      setConversationVisible(false);
       clearActiveConversation();
+      return;
     }
+
+    let cancelled = false;
+    const syncVisibility = () => {
+      setConversationVisible(document.visibilityState === "visible");
+    };
+    clearActiveConversation();
+    connect();
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+
+    const initChat = async () => {
+      const convId = await startCustomConversation(providerId);
+      if (convId && !cancelled) {
+        await setActiveConversation(convId);
+      }
+    };
+    void initChat();
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", syncVisibility);
+      setConversationVisible(false);
+      clearActiveConversation();
+    };
   }, [
     isOpen,
     providerId,
     connect,
     startCustomConversation,
     setActiveConversation,
+    setConversationVisible,
     clearActiveConversation,
   ]);
 
@@ -136,7 +159,7 @@ export function ChatBox({
   };
 
   return (
-    <div className="fixed right-4 bottom-4 w-full max-w-md h-[600px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl z-50 flex flex-col border border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 z-50 flex h-dvh w-full flex-col border-0 border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:inset-auto sm:bottom-[max(1rem,env(safe-area-inset-bottom))] sm:right-4 sm:h-[min(600px,calc(100dvh-2rem))] sm:max-w-md sm:rounded-lg sm:border">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
@@ -160,7 +183,7 @@ export function ChatBox({
               <div className="absolute bottom-0 right-0">
                 <Image
                   src="/assets/icons/online_indicator.svg"
-                  alt="Online"
+                  alt={marketplace("online")}
                   width={10}
                   height={10}
                 />
@@ -172,20 +195,22 @@ export function ChatBox({
               {providerName}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Avg. response time {responseTime}
+              {t("averageResponse", { time: responseTime ?? t("defaultResponseTime") })}
             </p>
           </div>
         </div>
         <button
+          type="button"
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          aria-label={common("close")}
+          className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 p-6 overflow-y-auto flex flex-col">
+      <div className="flex flex-1 flex-col overflow-y-auto p-4 sm:p-6">
         {isLoading ? (
           <div className="flex-1 flex justify-center items-center">
             <Loader2 className="w-8 h-8 animate-spin text-brand-900" />
@@ -194,7 +219,7 @@ export function ChatBox({
           <>
             <div className="text-center mb-6 mt-auto">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Start your conversation with {providerName.split(" ")[0]}
+                {t("startWith", { name: providerName.split(" ")[0] })}
               </p>
             </div>
             <div className="space-y-3">
@@ -231,7 +256,7 @@ export function ChatBox({
                       <a href={msg.content} target="_blank" rel="noreferrer">
                         <Image
                           src={msg.content}
-                          alt="shared image"
+                          alt={t("sharedImage")}
                           width={200}
                           height={200}
                           className="rounded-lg object-cover max-h-48 w-auto"
@@ -247,7 +272,7 @@ export function ChatBox({
                         isMe ? "text-green-100" : "text-gray-400",
                       )}
                     >
-                      {new Date(msg.createdAt).toLocaleTimeString([], {
+                      {format.dateTime(new Date(msg.createdAt), {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -265,15 +290,15 @@ export function ChatBox({
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="border-t border-gray-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-gray-700 sm:p-4">
         {/* Emoji Picker */}
         {showEmojiPicker && (
-          <div ref={emojiPickerRef} className="absolute bottom-20 left-4 z-50">
+          <div ref={emojiPickerRef} className="absolute bottom-20 left-2 z-50 max-w-[calc(100%-1rem)] overflow-x-auto sm:left-4">
             <EmojiPicker
               onEmojiClick={handleEmojiClick}
               theme={Theme.AUTO}
-              height={350}
-              width={300}
+              height={320}
+              width={280}
             />
           </div>
         )}
@@ -291,6 +316,7 @@ export function ChatBox({
           {/* Emoji Button */}
           <button
             onClick={() => setShowEmojiPicker((v) => !v)}
+            aria-label={t("chooseEmoji")}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
           >
             <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -299,6 +325,7 @@ export function ChatBox({
           {/* File/Attachment Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
+            aria-label={t("attachFile")}
             disabled={isUploading}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50"
           >
@@ -315,13 +342,14 @@ export function ChatBox({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type here..."
-            className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-900"
+            placeholder={t("typeMessage")}
+            className="min-h-11 flex-1 rounded-lg bg-gray-100 px-3 py-2 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 sm:px-4 sm:text-sm"
           />
 
           {/* Send Button */}
           <button
             onClick={handleSend}
+            aria-label={t("sendMessage")}
             disabled={!activeConversation || !message.trim()}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-brand-900"
           >

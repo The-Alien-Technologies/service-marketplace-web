@@ -35,16 +35,8 @@ export function ThemeProvider({
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem(storageKey) as Theme;
-    if (stored && Object.values(themes).includes(stored)) {
-      setThemeState(stored);
-    } else {
-      // Check system preference
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? themes.dark
-        : themes.light;
-      setThemeState(systemTheme);
-    }
+    // Force light theme and strip OS preference override
+    setThemeState(themes.light);
   }, [storageKey]);
 
   useEffect(() => {

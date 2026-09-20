@@ -5,32 +5,25 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
 type ExperienceLevel = 'BEGINNER' | 'INTERMEDIATE' | 'EXPERT';
 
-const experienceLevels = [
-  {
-    value: 'EXPERT' as ExperienceLevel,
-    label: 'Expert'
-  },
-  {
-    value: 'INTERMEDIATE' as ExperienceLevel,
-    label: 'Intermediate'
-  },
-  {
-    value: 'BEGINNER' as ExperienceLevel,
-    label: 'Beginner'
-  }
-];
-
 export function ProviderExperienceForm() {
+  const t = useTranslations('Onboarding');
+  const common = useTranslations('Common');
+  const experienceLevels = [
+    { value: 'EXPERT' as ExperienceLevel, label: t('expert') },
+    { value: 'INTERMEDIATE' as ExperienceLevel, label: t('intermediate') },
+    { value: 'BEGINNER' as ExperienceLevel, label: t('beginner') },
+  ];
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { nextProviderStep, previousProviderStep } = useAuthStore();
 
   const handleNext = async () => {
     if (!selectedLevel) {
-      toast.error('Please select your experience level');
+      toast.error(t('experienceRequired'));
       return;
     }
 
@@ -39,11 +32,11 @@ export function ProviderExperienceForm() {
       // Save experience level using the correct onboarding endpoint
       await apiService.updateExperience(selectedLevel);
       
-      toast.success('Experience level saved successfully!');
+      toast.success(t('experienceSaved'));
       nextProviderStep();
     } catch (error) {
       console.error('Failed to save experience level:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save experience level';
+      const errorMessage = error instanceof Error ? error.message : t('experienceSaveFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -55,7 +48,7 @@ export function ProviderExperienceForm() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
@@ -70,14 +63,14 @@ export function ProviderExperienceForm() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-6">
-          Let's finish setting up your account
+          {t('finishSetup')}
         </h1>
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Experience Level
+            {t('experienceTitle')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Select the level that best reflects your skills and background.
+            {t('experienceBody')}
           </p>
         </div>
       </div>
@@ -113,7 +106,7 @@ export function ProviderExperienceForm() {
           onClick={handlePrevious}
           className="text-gray-600 hover:text-gray-700"
         >
-          ← Previous
+          ← {common('previous')}
         </Button>
         
         <Button
@@ -121,7 +114,7 @@ export function ProviderExperienceForm() {
           disabled={!selectedLevel || isLoading}
           className="bg-green-600 hover:bg-green-700 text-white font-medium px-6"
         >
-          {isLoading ? 'Saving...' : 'Next →'}
+          {isLoading ? common('saving') : `${t('next')} →`}
         </Button>
       </div>
     </div>

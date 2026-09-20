@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { MapPin, Star } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ServiceProviderBadgeProps {
   providerName: string;
@@ -22,6 +23,8 @@ export function ServiceProviderBadge({
   isPro = true,
   isOnline = true,
 }: ServiceProviderBadgeProps) {
+  const t = useTranslations("Marketplace");
+  const format = useFormatter();
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex items-start gap-3">
@@ -41,7 +44,7 @@ export function ServiceProviderBadge({
             <div className="absolute bottom-0 right-0">
               <Image
                 src="/assets/icons/online_indicator.svg"
-                alt="Online"
+                alt={t("online")}
                 width={12}
                 height={12}
               />
@@ -82,7 +85,7 @@ export function ServiceProviderBadge({
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {rating.toFixed(1)}
+                  {format.number(rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                 </span>
               </div>
             </div>

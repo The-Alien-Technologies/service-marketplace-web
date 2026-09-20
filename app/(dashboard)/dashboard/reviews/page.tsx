@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { Review, ReviewSummary } from "@/types/order";
 import { toast } from "react-toastify";
+import { useFormatter, useTranslations } from "next-intl";
 
 const DEFAULT_SUMMARY: ReviewSummary & { completedOrders: number } = {
   average: 0,
@@ -32,6 +33,10 @@ const DEFAULT_SUMMARY: ReviewSummary & { completedOrders: number } = {
 };
 
 export default function ReviewsPage() {
+  const t = useTranslations("Reviews");
+  const common = useTranslations("Common");
+  const marketplace = useTranslations("Marketplace");
+  const format = useFormatter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +61,7 @@ export default function ReviewsPage() {
       setSummary(result.summary);
       setTotalPages(result.pagination.pages);
     } catch {
-      toast.error("Failed to load reviews");
+      toast.error(t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -71,12 +76,12 @@ export default function ReviewsPage() {
     setSubmittingResponse(true);
     try {
       await apiService.respondToReview(reviewId, responseText.trim());
-      toast.success("Response submitted");
+      toast.success(t("responseSubmitted"));
       setRespondingTo(null);
       setResponseText("");
       fetchReviews();
     } catch {
-      toast.error("Failed to submit response");
+      toast.error(t("responseFailed"));
     } finally {
       setSubmittingResponse(false);
     }
@@ -88,9 +93,9 @@ export default function ReviewsPage() {
     <div className="max-w-[1000px] space-y-10 pb-20">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Reviews</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="text-gray-500 mt-1">
-          Your ratings and feedback help you grow and earn trust.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -100,7 +105,7 @@ export default function ReviewsPage() {
         <div className="flex items-center gap-6 pt-2">
           {/* Rating Circle */}
           <div className="w-20 h-20 rounded-full border-[3px] border-amber-400 flex items-center justify-center text-3xl font-bold text-gray-900 shrink-0">
-            {summary.average.toFixed(1)}
+            {format.number(summary.average, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
           </div>
 
           {/* Stars & Count */}
@@ -119,7 +124,7 @@ export default function ReviewsPage() {
               ))}
             </div>
             <p className="text-sm text-gray-500">
-              from {summary.total} reviews
+              {t("fromReviews", { count: summary.total })}
             </p>
           </div>
 
@@ -129,7 +134,7 @@ export default function ReviewsPage() {
           {/* Orders Completed */}
           <div className="hidden sm:flex items-center gap-2.5 font-medium text-gray-900 text-lg">
             <Box className="w-6 h-6 text-gray-900" />
-            <span>Orders Completed: {summary.completedOrders}</span>
+            <span>{t("ordersCompleted", { count: summary.completedOrders })}</span>
           </div>
         </div>
 
@@ -138,7 +143,7 @@ export default function ReviewsPage() {
           {[5, 4, 3, 2, 1].map((star) => (
             <div key={star} className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2 shrink-0 w-12">
-                <span className="font-medium text-gray-900">{star}.0</span>
+                <span className="font-medium text-gray-900">{format.number(star, { minimumFractionDigits: 1 })}</span>
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
               </div>
 
@@ -151,7 +156,7 @@ export default function ReviewsPage() {
                 />
               </div>
               <span className="w-10 text-right text-gray-500 shrink-0">
-                {summary.breakdown[star] || 0}
+                {format.number(summary.breakdown[star] || 0)}
               </span>
             </div>
           ))}
@@ -162,15 +167,15 @@ export default function ReviewsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
           <div className="space-y-1">
-            <h2 className="text-lg font-bold text-gray-900">Recent reviews</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t("recent")}</h2>
             <p className="text-sm text-gray-500">
-              See what clients are saying about you.
+              {t("recentBody")}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Filter</span>
+          <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-2 sm:justify-start">
+              <span className="text-sm font-medium text-gray-700">{t("filter")}</span>
               <Select
                 value={ratingFilter}
                 onValueChange={(v) => {
@@ -179,20 +184,18 @@ export default function ReviewsPage() {
                 }}
               >
                 <SelectTrigger className="w-[100px] h-9 bg-white text-sm">
-                  <SelectValue placeholder="Filter" />
+                  <SelectValue placeholder={t("filter")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="5">5 Stars</SelectItem>
-                  <SelectItem value="4">4 Stars</SelectItem>
-                  <SelectItem value="3">3 Stars</SelectItem>
-                  <SelectItem value="2">2 Stars</SelectItem>
-                  <SelectItem value="1">1 Star</SelectItem>
+                  <SelectItem value="all">{t("all")}</SelectItem>
+                  {[5, 4, 3, 2, 1].map((count) => (
+                    <SelectItem key={count} value={String(count)}>{t("stars", { count })}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Sort by</span>
+            <div className="flex items-center justify-between gap-2 sm:justify-start">
+              <span className="text-sm font-medium text-gray-700">{marketplace("sortBy")}</span>
               <Select
                 value={sort}
                 onValueChange={(v) => {
@@ -201,12 +204,12 @@ export default function ReviewsPage() {
                 }}
               >
                 <SelectTrigger className="w-[130px] h-9 bg-white text-sm">
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={marketplace("sortBy")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="highest">Highest Rated</SelectItem>
-                  <SelectItem value="lowest">Lowest Rated</SelectItem>
+                  <SelectItem value="recent">{t("mostRecent")}</SelectItem>
+                  <SelectItem value="highest">{t("highestRated")}</SelectItem>
+                  <SelectItem value="lowest">{t("lowestRated")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -220,9 +223,9 @@ export default function ReviewsPage() {
         ) : reviews.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <Star className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-            <p className="font-medium">No reviews yet</p>
+            <p className="font-medium">{t("none")}</p>
             <p className="text-sm mt-1">
-              Complete orders to start receiving reviews.
+              {t("noneBody")}
             </p>
           </div>
         ) : (
@@ -256,7 +259,7 @@ export default function ReviewsPage() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString("en-US", {
+                      {format.dateTime(new Date(review.createdAt), {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
@@ -272,11 +275,11 @@ export default function ReviewsPage() {
 
                   {/* Provider response */}
                   {review.response && (
-                    <div className="mt-3 ml-4 pl-4 border-l-2 border-green-200 bg-green-50/50 rounded-r-lg py-2 pr-3">
+                    <div className="mt-3 rounded-lg bg-green-50 px-4 py-3">
                       <p className="text-xs font-semibold text-green-700 mb-1">
-                        Your response
+                        {t("yourResponse")}
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-green-950">
                         {review.response.comment}
                       </p>
                     </div>
@@ -289,7 +292,7 @@ export default function ReviewsPage() {
                       className="flex items-center gap-1.5 text-xs font-medium text-green-600 hover:text-green-700 transition-colors mt-1"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      Respond to review
+                      {t("respond")}
                     </button>
                   )}
 
@@ -299,7 +302,7 @@ export default function ReviewsPage() {
                       <textarea
                         value={responseText}
                         onChange={(e) => setResponseText(e.target.value)}
-                        placeholder="Write your response..."
+                        placeholder={t("responsePlaceholder")}
                         className="w-full max-w-xl h-24 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none resize-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
                       />
                       <div className="flex items-center gap-2">
@@ -311,7 +314,7 @@ export default function ReviewsPage() {
                           {submittingResponse && (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           )}
-                          Submit
+                          {common("submit")}
                         </button>
                         <button
                           onClick={() => {
@@ -320,7 +323,7 @@ export default function ReviewsPage() {
                           }}
                           className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
                         >
-                          <X className="w-3.5 h-3.5" /> Cancel
+                          <X className="w-3.5 h-3.5" /> {common("cancel")}
                         </button>
                       </div>
                     </div>
@@ -338,7 +341,7 @@ export default function ReviewsPage() {
             disabled={page >= totalPages}
             className="flex items-center gap-2 text-sm font-medium text-[#15803d] hover:text-[#14532d] transition-colors mt-4 disabled:opacity-40"
           >
-            Show more <ArrowDown className="w-4 h-4" />
+            {t("showMore")} <ArrowDown className="w-4 h-4" />
           </button>
         )}
       </div>

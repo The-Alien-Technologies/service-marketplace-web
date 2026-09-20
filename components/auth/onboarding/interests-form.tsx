@@ -6,8 +6,11 @@ import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
 import { Category } from '@/types/auth';
+import { useTranslations } from 'next-intl';
 
 export function OnboardingInterestsForm() {
+  const t = useTranslations('Onboarding');
+  const common = useTranslations('Common');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,14 +27,14 @@ export function OnboardingInterestsForm() {
         setCategories(response.categories || []);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        toast.error('Failed to load service categories');
+        toast.error(t('categoriesLoadFailed'));
       } finally {
         setIsLoadingCategories(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [t]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -43,7 +46,7 @@ export function OnboardingInterestsForm() {
 
   const handleFinish = async () => {
     if (selectedCategories.length === 0) {
-      toast.error('Please select at least one service category');
+      toast.error(t('categoryRequired'));
       return;
     }
 
@@ -56,11 +59,11 @@ export function OnboardingInterestsForm() {
       const profileResult = await apiService.getProfile();
       setUser(profileResult.user);
       
-      toast.success('Interests saved successfully! Welcome to Pavodah!');
+      toast.success(t('interestsSaved'));
       hideAuth();
     } catch (error) {
       console.error('Failed to save interests:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save interests';
+      const errorMessage = error instanceof Error ? error.message : t('interestsSaveFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -72,18 +75,18 @@ export function OnboardingInterestsForm() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-2">
-          Let's finish setting up your account
+          {t('finishSetup')}
         </h1>
         <div className="mt-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-            What services are you interested in?
+            {t('interestsTitle')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Pick a few so we can recommend the best providers for you.
+            {t('interestsBody')}
           </p>
         </div>
       </div>
@@ -92,14 +95,14 @@ export function OnboardingInterestsForm() {
       <div className="mb-8">
         {isLoadingCategories ? (
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading categories...</span>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-200 border-t-green-600"></div>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('loadingCategories')}</span>
           </div>
         ) : categories.length === 0 ? (
           <div className="flex justify-center items-center py-8">
             <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400 mb-2">No service categories available</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">Please try refreshing the page</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">{t('noCategories')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">{t('refreshPage')}</p>
             </div>
           </div>
         ) : (
@@ -141,7 +144,7 @@ export function OnboardingInterestsForm() {
           onClick={handlePrevious}
           className="text-gray-600 hover:text-gray-700"
         >
-          ← Previous
+          ← {common('previous')}
         </Button>
         
         <Button
@@ -149,7 +152,7 @@ export function OnboardingInterestsForm() {
           disabled={selectedCategories.length === 0 || isLoading || isLoadingCategories}
           className="bg-green-600 hover:bg-green-700 text-white font-medium px-6"
         >
-          {isLoading ? 'Saving...' : isLoadingCategories ? 'Loading...' : 'Finish →'}
+          {isLoading ? common('saving') : isLoadingCategories ? common('loading') : `${t('finish')} →`}
         </Button>
       </div>
     </div>

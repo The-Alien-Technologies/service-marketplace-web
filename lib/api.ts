@@ -5,9 +5,17 @@ import {
   OnboardingStatus,
   Category,
   VerificationDocument,
+  ProviderApplicationDetail,
+  ProviderApplicationSummary,
+  UserStatus,
 } from "@/types/auth";
 import { BotChatResponse } from "@/types/bot";
 import { Service, ServiceStatus, CreateServiceData } from "@/types/service";
+import {
+  SupportConversation,
+  SupportMessage,
+  AdminConversationsResponse,
+} from "@/types/support";
 import { Order, Review, ReviewSummary } from "@/types/order";
 import {
   ProviderAnalytics,
@@ -15,6 +23,34 @@ import {
   UserAnalytics,
 } from "@/types/analytics";
 import { QuoteRequest } from "@/types/quote";
+import { Dispute, DisputeResolutionType } from "@/types/dispute";
+import {
+  AdminRefund,
+  AdminPaymentTransaction,
+  ExternalPaymentDispute,
+  PaymentInitialization,
+  PaymentVerification,
+  PaymentRefundStatus,
+  RefundInstitution,
+  ResolvedRefundAccount,
+} from "@/types/payment";
+import {
+  EarningsSummary,
+  PayoutAccount,
+  PayoutDestinationType,
+  PayoutInstitution,
+  ProviderEarning,
+  ProviderPayout,
+  ProviderPayoutStatus,
+  ReleaseReview,
+} from "@/types/payout";
+import { AppNotification, NotificationPage } from "@/types/notification";
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  REFRESH_TOKEN_STORAGE_KEY,
+  clearStoredAuthSession,
+  throwIfSessionExpired,
+} from "@/lib/client-session";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -49,7 +85,7 @@ class ApiService {
     };
 
     // Add auth token if available
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     if (token) {
       config.headers = {
         ...config.headers,
@@ -59,16 +95,35 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      throwIfSessionExpired(response.status, Boolean(token));
+      const responseText = await response.text();
+      let data:
+        | ApiResponse<T>
+        | { message?: string; attemptsLeft?: number }
+        | null = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as
+            | ApiResponse<T>
+            | { message?: string; attemptsLeft?: number };
+        } catch {
+          if (!response.ok) {
+            throw new Error(
+              `The API returned an invalid response (${response.status}). Please try again.`,
+            );
+          }
+          throw new Error("The API returned an invalid response.");
+        }
+      }
 
       if (!response.ok) {
         // Handle specific error format from the backend
-        if (data.message) {
+        if (data?.message) {
           // Create a custom error with additional properties if available
           const error = new Error(data.message) as Error & {
             attemptsLeft?: number;
           };
-          if (data.attemptsLeft !== undefined) {
+          if ("attemptsLeft" in data && data.attemptsLeft !== undefined) {
             error.attemptsLeft = data.attemptsLeft;
           }
           throw error;
@@ -76,9 +131,11 @@ class ApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return data;
+      if (!data || !("data" in data)) {
+        throw new Error("The API returned an incomplete response.");
+      }
+      return data as ApiResponse<T>;
     } catch (error) {
-      console.error("API request failed:", error);
       throw error;
     }
   }
@@ -95,8 +152,11 @@ class ApiService {
 
     // Store tokens
     if (response.data.token) {
-      localStorage.setItem("auth_token", response.data.token);
-      localStorage.setItem("refresh_token", response.data.refreshToken);
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.data.token);
+      localStorage.setItem(
+        REFRESH_TOKEN_STORAGE_KEY,
+        response.data.refreshToken,
+      );
     }
 
     return response.data;
@@ -116,8 +176,11 @@ class ApiService {
 
     // Store tokens
     if (response.data.token) {
-      localStorage.setItem("auth_token", response.data.token);
-      localStorage.setItem("refresh_token", response.data.refreshToken);
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.data.token);
+      localStorage.setItem(
+        REFRESH_TOKEN_STORAGE_KEY,
+        response.data.refreshToken,
+      );
     }
 
     return response.data;
@@ -152,32 +215,51 @@ class ApiService {
     return response.data;
   }
 
-  async sendPhoneVerification(phoneNumber: string): Promise<void> {
-    await this.request("/auth/send-phone-verification", {
+  async sendPhoneVerification(
+    phoneNumber: string,
+  ): Promise<{ phoneNumber: string; expiresAt: string }> {
+    const response = await this.request<{
+      phoneNumber: string;
+      expiresAt: string;
+    }>("/auth/send-phone-verification", {
       method: "POST",
       body: JSON.stringify({
         phoneNumber,
       }),
     });
+    return response.data;
   }
 
-  async verifyPhone(phoneNumber: string, code: string): Promise<void> {
-    await this.request("/auth/verify-phone", {
+  async verifyPhone(
+    phoneNumber: string,
+    code: string,
+  ): Promise<{ valid: true; phoneNumber: string }> {
+    const response = await this.request<{
+      valid: true;
+      phoneNumber: string;
+    }>("/auth/verify-phone", {
       method: "POST",
       body: JSON.stringify({
         phoneNumber,
         otpCode: code,
       }),
     });
+    return response.data;
   }
 
-  async resendPhoneVerification(phoneNumber: string): Promise<void> {
-    await this.request("/auth/resend-phone-verification", {
+  async resendPhoneVerification(
+    phoneNumber: string,
+  ): Promise<{ phoneNumber: string; expiresAt: string }> {
+    const response = await this.request<{
+      phoneNumber: string;
+      expiresAt: string;
+    }>("/auth/resend-phone-verification", {
       method: "POST",
       body: JSON.stringify({
         phoneNumber,
       }),
     });
+    return response.data;
   }
 
   async getCategories(
@@ -226,6 +308,7 @@ class ApiService {
       },
       body: formData,
     });
+    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -240,14 +323,13 @@ class ApiService {
 
   //************************************** */
   async chatBot(
-      prompt: string,
-      conversationId: string
+    prompt: string,
+    conversationId: string,
   ): Promise<BotChatResponse> {
-
     const data = {
       prompt,
-      conversationId
-    }
+      conversationId,
+    };
 
     // const token = localStorage.getItem("auth_token");
     const response = await fetch(`${API_BASE_URL}/support/bot`, {
@@ -262,17 +344,19 @@ class ApiService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
-    const {message} = await response.json();
-    console.log(message);
-    return { message };
+    const payload = await response.json().catch(() => ({}));
+    const message =
+      payload && typeof payload === "object" && "message" in payload
+        ? (payload as { message: unknown }).message
+        : "";
+    return { message: typeof message === "string" ? message : "" };
   }
 
   //************************************** */
-
 
   async updateCategory(
     id: string,
@@ -306,6 +390,7 @@ class ApiService {
       },
       body: formData,
     });
+    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -414,12 +499,64 @@ class ApiService {
 
   async updateUserStatus(
     userId: string,
-    status: "ACTIVE" | "SUSPENDED" | "DELETED",
+    status: Extract<UserStatus, "ACTIVE" | "SUSPENDED">,
   ): Promise<User> {
     const response = await this.request<User>(`/users/${userId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+    return response.data;
+  }
+
+  async getProviderApplications(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: Extract<UserStatus, "PENDING" | "REJECTED" | "ACTIVE">;
+  }): Promise<{
+    applications: ProviderApplicationSummary[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.set("page", String(options.page));
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.search) params.set("search", options.search);
+    if (options?.status) params.set("status", options.status);
+    const query = params.size ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      applications: ProviderApplicationSummary[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/users/provider-applications${query}`);
+    return response.data;
+  }
+
+  async getProviderApplication(
+    userId: string,
+  ): Promise<ProviderApplicationDetail> {
+    const response = await this.request<ProviderApplicationDetail>(
+      `/users/provider-applications/${userId}`,
+    );
+    return response.data;
+  }
+
+  async reviewProviderApplication(
+    userId: string,
+    decision: "APPROVE" | "REJECT",
+    reason?: string,
+  ): Promise<User> {
+    const response = await this.request<User>(
+      `/users/provider-applications/${userId}/decision`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ decision, reason }),
+      },
+    );
     return response.data;
   }
 
@@ -557,6 +694,11 @@ class ApiService {
 
   async getService(id: string): Promise<Service> {
     const response = await this.request<Service>(`/services/${id}`);
+    return response.data;
+  }
+
+  async getMyService(id: string): Promise<Service> {
+    const response = await this.request<Service>(`/services/my/${id}`);
     return response.data;
   }
 
@@ -722,6 +864,7 @@ class ApiService {
       },
       body: formData,
     });
+    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -737,7 +880,7 @@ class ApiService {
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const refreshToken = localStorage.getItem("refresh_token");
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
     if (!refreshToken) {
       throw new Error("No refresh token available");
     }
@@ -751,17 +894,18 @@ class ApiService {
 
     // Update tokens
     if (response.data.token) {
-      localStorage.setItem("auth_token", response.data.token);
-      localStorage.setItem("refresh_token", response.data.refreshToken);
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.data.token);
+      localStorage.setItem(
+        REFRESH_TOKEN_STORAGE_KEY,
+        response.data.refreshToken,
+      );
     }
 
     return response.data;
   }
 
   async signOut(): Promise<void> {
-    // Clear tokens
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("refresh_token");
+    clearStoredAuthSession();
   }
 
   // Forgot password flow
@@ -825,8 +969,11 @@ class ApiService {
 
     // Store tokens
     if (response.data.token) {
-      localStorage.setItem("auth_token", response.data.token);
-      localStorage.setItem("refresh_token", response.data.refreshToken);
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.data.token);
+      localStorage.setItem(
+        REFRESH_TOKEN_STORAGE_KEY,
+        response.data.refreshToken,
+      );
     }
 
     return response.data;
@@ -852,6 +999,7 @@ class ApiService {
       },
       body: formData,
     });
+    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -889,11 +1037,77 @@ class ApiService {
     return response.data;
   }
 
+  // ─── Support Chat ____________________________________________
+
+  async startSupportConversation(): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      "/support/conversations",
+      { method: "POST" },
+    );
+    return response.data.conversation;
+  }
+
+  async getMySupportConversations(): Promise<SupportConversation[]> {
+    const response = await this.request<{
+      conversations: SupportConversation[];
+    }>("/support/conversations/my");
+    return response.data.conversations;
+  }
+
+  async getSupportConversation(id: string): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${id}`,
+    );
+    return response.data.conversation;
+  }
+
+  async sendSupportMessage(
+    conversationId: string,
+    content: string,
+  ): Promise<{ userMessage: SupportMessage; botMessage?: SupportMessage }> {
+    const response = await this.request<{
+      userMessage: SupportMessage;
+      botMessage?: SupportMessage;
+    }>(`/support/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+    return response.data;
+  }
+
   async updateUserProfile(data: Partial<User>): Promise<{ user: User }> {
     const response = await this.request<{ user: User }>("/auth/profile", {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+    return response.data;
+  }
+
+  async escalateSupportConversation(
+    conversationId: string,
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${conversationId}/escalate`,
+      { method: "PATCH" },
+    );
+    return response.data.conversation;
+  }
+
+  async closeSupportConversation(
+    conversationId: string,
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/conversations/${conversationId}/close`,
+      { method: "PATCH" },
+    );
+    return response.data.conversation;
+  }
+
+  // Admin support endpoints
+  async getAdminSupportConversations(): Promise<AdminConversationsResponse> {
+    const response = await this.request<AdminConversationsResponse>(
+      "/support/admin/conversations",
+    );
     return response.data;
   }
 
@@ -911,35 +1125,161 @@ class ApiService {
   async createOrder(orderData: {
     serviceId: string;
     planId: string;
-    planTitle: string;
-    planPrice: number;
-    planInclusions: string;
-    addOns?: {
-      id: string;
-      title: string;
-      description?: string;
-      price: number;
-    }[];
-    subtotal: number;
-    addOnsTotal: number;
-    couponCode?: string;
-    couponDiscount?: number;
-    total: number;
-  }): Promise<{
-    id: string;
-    orderNumber: string;
-    status: string;
-    total: number;
-  }> {
-    const response = await this.request<{
-      id: string;
-      orderNumber: string;
-      status: string;
-      total: number;
-    }>("/orders", {
+    addOnIds?: string[];
+    checkoutKey: string;
+  }): Promise<Order> {
+    const response = await this.request<Order>("/orders", {
       method: "POST",
       body: JSON.stringify(orderData),
     });
+    return response.data;
+  }
+
+  async initializePayment(orderId: string): Promise<PaymentInitialization> {
+    const response = await this.request<PaymentInitialization>(
+      `/payments/orders/${orderId}/initialize`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async verifyPayment(reference: string): Promise<PaymentVerification> {
+    const response = await this.request<PaymentVerification>(
+      "/payments/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({ reference }),
+      },
+    );
+    return response.data;
+  }
+
+  async getAdminPayments(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{
+    data: AdminPaymentTransaction[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
+    const params = new URLSearchParams();
+    if (options?.page) params.set("page", String(options.page));
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.search) params.set("search", options.search);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const response = await this.request<{
+      data: AdminPaymentTransaction[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        pages: number;
+      };
+    }>(`/payments/admin${query}`);
+    return response.data;
+  }
+
+  async refundOrderPayment(
+    orderId: string,
+    reason?: string,
+    amount?: number,
+  ): Promise<{
+    orderId: string;
+    transactionReference: string;
+    refundId: string;
+    refundStatus: string;
+    paymentStatus: PaymentVerification["paymentStatus"];
+  }> {
+    const response = await this.request<{
+      orderId: string;
+      transactionReference: string;
+      refundId: string;
+      refundStatus: string;
+      paymentStatus: PaymentVerification["paymentStatus"];
+    }>(`/payments/orders/${orderId}/refund`, {
+      method: "POST",
+      body: JSON.stringify({ reason, amount }),
+    });
+    return response.data;
+  }
+
+  async getExternalPaymentDisputes(page = 1, limit = 20) {
+    const response = await this.request<{
+      data: ExternalPaymentDispute[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payments/admin/external-disputes?page=${page}&limit=${limit}`);
+    return response.data;
+  }
+
+  async reconcilePendingTransfers() {
+    const response = await this.request<{
+      checked: number;
+      reconciled: number;
+    }>("/payments/admin/reconcile-transfers", { method: "POST" });
+    return response.data;
+  }
+
+  async getAdminRefunds(page = 1, limit = 20, status?: PaymentRefundStatus) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (status) params.set("status", status);
+    const response = await this.request<{
+      data: AdminRefund[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payments/admin/refunds?${params}`);
+    return response.data;
+  }
+
+  async reconcilePendingRefunds() {
+    const response = await this.request<{
+      checked: number;
+      reconciled: number;
+      attention: number;
+    }>("/payments/admin/refunds/reconcile", { method: "POST" });
+    return response.data;
+  }
+
+  async retryRefund(
+    id: string,
+    details: { accountNumber: string; bankCode: string; currency: "GHS" },
+  ) {
+    const response = await this.request<AdminRefund>(
+      `/payments/admin/refunds/${id}/retry`,
+      { method: "POST", body: JSON.stringify(details) },
+    );
+    return response.data;
+  }
+
+  async reattemptExcessRefund(id: string) {
+    const response = await this.request<AdminRefund>(
+      `/payments/admin/refunds/${id}/reattempt`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async getRefundInstitutions() {
+    const response = await this.request<RefundInstitution[]>(
+      "/payments/admin/refund-institutions",
+    );
+    return response.data;
+  }
+
+  async resolveRefundAccount(accountNumber: string, bankCode: string) {
+    const response = await this.request<ResolvedRefundAccount>(
+      "/payments/admin/refund-account/resolve",
+      {
+        method: "POST",
+        body: JSON.stringify({ accountNumber, bankCode }),
+      },
+    );
     return response.data;
   }
 
@@ -962,6 +1302,22 @@ class ApiService {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+    return response.data;
+  }
+
+  async acceptOrder(id: string) {
+    const response = await this.request<Order["settlement"]>(
+      `/orders/${id}/accept`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async requestOrderReleaseReview(id: string, note?: string) {
+    const response = await this.request<NonNullable<Order["settlement"]>>(
+      `/orders/${id}/release-review`,
+      { method: "POST", body: JSON.stringify({ note }) },
+    );
     return response.data;
   }
 
@@ -1127,6 +1483,26 @@ class ApiService {
     return response.data;
   }
 
+  async adminJoinSupportConversation(
+    conversationId: string,
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/admin/conversations/${conversationId}/join`,
+      { method: "PATCH" },
+    );
+    return response.data.conversation;
+  }
+
+  async adminCloseSupportConversation(
+    conversationId: string,
+  ): Promise<SupportConversation> {
+    const response = await this.request<{ conversation: SupportConversation }>(
+      `/support/admin/conversations/${conversationId}/close`,
+      { method: "PATCH" },
+    );
+    return response.data.conversation;
+  }
+
   async respondToReview(
     reviewId: string,
     comment: string,
@@ -1144,20 +1520,46 @@ class ApiService {
 
   // ─── Analytics ───────────────────────────────────────────────────────────────
 
-  async getProviderAnalytics(): Promise<ProviderAnalytics> {
+  async getProviderAnalytics(filters?: {
+    year?: number;
+    orderMonth?: string;
+  }): Promise<ProviderAnalytics> {
+    const query = new URLSearchParams();
+    if (filters?.year) query.set("year", String(filters.year));
+    if (filters?.orderMonth) query.set("orderMonth", filters.orderMonth);
+    const queryString = query.toString();
+    const suffix = queryString ? `?${queryString}` : "";
     const response = await this.request<ProviderAnalytics>(
-      "/analytics/provider",
+      `/analytics/provider${suffix}`,
     );
     return response.data;
   }
 
-  async getUserAnalytics(): Promise<UserAnalytics> {
-    const response = await this.request<UserAnalytics>("/analytics/user");
+  async getUserAnalytics(filters?: { year?: number }): Promise<UserAnalytics> {
+    const query = new URLSearchParams();
+    if (filters?.year) query.set("year", String(filters.year));
+    const queryString = query.toString();
+    const suffix = queryString ? `?${queryString}` : "";
+    const response = await this.request<UserAnalytics>(
+      `/analytics/user${suffix}`,
+    );
     return response.data;
   }
 
-  async getAdminAnalytics(): Promise<AdminAnalytics> {
-    const response = await this.request<AdminAnalytics>("/analytics/admin");
+  async getAdminAnalytics(filters?: {
+    year?: number;
+    categoryMonth?: string;
+  }): Promise<AdminAnalytics> {
+    const query = new URLSearchParams();
+    if (filters?.year) query.set("year", String(filters.year));
+    if (filters?.categoryMonth) {
+      query.set("categoryMonth", filters.categoryMonth);
+    }
+    const queryString = query.toString();
+    const suffix = queryString ? `?${queryString}` : "";
+    const response = await this.request<AdminAnalytics>(
+      `/analytics/admin${suffix}`,
+    );
     return response.data;
   }
 
@@ -1191,6 +1593,7 @@ class ApiService {
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
+    throwIfSessionExpired(res.status, Boolean(token));
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || `HTTP error! status: ${res.status}`);
@@ -1270,6 +1673,203 @@ class ApiService {
     return response.data.quote;
   }
 
+  // ─── Provider earnings and payouts ─────────────────────────────────────
+
+  async getPayoutInstitutions(type: PayoutDestinationType) {
+    const response = await this.request<PayoutInstitution[]>(
+      `/payouts/institutions?type=${type}`,
+    );
+    return response.data;
+  }
+
+  async sendPayoutAccountOtp() {
+    const response = await this.request<{
+      phoneNumber: string;
+      expiresAt: string;
+    }>("/payouts/account/otp", { method: "POST" });
+    return response.data;
+  }
+
+  async getPayoutAccount() {
+    const response = await this.request<PayoutAccount | null>(
+      "/payouts/account",
+    );
+    return response.data;
+  }
+
+  async updatePayoutAccount(data: {
+    type: PayoutDestinationType;
+    institutionCode: string;
+    accountNumber: string;
+    accountName: string;
+    otpCode: string;
+  }) {
+    const response = await this.request<PayoutAccount>("/payouts/account", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async getEarningsSummary() {
+    const response = await this.request<EarningsSummary>("/payouts/summary");
+    return response.data;
+  }
+
+  async getProviderEarnings(page = 1, limit = 20) {
+    const response = await this.request<{
+      data: ProviderEarning[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payouts/earnings?page=${page}&limit=${limit}`);
+    return response.data;
+  }
+
+  async requestPayout() {
+    const response = await this.request<ProviderPayout>("/payouts/requests", {
+      method: "POST",
+    });
+    return response.data;
+  }
+
+  async getProviderPayouts(page = 1, limit = 20) {
+    const response = await this.request<{
+      data: ProviderPayout[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payouts/requests?page=${page}&limit=${limit}`);
+    return response.data;
+  }
+
+  async getAdminPayouts(options?: {
+    status?: ProviderPayoutStatus;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (options?.status) params.set("status", options.status);
+    if (options?.page) params.set("page", String(options.page));
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.search) params.set("search", options.search);
+    const response = await this.request<{
+      data: ProviderPayout[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payouts/admin${params.size ? `?${params}` : ""}`);
+    return response.data;
+  }
+
+  async approvePayout(id: string) {
+    const response = await this.request<ProviderPayout>(
+      `/payouts/admin/${id}/approve`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async finalizePayout(id: string, otp: string) {
+    const response = await this.request<ProviderPayout>(
+      `/payouts/admin/${id}/finalize`,
+      { method: "POST", body: JSON.stringify({ otp }) },
+    );
+    return response.data;
+  }
+
+  async rejectPayout(id: string, reason: string) {
+    const response = await this.request<ProviderPayout>(
+      `/payouts/admin/${id}/reject`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
+    return response.data;
+  }
+
+  async getReleaseReviews(page = 1, limit = 20) {
+    const response = await this.request<{
+      data: ReleaseReview[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>(`/payouts/admin/release-reviews?page=${page}&limit=${limit}`);
+    return response.data;
+  }
+
+  async reviewRelease(orderId: string, approve: boolean, note?: string) {
+    const response = await this.request<Order["settlement"]>(
+      `/payouts/admin/release-reviews/${orderId}`,
+      { method: "POST", body: JSON.stringify({ approve, note }) },
+    );
+    return response.data;
+  }
+
+  async getPaymentSettings() {
+    const response = await this.request<{
+      commissionRate: number | string;
+      updatedAt: string;
+    }>("/payouts/admin/settings");
+    return response.data;
+  }
+
+  async updatePaymentSettings(commissionRate: number) {
+    const response = await this.request<{
+      commissionRate: number | string;
+      updatedAt: string;
+    }>("/payouts/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ commissionRate }),
+    });
+    return response.data;
+  }
+
+  // ─── Notifications ───────────────────────────────────────────────────────
+
+  async getNotifications(options?: {
+    cursor?: string | null;
+    limit?: number;
+    unreadOnly?: boolean;
+  }): Promise<NotificationPage> {
+    const params = new URLSearchParams();
+    if (options?.cursor) params.set("cursor", options.cursor);
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.unreadOnly) params.set("unreadOnly", "true");
+    const response = await this.request<NotificationPage>(
+      `/notifications${params.size ? `?${params}` : ""}`,
+    );
+    return response.data;
+  }
+
+  async getNotificationUnreadCount(): Promise<number> {
+    const response = await this.request<{ count: number }>(
+      "/notifications/unread-count",
+    );
+    return response.data.count;
+  }
+
+  async markNotificationRead(id: string): Promise<AppNotification | null> {
+    const response = await this.request<{
+      notification: AppNotification | null;
+    }>(`/notifications/${id}/read`, { method: "PATCH" });
+    return response.data.notification;
+  }
+
+  async markAllNotificationsRead(): Promise<number> {
+    const response = await this.request<{ count: number }>(
+      "/notifications/read-all",
+      { method: "PATCH" },
+    );
+    return response.data.count;
+  }
+
+  async markConversationRead(conversationId: string): Promise<number> {
+    const response = await this.request<{ count: number }>(
+      `/chat/conversations/${conversationId}/read`,
+      { method: "PATCH" },
+    );
+    return response.data.count;
+  }
+
+  async getUnreadMessageCount(): Promise<number> {
+    const response = await this.request<{ unreadCount: number }>(
+      "/chat/unread-count",
+    );
+    return response.data.unreadCount;
+  }
+
   // ─── Disputes ────────────────────────────────────────────────────────────
 
   async createDispute(data: {
@@ -1285,25 +1885,43 @@ class ApiService {
 
   async getAdminDisputes(status?: string) {
     const qs = status ? `?status=${status}` : "";
-    const result = await this.request<any[]>(`/disputes${qs}`);
-    // backend returns array directly
-    return Array.isArray(result) ? result : ((result as any)?.disputes ?? []);
+    const result = await this.request<Dispute[]>(`/disputes${qs}`);
+    return result.data;
   }
 
   async getMyDisputes() {
-    const result = await this.request<any[]>("/disputes/my");
-    return Array.isArray(result) ? result : ((result as any)?.disputes ?? []);
+    const result = await this.request<Dispute[]>("/disputes/my");
+    return result.data;
   }
 
-  async getDispute(id: string) {
-    return this.request<any>(`/disputes/${id}`);
+  async getDispute(id: string): Promise<Dispute> {
+    const result = await this.request<any>(`/disputes/${id}`);
+    return (result?.data ?? result) as Dispute;
   }
 
-  async updateDisputeStatus(id: string, status: string, adminNote?: string) {
-    return this.request<any>(`/disputes/${id}/status`, {
+  async updateDisputeStatus(
+    id: string,
+    status: string,
+    adminNote?: string,
+  ): Promise<Dispute> {
+    const result = await this.request<any>(`/disputes/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status, adminNote }),
     });
+    return (result?.data ?? result) as Dispute;
+  }
+
+  async resolveDispute(
+    id: string,
+    resolutionType: DisputeResolutionType,
+    refundAmount?: number,
+    adminNote?: string,
+  ) {
+    const result = await this.request<any>(`/disputes/${id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ resolutionType, refundAmount, adminNote }),
+    });
+    return result.data ?? result;
   }
 }
 

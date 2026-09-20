@@ -1,21 +1,39 @@
 "use client";
 
-import { ChevronRight, Mail, Layers, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Mail,
+  Layers,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { apiService } from "@/lib/api";
+import { remainingRefundAmount } from "@/lib/payment-state";
 import { Order, OrderStatus } from "@/types/order";
 import { useState, useEffect, use } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { ChatBox } from "@/components/sections/service-detail/chat-box";
+import { RaiseDisputeModal } from "@/components/sections/orders/raise-dispute-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useFormatter, useTranslations } from "next-intl";
 
 // --- Helpers ---
-
-const progressSteps = ["Order placed", "Awaiting", "In-progress", "Completed"];
 
 const getProgressIndex = (status: OrderStatus): number => {
   switch (status) {
@@ -49,9 +67,6 @@ const getStatusStyles = (status: OrderStatus) => {
   }
 };
 
-const getStatusLabel = (status: OrderStatus): string =>
-  status.replace("_", " ");
-
 const getActiveTab = (status: OrderStatus): string => {
   switch (status) {
     case "PENDING":
@@ -78,11 +93,33 @@ function OrderDetailsView({
   orderId: string;
   role: "USER" | "SERVICE_PROVIDER" | "ADMIN";
 }) {
+  const t = useTranslations("Orders");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isAcceptOpen, setIsAcceptOpen] = useState(false);
+  const [isDisputeOpen, setIsDisputeOpen] = useState(false);
+  const [isRefundOpen, setIsRefundOpen] = useState(false);
+  const progressSteps = [
+    t("stagePlaced"),
+    t("awaiting"),
+    t("inProgress"),
+    t("completed"),
+  ];
+  const getStatusLabel = (status: OrderStatus) =>
+    status === "IN_PROGRESS"
+      ? t("inProgress")
+      : status === "COMPLETED"
+        ? t("completed")
+        : status === "DECLINED"
+          ? t("declined")
+          : status === "REFUNDED"
+            ? t("refunded")
+            : t("awaiting");
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -92,13 +129,13 @@ function OrderDetailsView({
         setOrder(data);
       } catch (error) {
         console.error("Failed to fetch order:", error);
-        toast.error("Failed to load order details");
+        toast.error(t("loadFailed"));
       } finally {
         setIsLoading(false);
       }
     };
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, t]);
 
   const handleStatusUpdate = async (
     newStatus: "IN_PROGRESS" | "COMPLETED" | "DECLINED",
@@ -109,9 +146,9 @@ function OrderDetailsView({
       const updated = await apiService.updateOrderStatus(order.id, newStatus);
       setOrder(updated);
       const messages: Record<string, string> = {
-        IN_PROGRESS: "Order accepted successfully",
-        COMPLETED: "Order marked as completed",
-        DECLINED: "Order declined",
+        IN_PROGRESS: t("orderAcceptedSuccessfully"),
+        COMPLETED: t("markedComplete"),
+        DECLINED: t("orderDeclined"),
       };
       toast.success(messages[newStatus]);
       // Navigate back to the relevant tab
@@ -119,7 +156,7 @@ function OrderDetailsView({
         router.push("/dashboard/orders?tab=Declined");
       }
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update order status");
+      toast.error(error?.message || t("updateFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -127,14 +164,68 @@ function OrderDetailsView({
 
   const handleClientCancel = async () => {
     if (!order) return;
+    if (!window.confirm(t("cancelConfirm", { number: order.orderNumber }))) return;
     setActionLoading("DECLINED");
     try {
       const updated = await apiService.updateOrderStatus(order.id, "DECLINED");
       setOrder(updated);
-      toast.success("Order cancelled");
+      toast.success(t("cancelledSuccess"));
       router.push("/dashboard/orders?tab=Declined");
     } catch (error: any) {
-      toast.error(error?.message || "Failed to cancel order");
+      toast.error(error?.message || t("cancelFailed"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!order) return;
+    setActionLoading("REFUND");
+    try {
+      const result = await apiService.refundOrderPayment(
+        order.id,
+        `Refund remaining balance for order ${order.orderNumber}`,
+        refundableAmount,
+      );
+      const updatedOrder = await apiService.getOrder(order.id);
+      setOrder(updatedOrder);
+      setIsRefundOpen(false);
+      toast.success(
+        result.paymentStatus === "REFUNDED"
+          ? t("refundCompleted")
+          : t("refundProcessing"),
+      );
+    } catch (error: any) {
+      toast.error(error?.message || t("refundFailed"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAcceptWork = async () => {
+    if (!order) return;
+    setActionLoading("ACCEPT_WORK");
+    try {
+      const settlement = await apiService.acceptOrder(order.id);
+      setOrder({ ...order, settlement });
+      setIsAcceptOpen(false);
+      toast.success(t("workAccepted"));
+    } catch (error: any) {
+      toast.error(error?.message || t("acceptWorkFailed"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReleaseReview = async () => {
+    if (!order) return;
+    setActionLoading("RELEASE_REVIEW");
+    try {
+      const settlement = await apiService.requestOrderReleaseReview(order.id);
+      setOrder({ ...order, settlement });
+      toast.success(t("adminReviewRequested"));
+    } catch (error: any) {
+      toast.error(error?.message || t("adminReviewFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -151,9 +242,9 @@ function OrderDetailsView({
   if (!order) {
     return (
       <div className="py-20 text-center text-gray-500">
-        Order not found.{" "}
+        {t("notFound")} {" "}
         <Link href="/dashboard/orders" className="text-green-600 underline">
-          Go back
+          {common("back")}
         </Link>
       </div>
     );
@@ -171,19 +262,43 @@ function OrderDetailsView({
       ? order.client
       : (order.provider ?? order.service?.provider);
 
-  const subtotal = Number(order.subtotal ?? order.planPrice ?? 0);
+  const subtotal = Number(order.planPrice ?? order.subtotal ?? 0);
   const addOnsTotal = Number(order.addOnsTotal ?? 0);
   const couponDiscount = Number(order.couponDiscount ?? 0);
   const total = Number(order.total ?? 0);
+  const processedRefundAmount =
+    order.refunds
+      ?.filter(
+        (refund) =>
+          refund.affectsOrderBalance && refund.status === "PROCESSED",
+      )
+      .reduce((sum, refund) => sum + Number(refund.amount), 0) ??
+    Number(order.settlement?.refundedAmount ?? 0);
+  const refundableAmount = remainingRefundAmount(
+    total,
+    processedRefundAmount,
+  );
+  const settlementHeld =
+    order.status === "COMPLETED" &&
+    (!order.settlement ||
+      (order.settlement.status === "HELD" && !order.settlement.acceptedAt));
+  const settlementAcceptedButHeld =
+    order.status === "COMPLETED" &&
+    order.settlement?.status === "HELD" &&
+    Boolean(order.settlement.acceptedAt);
+  const settlementReleased =
+    order.settlement?.status === "ELIGIBLE" ||
+    order.settlement?.status === "RESERVED" ||
+    order.settlement?.status === "PAID";
 
   return (
     <div className="space-y-8">
       {/* Header & Breadcrumbs */}
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("myOrders")}</h1>
           <p className="text-gray-500 mt-1">
-            Stay on top of your orders to deliver great results.
+            {role === "SERVICE_PROVIDER" ? t("providerSubtitle") : t("clientSubtitle")}
           </p>
         </div>
 
@@ -200,7 +315,13 @@ function OrderDetailsView({
                   : "text-gray-600 hover:bg-gray-50",
               )}
             >
-              {tab}
+              {tab === "Awaiting"
+                ? t("awaiting")
+                : tab === "In-progress"
+                  ? t("inProgress")
+                  : tab === "Completed"
+                    ? t("completed")
+                    : t("declined")}
             </Link>
           ))}
         </div>
@@ -211,17 +332,23 @@ function OrderDetailsView({
             href="/dashboard/orders"
             className="hover:text-gray-900 transition-colors"
           >
-            My orders
+            {t("myOrders")}
           </Link>
           <ChevronRight className="w-4 h-4" />
           <Link
             href={`/dashboard/orders?tab=${activeTab}`}
             className="text-green-600 font-medium hover:underline"
           >
-            {activeTab}
+            {activeTab === "Awaiting"
+              ? t("awaiting")
+              : activeTab === "In-progress"
+                ? t("inProgress")
+                : activeTab === "Completed"
+                  ? t("completed")
+                  : t("declined")}
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-400">Order ID: #{order.orderNumber}</span>
+          <span className="text-gray-400">{t("orderId", { id: order.orderNumber })}</span>
         </div>
       </div>
 
@@ -253,14 +380,14 @@ function OrderDetailsView({
                 {otherParty
                   ? otherParty.displayName ||
                     `${otherParty.firstName} ${otherParty.lastName}`
-                  : "Unknown"}
+                  : common("unknown")}
               </span>
             </div>
 
             {/* Order meta */}
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="font-bold text-gray-900 text-base">
-                Order ID: #{order.orderNumber}
+                {t("orderId", { id: order.orderNumber })}
               </span>
               <span className="text-gray-300">|</span>
               <span className="text-gray-500">
@@ -276,17 +403,25 @@ function OrderDetailsView({
                   {getStatusLabel(order.status)}
                 </span>
               </div>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-semibold",
+                  order.paymentStatus === "PAID"
+                    ? "bg-green-50 text-green-700"
+                    : order.paymentStatus === "PROCESSING"
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-gray-100 text-gray-700",
+                )}
+              >
+                {t("paymentStatus", { status: order.paymentStatus.replace("_", " ") })}
+              </span>
             </div>
           </div>
 
           {/* Top Right: Date & Actions */}
           <div className="flex flex-col items-end gap-4">
             <span className="text-sm text-gray-500">
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {format.dateTime(new Date(order.createdAt), "long")}
             </span>
 
             {!isDeclinedOrRefunded && (
@@ -304,19 +439,7 @@ function OrderDetailsView({
                         {actionLoading === "IN_PROGRESS" ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          "Accept Order"
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
-                        onClick={() => handleStatusUpdate("DECLINED")}
-                        disabled={actionLoading !== null}
-                      >
-                        {actionLoading === "DECLINED" ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Decline Order"
+                          t("acceptOrder")
                         )}
                       </Button>
                     </>
@@ -332,15 +455,97 @@ function OrderDetailsView({
                       {actionLoading === "COMPLETED" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Mark as Completed"
+                        t("completeOrder")
                       )}
                     </Button>
                   )}
 
                 {/* Client actions */}
                 {role === "USER" &&
-                  (order.status === "PENDING" ||
-                    order.status === "AWAITING") && (
+                  order.paymentStatus !== "PAID" &&
+                  order.paymentStatus !== "REFUNDED" &&
+                  order.paymentStatus !== "REFUND_PENDING" &&
+                  order.paymentStatus !== "PARTIALLY_REFUNDED" && (
+                    <Button
+                      className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[130px] rounded-lg"
+                      onClick={() =>
+                        router.push(`/checkout?orderId=${order.id}`)
+                      }
+                    >
+                      {order.paymentStatus === "PROCESSING"
+                        ? t("resumePayment")
+                        : t("payNow")}
+                    </Button>
+                  )}
+
+                {role === "USER" && settlementHeld && (
+                  <>
+                    <Button
+                      className="bg-[#15803d] hover:bg-[#14532d] text-white font-semibold min-w-[150px] rounded-lg"
+                      onClick={() => setIsAcceptOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      {t("acceptWork")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-amber-200 text-amber-800 hover:bg-amber-50"
+                      onClick={() => setIsDisputeOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      {t("raiseDispute")}
+                    </Button>
+                  </>
+                )}
+
+                {role === "SERVICE_PROVIDER" && settlementHeld && (
+                  <Button
+                    variant="outline"
+                    className="border-gray-300 text-gray-800 hover:bg-gray-50"
+                    onClick={handleReleaseReview}
+                    disabled={
+                      actionLoading !== null ||
+                      order.settlement?.releaseReviewStatus === "REQUESTED"
+                    }
+                  >
+                    {actionLoading === "RELEASE_REVIEW" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Clock3 className="w-4 h-4" />
+                    )}
+                    {order.settlement?.releaseReviewStatus === "REQUESTED"
+                      ? t("adminReviewPending")
+                      : t("requestAdminReview")}
+                  </Button>
+                )}
+
+                {role === "ADMIN" &&
+                  (order.paymentStatus === "PAID" ||
+                    order.paymentStatus === "PARTIALLY_REFUNDED") &&
+                  refundableAmount > 0 &&
+                  !order.settlement?.acceptedAt && (
+                    <Button
+                      variant="outline"
+                      className="border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => setIsRefundOpen(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      {actionLoading === "REFUND" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        order.paymentStatus === "PARTIALLY_REFUNDED"
+                          ? t("refundRemaining")
+                          : t("issueFullRefund")
+                      )}
+                    </Button>
+                  )}
+
+                {role === "USER" &&
+                  (order.status === "PENDING" || order.status === "AWAITING") &&
+                  (order.paymentStatus === "UNPAID" ||
+                    order.paymentStatus === "FAILED") && (
                     <Button
                       variant="ghost"
                       className="text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
@@ -350,18 +555,20 @@ function OrderDetailsView({
                       {actionLoading === "DECLINED" ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Cancel Order"
+                        t("cancelOrder")
                       )}
                     </Button>
                   )}
 
-                {order.status === "COMPLETED" && (
-                  <Link href={`/orders/${order.id}/review`}>
-                    <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
-                      Leave a Review
-                    </Button>
-                  </Link>
-                )}
+                {role === "USER" &&
+                  order.status === "COMPLETED" &&
+                  settlementReleased && (
+                    <Link href={`/orders/${order.id}/review`}>
+                      <Button className="bg-[#15803d] hover:bg-[#14532d] text-white font-medium min-w-[150px] rounded-lg">
+                        {t("leaveReview")}
+                      </Button>
+                    </Link>
+                  )}
 
                 {/* Message button */}
                 <Button
@@ -371,57 +578,99 @@ function OrderDetailsView({
                 >
                   <Mail className="w-4 h-4" />
                   {role === "SERVICE_PROVIDER"
-                    ? "Message Client"
-                    : "Message Provider"}
+                    ? t("messageClient")
+                    : t("messageProvider")}
                 </Button>
               </div>
             )}
           </div>
         </div>
 
+        {order.status === "COMPLETED" && (
+          <div
+            className={cn(
+              "rounded-xl px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+              settlementReleased
+                ? "bg-green-50 text-green-950"
+                : "bg-amber-50 text-amber-950",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              {settlementReleased ? (
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+              ) : (
+                <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+              )}
+              <div>
+                <p className="text-sm font-bold">
+                  {settlementReleased
+                    ? t("paymentReleasedTitle")
+                    : settlementAcceptedButHeld
+                      ? t("paymentReviewTitle")
+                      : t("paymentHeldTitle")}
+                </p>
+                <p className="mt-1 max-w-2xl text-sm opacity-80">
+                  {settlementReleased
+                    ? role === "USER"
+                      ? t("customerReleasedBody", { amount: format.number(refundableAmount, "currency") })
+                      : t("providerReleasedBody", {
+                          amount: format.number(Number(order.settlement?.providerAmount ?? 0), "currency"),
+                          status: order.settlement?.status.toLowerCase() ?? "",
+                        })
+                    : settlementAcceptedButHeld
+                      ? t("paymentReviewBody")
+                      : role === "SERVICE_PROVIDER"
+                        ? t("providerHeldBody")
+                        : t("customerHeldBody")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Split View: Summary & Add-ons */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left: Order Summary */}
-          <div className="bg-gray-50 rounded-xl p-8 space-y-6">
+          <div className="space-y-6 rounded-xl bg-gray-50 p-4 sm:p-6 lg:p-8">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-lg font-bold text-gray-900">Order summary</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t("orderSummary")}</h3>
               <span className="text-sm text-gray-400">
-                Order ID: #{order.orderNumber}
+                {t("orderId", { id: order.orderNumber })}
               </span>
             </div>
 
             <div className="space-y-4 text-sm">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">
-                  Subtotal({order.planTitle ?? "Plan"})
+                  {t("planSubtotal", { plan: order.planTitle ?? t("plan") })}
                 </span>
                 <span className="font-bold text-gray-900">
-                  GHS {subtotal.toFixed(2)}
+                  {format.number(subtotal, "currency")}
                 </span>
               </div>
 
               {addOnsTotal > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Add-ons</span>
+                  <span className="text-gray-600">{t("addOns")}</span>
                   <span className="font-bold text-gray-900">
-                    GHS {addOnsTotal.toFixed(2)}
+                    {format.number(addOnsTotal, "currency")}
                   </span>
                 </div>
               )}
 
               {couponDiscount > 0 && (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Coupon discount</span>
+                  <span className="text-gray-600">{t("couponDiscount")}</span>
                   <span className="font-bold text-red-600">
-                    -GHS {couponDiscount.toFixed(2)}
+                    -{format.number(couponDiscount, "currency")}
                   </span>
                 </div>
               )}
 
               <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between items-center">
-                <span className="text-gray-600 font-medium">Total</span>
+                <span className="text-gray-600 font-medium">{common("total")}</span>
                 <span className="text-xl font-bold text-gray-900">
-                  GHS {total.toFixed(2)}
+                  {format.number(total, "currency")}
                 </span>
               </div>
             </div>
@@ -458,7 +707,7 @@ function OrderDetailsView({
               <div className="pt-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-sm font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  {order.status === "REFUNDED" ? "Refunded" : "Declined"}
+                  {order.status === "REFUNDED" ? t("refunded") : t("declined")}
                 </span>
               </div>
             )}
@@ -467,7 +716,7 @@ function OrderDetailsView({
           {/* Right: Add-ons Selected */}
           <div>
             <h3 className="text-sm font-bold text-gray-900 mb-4">
-              Add-ons selected
+              {t("addOnsSelected")}
             </h3>
             {order.addOns && order.addOns.length > 0 ? (
               <div className="space-y-3">
@@ -489,15 +738,15 @@ function OrderDetailsView({
                         </p>
                       )}
                       <p className="text-sm font-medium text-gray-700 mt-1">
-                        GHS {Number(addon.price).toFixed(2)}
+                        {format.number(Number(addon.price), "currency")}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
-                No add-ons selected
+              <div className="rounded-xl border-2 border-dashed border-gray-200 p-5 text-center text-sm text-gray-500 sm:p-8">
+                {t("noAddOnsSelected")}
               </div>
             )}
           </div>
@@ -517,6 +766,87 @@ function OrderDetailsView({
           providerAvatar={otherParty.avatar || ""}
         />
       )}
+
+      <Dialog open={isAcceptOpen} onOpenChange={setIsAcceptOpen}>
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-800">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <DialogTitle>{t("acceptCompletedTitle")}</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              {t("acceptCompletedBody", { amount: format.number(refundableAmount, "currency") })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsAcceptOpen(false)}
+              disabled={actionLoading !== null}
+            >
+              {t("reviewAgain")}
+            </Button>
+            <Button
+              className="bg-green-700 text-white hover:bg-green-800"
+              onClick={handleAcceptWork}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "ACCEPT_WORK" && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {t("acceptRelease")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRefundOpen} onOpenChange={setIsRefundOpen}>
+        <DialogContent className="bg-white sm:max-w-md dark:bg-gray-900">
+          <DialogHeader>
+            <DialogTitle>
+              {order.paymentStatus === "PARTIALLY_REFUNDED"
+                ? t("refundRemainingTitle")
+                : t("fullRefundTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("refundBody", {
+                amount: format.number(refundableAmount, "currency"),
+                number: order.orderNumber,
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRefundOpen(false)}
+              disabled={actionLoading !== null}
+            >
+              {common("cancel")}
+            </Button>
+            <Button
+              className="bg-red-700 text-white hover:bg-red-800"
+              onClick={handleRefund}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "REFUND" && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {t("confirmRefund")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <RaiseDisputeModal
+        orderId={order.id}
+        orderNumber={order.orderNumber}
+        isOpen={isDisputeOpen}
+        onClose={() => setIsDisputeOpen(false)}
+        onSuccess={() => {
+          setIsDisputeOpen(false);
+          toast.info(t("heldDuringDispute"));
+        }}
+      />
     </div>
   );
 }

@@ -13,8 +13,10 @@ import {
   type OrderStatus,
   type OrderWithSummary,
 } from "@/lib/orders-data";
+import {useTranslations} from "next-intl";
 
 export default function OrdersPage() {
+  const t = useTranslations("Orders");
   const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>("awaiting");
   const [orders] = useState<OrderWithSummary[]>(mockOrders);
@@ -57,12 +59,12 @@ export default function OrdersPage() {
       <main className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Title */}
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-          My orders
+          {t("title")}
         </h1>
 
         {/* Status Filter Tabs */}
-        <div className="mb-8">
-          <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-1 py-1">
+        <div className="mb-8 max-w-full overflow-x-auto pb-1">
+          <div className="inline-flex w-max items-center rounded-full bg-gray-100 dark:bg-gray-800 px-1 py-1">
             {(
               [
                 "awaiting",
@@ -72,10 +74,9 @@ export default function OrdersPage() {
               ] as OrderStatus[]
             ).map((status) => {
               const isActive = selectedStatus === status;
-              const label =
-                status === "in-progress"
-                  ? "In-progress"
-                  : status.charAt(0).toUpperCase() + status.slice(1);
+              const label = t(
+                status === "in-progress" ? "inProgress" : status
+              );
 
               return (
                 <button
@@ -123,7 +124,7 @@ export default function OrdersPage() {
                     href={`/services/${order.id}`}
                     className="text-brand-600 dark:text-brand-500 hover:text-brand-700 dark:hover:text-brand-400 text-sm"
                   >
-                    view profile
+                    {t("viewProfile")}
                   </Link>
                 </div>
               </div>
@@ -133,10 +134,10 @@ export default function OrdersPage() {
                 {/* Left Side - Order Details */}
                 <div className="space-y-4">
                   {/* Order Info with Date */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                       <span className="font-bold text-gray-900 dark:text-white">
-                        Order ID: #{order.orderId}
+                        {t("orderId", {id: order.orderId})}
                       </span>
                       <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
                       <span className="text-gray-700 dark:text-gray-300">
@@ -153,14 +154,11 @@ export default function OrdersPage() {
                             order.status
                           )}`}
                         >
-                          {order.status === "in-progress"
-                            ? "In-progress"
-                            : order.status.charAt(0).toUpperCase() +
-                              order.status.slice(1)}
+                          {t(order.status === "in-progress" ? "inProgress" : order.status)}
                         </span>
                       </div>
                     </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 sm:shrink-0">
                       {order.date}
                     </span>
                   </div>
@@ -170,7 +168,7 @@ export default function OrdersPage() {
                     href={`/orders/${order.id}`}
                     className="inline-flex items-center gap-1 text-brand-600 dark:text-brand-500 hover:text-brand-700 dark:hover:text-brand-400 text-sm font-medium"
                   >
-                    Order details
+                    {t("orderDetails")}
                     <ChevronRight className="w-4 h-4" />
                   </Link>
 
@@ -193,7 +191,7 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Stage labels */}
-                    <div className="flex justify-between mt-2">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                       {progressStages.map((stage, stageIndex) => (
                         <span
                           key={stageIndex}
@@ -203,7 +201,13 @@ export default function OrdersPage() {
                               : "text-gray-500 dark:text-gray-400"
                           }`}
                         >
-                          {stage}
+                          {t(
+                            stageIndex === 0
+                              ? "stagePlaced"
+                              : stageIndex === 1
+                                ? "stageProgress"
+                                : "stageDelivered"
+                          )}
                         </span>
                       ))}
                     </div>
@@ -211,11 +215,11 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Right Side - Action Buttons */}
-                <div className="flex items-center justify-end gap-3 lg:justify-center">
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end lg:justify-center">
                   {order.status === "completed" ? (
                     <>
                       <button className="px-4 py-2 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition-colors">
-                        Accept
+                        {t("accept")}
                       </button>
                       <button
                         className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -224,11 +228,11 @@ export default function OrdersPage() {
                         }
                       >
                         <Star className="w-4 h-4" />
-                        Leave a Review
+                        {t("leaveReview")}
                       </button>
                       <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <RotateCcw className="w-4 h-4" />
-                        Reorder service
+                        {t("reorder")}
                       </button>
                     </>
                   ) : order.status === "declined" ? (
@@ -237,26 +241,26 @@ export default function OrdersPage() {
                         className="px-4 py-2 bg-gray-400 text-white rounded-lg font-medium text-sm cursor-not-allowed"
                         disabled
                       >
-                        Raise dispute
+                        {t("raiseDispute")}
                       </button>
                       <button
                         className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 rounded-lg font-medium text-sm cursor-not-allowed"
                         disabled
                       >
                         <Mail className="w-4 h-4" />
-                        Message Freelancer
+                        {t("messageProvider")}
                       </button>
                     </>
                   ) : (
                     <>
                       <button className="px-4 py-2 bg-brand-900 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition-colors">
                         {order.status === "in-progress"
-                          ? "Raise dispute"
-                          : "Cancel Order"}
+                          ? t("raiseDispute")
+                          : t("cancelOrder")}
                       </button>
                       <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <Mail className="w-4 h-4" />
-                        Message Freelancer
+                        {t("messageProvider")}
                       </button>
                     </>
                   )}

@@ -12,6 +12,7 @@ export interface OrderPlan {
   id: string;
   name: string;
   price: number;
+  inclusions: string;
 }
 
 export interface OrderService {
@@ -26,11 +27,16 @@ export interface PendingOrder {
   addOns: OrderAddOn[];
   addOnsTotal: number;
   subtotal: number;
+  checkoutKey: string;
+  createdOrderId?: string;
   createdAt: number; // timestamp for cache invalidation
 }
 
 // Input type for creating an order (createdAt added automatically)
-export type OrderInput = Omit<PendingOrder, "createdAt">;
+export type OrderInput = Omit<
+  PendingOrder,
+  "createdAt" | "checkoutKey" | "createdOrderId"
+>;
 
 interface OrderState {
   pendingOrder: PendingOrder | null;
@@ -41,6 +47,7 @@ interface OrderStore extends OrderState {
   // Actions
   setPendingOrder: (order: OrderInput | null) => void;
   clearPendingOrder: () => void;
+  setCreatedOrderId: (orderId: string) => void;
   setLoading: (loading: boolean) => void;
 
   // Computed getters
@@ -61,6 +68,7 @@ export const useOrderStore = create<OrderStore>()(
           pendingOrder: order
             ? {
                 ...order,
+                checkoutKey: crypto.randomUUID(),
                 createdAt: Date.now(), // Add timestamp
               }
             : null,
@@ -70,6 +78,13 @@ export const useOrderStore = create<OrderStore>()(
         set({
           pendingOrder: null,
         }),
+
+      setCreatedOrderId: (createdOrderId) =>
+        set((state) => ({
+          pendingOrder: state.pendingOrder
+            ? { ...state.pendingOrder, createdOrderId }
+            : null,
+        })),
 
       setLoading: (isLoading) => set({ isLoading }),
 
@@ -87,6 +102,23 @@ export const useOrderStore = create<OrderStore>()(
     }),
     {
       name: "order-storage",
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<OrderStore>;
+        if (!state.pendingOrder) return state as OrderStore;
+
+        return {
+          ...state,
+          pendingOrder: {
+            ...state.pendingOrder,
+            checkoutKey: state.pendingOrder.checkoutKey || crypto.randomUUID(),
+            plan: {
+              ...state.pendingOrder.plan,
+              inclusions: state.pendingOrder.plan.inclusions || "",
+            },
+          },
+        } as OrderStore;
+      },
       partialize: (state) => ({
         pendingOrder: state.pendingOrder,
       }),

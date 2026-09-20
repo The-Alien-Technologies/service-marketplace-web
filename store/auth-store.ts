@@ -9,7 +9,9 @@ import {
   USER_AUTH_STEPS,
   PROVIDER_AUTH_STEPS,
 } from "@/types/auth";
-import { apiService } from "@/lib/api";
+import { useNotificationStore } from "@/store/notification-store";
+import { clearStoredAuthSession } from "@/lib/client-session";
+import { getSignUpEntryState } from "@/lib/auth-entry-state";
 
 interface AuthStore extends AuthState {
   // Hydration state
@@ -70,10 +72,11 @@ export const useAuthStore = create<AuthStore>()(
       setLoading: (isLoading) => set({ isLoading }),
 
       showAuth: (step = "signin") =>
-        set({
-          showAuthModal: true,
-          authStep: step,
-        }),
+        set(
+          step === "signup"
+            ? getSignUpEntryState("user")
+            : { showAuthModal: true, authStep: step },
+        ),
 
       hideAuth: () =>
         set({
@@ -98,19 +101,9 @@ export const useAuthStore = create<AuthStore>()(
           showAuthModal: true,
         }),
 
-      startUserFlow: () =>
-        set({
-          authFlow: "user",
-          userAuthStep: "signup",
-          showAuthModal: true,
-        }),
+      startUserFlow: () => set(getSignUpEntryState("user")),
 
-      startProviderFlow: () =>
-        set({
-          authFlow: "provider",
-          providerAuthStep: "provider-signup",
-          showAuthModal: true,
-        }),
+      startProviderFlow: () => set(getSignUpEntryState("provider")),
 
       setForgotPasswordEmail: (forgotPasswordEmail) =>
         set({ forgotPasswordEmail }),
@@ -124,7 +117,8 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       signOut: async () => {
-        await apiService.signOut();
+        clearStoredAuthSession();
+        useNotificationStore.getState().reset();
         set({
           user: null,
           isAuthenticated: false,

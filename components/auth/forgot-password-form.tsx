@@ -9,14 +9,12 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
+import { useTranslations } from 'next-intl';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Please enter a valid email address' ),
-});
-
-type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordFormData = { email: string };
 
 export function ForgotPasswordForm() {
+  const t = useTranslations('Auth');
   const [isLoading, setIsLoading] = useState(false);
   const { setAuthStep, setForgotPasswordEmail, clearForgotPasswordState } = useAuthStore();
 
@@ -25,7 +23,9 @@ export function ForgotPasswordForm() {
     handleSubmit,
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
-    resolver: zodResolver(forgotPasswordSchema),
+    resolver: zodResolver(z.object({
+      email: z.string().email(t('invalidEmail')),
+    })),
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
@@ -39,9 +39,9 @@ export function ForgotPasswordForm() {
       
       // Move to email sent confirmation
       setAuthStep('forgot-password-sent');
-      toast.success('Password reset email sent successfully!');
+      toast.success(t('resetEmailSent'));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email';
+      const errorMessage = error instanceof Error ? error.message : t('resetEmailFailed');
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -59,13 +59,13 @@ export function ForgotPasswordForm() {
         <div className="hidden md:flex md:w-[315px] md:flex-shrink-0">
           <img 
             src="/assets/site-images/forgot-password-left-image.jpg" 
-            alt="Forgot Password" 
+            alt={t('forgotPasswordTitle')}
             className="w-full h-full object-cover object-left rounded-l-lg"
           />
         </div>
 
       {/* Right Side - Form Content (522px / 62.4%) */}
-      <div className="w-full md:w-[522px] md:flex-shrink-0 p-8 flex flex-col justify-center">
+      <div className="flex w-full flex-col justify-center p-5 sm:p-8 md:w-[522px] md:flex-shrink-0">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-6">
@@ -76,20 +76,20 @@ export function ForgotPasswordForm() {
             />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-            Forgot your password
+            {t('forgotPasswordTitle')}
           </h1>
           
           {/* Lock Icon */}
           <div className="w-12 h-12 mx-auto mb-6 flex items-center justify-center">
             <img 
               src="/assets/icons/padlock.svg" 
-              alt="Padlock Icon" 
+              alt=""
               className="w-8 h-8"
             />
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
-            Don't worry. Enter your email and we'll send you a link to reset your password
+            {t('forgotPasswordBody')}
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export function ForgotPasswordForm() {
           {/* Email Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email
+              {t('emailAddress')}
             </label>
             <div className="relative">
               <Input
@@ -124,7 +124,7 @@ export function ForgotPasswordForm() {
             disabled={isLoading}
             className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium"
           >
-            {isLoading ? 'Sending...' : 'Reset password'}
+            {isLoading ? t('sending') : t('sendResetCode')}
           </Button>
         </form>
 
@@ -134,7 +134,7 @@ export function ForgotPasswordForm() {
             onClick={handleBackToSignIn}
             className="text-sm text-green-600 hover:text-green-700 font-medium underline"
           >
-            Back to Sign in
+            {t('backToSignIn')}
           </button>
         </div>
       </div>

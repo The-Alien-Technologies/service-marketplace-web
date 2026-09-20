@@ -6,20 +6,23 @@ import { Star, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiService } from "@/lib/api";
 import { toast } from "react-toastify";
-
-const RATINGS = [
-  { value: 1, label: "Very poor" },
-  { value: 2, label: "Poor" },
-  { value: 3, label: "Average" },
-  { value: 4, label: "Good" },
-  { value: 5, label: "Excellent" },
-] as const;
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ReviewFormProps {
   orderId: string;
 }
 
 export function ReviewForm({ orderId }: ReviewFormProps) {
+  const t = useTranslations("Reviews");
+  const common = useTranslations("Common");
+  const format = useFormatter();
+  const ratings = [
+    { value: 1, label: t("veryPoor") },
+    { value: 2, label: t("poor") },
+    { value: 3, label: t("average") },
+    { value: 4, label: t("good") },
+    { value: 5, label: t("excellent") },
+  ];
   const router = useRouter();
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
@@ -48,7 +51,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!rating) {
-      toast.error("Please select a rating");
+      toast.error(t("selectRating"));
       return;
     }
     setIsSubmitting(true);
@@ -60,7 +63,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
       });
       setIsSubmitted(true);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to submit review");
+      toast.error(error?.message || t("submitFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -81,17 +84,17 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
           <Star className="w-8 h-8 text-amber-500 fill-amber-500" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-          Already reviewed
+          {t("alreadyReviewed")}
         </h2>
         <p className="text-sm text-gray-500 mb-8 text-center">
-          You have already submitted a review for this order.
+          {t("alreadyReviewedBody")}
         </p>
         <button
           type="button"
           onClick={() => router.push("/dashboard/orders")}
           className="text-sm font-bold text-green-700 hover:text-green-800 hover:underline border-b border-green-700 pb-0.5"
         >
-          Back to Orders
+          {t("backToOrders")}
         </button>
       </div>
     );
@@ -104,17 +107,17 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
           <Check className="w-8 h-8 text-green-600" strokeWidth={3} />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-          Your feedback has been submitted!
+          {t("submittedTitle")}
         </h2>
         <p className="text-sm text-gray-500 mb-8 text-center">
-          Thanks for your feedback! Your review will help others.
+          {t("submittedBody")}
         </p>
         <button
           type="button"
           onClick={() => router.push("/dashboard/orders")}
           className="text-sm font-bold text-green-700 hover:text-green-800 hover:underline border-b border-green-700 pb-0.5"
         >
-          Back to Orders
+          {t("backToOrders")}
         </button>
       </div>
     );
@@ -127,18 +130,18 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
     >
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">
-          Share your experience
+          {t("shareTitle")}
         </h1>
         <p className="text-sm text-gray-500">
-          Your feedback helps others hire with confidence.
+          {t("shareBody")}
         </p>
       </div>
 
       {/* Rating */}
       <div className="mb-8">
-        <p className="text-sm font-bold text-gray-900 mb-3">Your rating</p>
+        <p className="text-sm font-bold text-gray-900 mb-3">{t("yourRating")}</p>
         <div className="flex flex-wrap items-center gap-4">
-          {RATINGS.map((option) => (
+          {ratings.map((option) => (
             <button
               key={option.value}
               type="button"
@@ -182,19 +185,19 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-2">
           <p className="text-sm font-bold text-gray-900">
-            Tell us more about your experience
+            {t("tellMore")}
           </p>
-          <span className="text-xs text-gray-400">(optional)</span>
+          <span className="text-xs text-gray-400">({common("optional")})</span>
         </div>
         <div className="border border-gray-200 rounded-lg overflow-hidden bg-white focus-within:ring-1 focus-within:ring-green-500 focus-within:border-green-500 transition-all">
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value.slice(0, 500))}
-            placeholder="Enter a description..."
+            placeholder={t("commentPlaceholder")}
             className="w-full h-32 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none resize-none"
           />
           <div className="flex justify-end px-4 py-2 text-xs text-gray-400 bg-gray-50/50 border-t border-gray-100">
-            {500 - remainingChars}/500
+            {format.number(500 - remainingChars)}/{format.number(500)}
           </div>
         </div>
       </div>
@@ -206,7 +209,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
           onClick={() => router.back()}
           className="flex-1 sm:flex-none sm:w-32 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
         >
-          Cancel
+          {common("cancel")}
         </button>
         <button
           type="submit"
@@ -214,7 +217,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
           className="flex-1 sm:flex-none sm:w-48 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-[#15803d] hover:bg-[#14532d] transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-          Submit review
+          {t("submitReview")}
         </button>
       </div>
     </form>

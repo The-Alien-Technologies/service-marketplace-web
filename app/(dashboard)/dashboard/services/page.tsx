@@ -27,10 +27,14 @@ import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/store/auth-store";
+import { useFormatter, useTranslations } from "next-intl";
 
 const columnHelper = createColumnHelper<Service>();
 
 export default function ServicesPage() {
+  const t = useTranslations("Services");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const { user } = useAuthStore();
   const isAdmin = user?.role === "ADMIN";
 
@@ -45,7 +49,7 @@ export default function ServicesPage() {
   const columns = useMemo(() => {
     const cols: ColumnDef<Service, any>[] = [
       columnHelper.accessor("title", {
-        header: "Service Name",
+        header: t("serviceName"),
         cell: (info) => (
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 relative shrink-0">
@@ -58,7 +62,7 @@ export default function ServicesPage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
-                  No Img
+                  {t("noImage")}
                 </div>
               )}
             </div>
@@ -66,9 +70,9 @@ export default function ServicesPage() {
           </div>
         ),
       }),
-      columnHelper.accessor((row) => row.category?.name || "Uncategorized", {
+      columnHelper.accessor((row) => row.category?.name || t("uncategorized"), {
         id: "category",
-        header: "Category",
+        header: common("category"),
         cell: (info) => (
           <span className="text-gray-600">{info.getValue()}</span>
         ),
@@ -78,7 +82,7 @@ export default function ServicesPage() {
     if (isAdmin) {
       cols.push(
         columnHelper.accessor("provider", {
-          header: "Provider",
+          header: common("provider"),
           cell: (info) => {
             const provider = info.getValue();
             return (
@@ -102,7 +106,7 @@ export default function ServicesPage() {
                     `${provider?.firstName || ""} ${
                       provider?.lastName || ""
                     }`.trim() ||
-                    "Unknown Provider"}
+                    t("unknownProvider")}
                 </span>
               </div>
             );
@@ -119,21 +123,21 @@ export default function ServicesPage() {
         },
         {
           id: "price",
-          header: "Starting Price",
+          header: t("startingPrice"),
           cell: (info) => (
             <span className="text-gray-600">
-              GHS {info.getValue().toFixed(2)}
+              {format.number(info.getValue(), "currency")}
             </span>
           ),
         },
       ),
       columnHelper.display({
         id: "orders",
-        header: "Total Orders",
+        header: t("totalOrders"),
         cell: () => <span className="text-gray-600">0</span>, // Mock for now
       }),
       columnHelper.accessor("status", {
-        header: "Status",
+        header: common("status"),
         cell: (info) => {
           const status = info.getValue();
           const styles =
@@ -143,9 +147,14 @@ export default function ServicesPage() {
                 ? "bg-gray-100 text-gray-700 border-gray-200"
                 : "bg-red-50 text-red-700 border-red-200";
 
-          const label = status
-            ? status.charAt(0) + status.slice(1).toLowerCase()
-            : "Unknown";
+          const label =
+            status === "PUBLISHED"
+              ? t("published")
+              : status === "DRAFT"
+                ? t("draft")
+                : status
+                  ? t("inactive")
+                  : common("unknown");
 
           return (
             <span
@@ -164,7 +173,7 @@ export default function ServicesPage() {
       }),
     );
     return cols;
-  }, [isAdmin]);
+  }, [common, format, isAdmin, t]);
 
   const fetchServices = async () => {
     try {
@@ -186,7 +195,7 @@ export default function ServicesPage() {
       setTotal(response.total);
     } catch (error) {
       console.error("Failed to fetch services:", error);
-      toast.error("Failed to load services");
+      toast.error(t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -195,11 +204,11 @@ export default function ServicesPage() {
   const handleDelete = async (id: string) => {
     try {
       await apiService.deleteService(id);
-      toast.success("Service deleted successfully");
+      toast.success(t("deleted"));
       fetchServices(); // Refresh list
     } catch (error) {
       console.error("Failed to delete service:", error);
-      toast.error("Failed to delete service");
+      toast.error(t("deleteFailed"));
     }
   };
 
@@ -228,31 +237,31 @@ export default function ServicesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {isAdmin ? "Service Management" : "My Services"}
+            {isAdmin ? t("management") : t("myServices")}
           </h1>
           <p className="text-gray-500 mt-1">
             {isAdmin
-              ? "Oversee all marketplace services."
-              : "Manage your services, track performance, and update offerings."}
+              ? t("adminSubtitle")
+              : t("providerSubtitle")}
           </p>
         </div>
-        <Link href="/dashboard/services/new">
-          <Button className="bg-[#15803d] hover:bg-[#14532d] text-white gap-2">
+        <Link href="/dashboard/services/new" className="w-full sm:w-auto">
+          <Button className="w-full gap-2 bg-[#15803d] text-white hover:bg-[#14532d] sm:w-auto">
             <Plus className="w-4 h-4" />
-            Add new service
+            {t("addNew")}
           </Button>
         </Link>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input placeholder="Search services..." className="pl-10 bg-white" />
+          <Input placeholder={t("search")} className="pl-10 bg-white" />
         </div>
-        <Button variant="outline" className="gap-2 text-gray-600">
+        <Button variant="outline" className="w-full gap-2 text-gray-600 sm:w-auto">
           <Filter className="w-4 h-4" />
-          Filters
+          {t("filters")}
         </Button>
       </div>
 
@@ -264,65 +273,67 @@ export default function ServicesPage() {
           </div>
         ) : (
           <>
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="px-6 py-4 font-medium">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="px-6 py-12 text-center text-gray-500"
-                    >
-                      No services found. Create your first service to get
-                      started!
-                    </td>
-                  </tr>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-6 py-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left min-w-[600px]">
+                <thead className="bg-gray-50 text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id} className="px-6 py-4 font-medium whitespace-nowrap">
                           {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                            header.column.columnDef.header,
+                            header.getContext(),
                           )}
-                        </td>
+                        </th>
                       ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {table.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={columns.length}
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
+                        {t("noServices")}
+                      </td>
+                    </tr>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-              <span className="text-sm text-gray-500">
-                Showing{" "}
-                {data.length > 0
-                  ? pagination.pageIndex * pagination.pageSize + 1
-                  : 0}{" "}
-                to{" "}
-                {Math.min(
-                  (pagination.pageIndex + 1) * pagination.pageSize,
+            <div className="flex flex-col gap-3 border-t border-gray-200 px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <span className="text-center text-sm text-gray-500 sm:text-left">
+                {t("resultsRange", {
+                  start:
+                    data.length > 0
+                      ? pagination.pageIndex * pagination.pageSize + 1
+                      : 0,
+                  end: Math.min(
+                    (pagination.pageIndex + 1) * pagination.pageSize,
+                    total,
+                  ),
                   total,
-                )}{" "}
-                of {total} results
+                })}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -331,7 +342,7 @@ export default function ServicesPage() {
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  Previous
+                  {common("previous")}
                 </Button>
                 <Button
                   variant="outline"
@@ -339,7 +350,7 @@ export default function ServicesPage() {
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  Next
+                  {common("next")}
                 </Button>
               </div>
             </div>
@@ -366,6 +377,8 @@ const ActionsCell = ({
   service: Service;
   onDelete: (id: string) => void;
 }) => {
+  const t = useTranslations("Services");
+  const common = useTranslations("Common");
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -382,20 +395,20 @@ const ActionsCell = ({
             <DropdownMenuItem
               onClick={() => router.push(`/dashboard/services/${service.id}`)}
             >
-              View Details
+              {t("viewDetails")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
                 router.push(`/dashboard/services/${service.id}/edit`)
               }
             >
-              Edit
+              {common("edit")}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-red-600"
               onClick={() => setShowDeleteDialog(true)}
             >
-              Delete
+              {common("delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -404,10 +417,9 @@ const ActionsCell = ({
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Service</DialogTitle>
+            <DialogTitle>{t("deleteTitle")}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this service? This action cannot
-              be undone.
+              {t("deleteBody")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -415,7 +427,7 @@ const ActionsCell = ({
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
-              Cancel
+              {common("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -425,7 +437,7 @@ const ActionsCell = ({
                 setShowDeleteDialog(false);
               }}
             >
-              Delete
+              {common("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth-store';
 import { apiService } from '@/lib/api';
 import { toast } from 'react-toastify';
 import { Upload, FileText, X, CheckCircle } from 'lucide-react';
+import { VerificationDocument } from '@/types/auth';
+import { useFormatter, useTranslations } from 'next-intl';
 
 interface DocumentFile {
   file: File;
@@ -19,11 +21,37 @@ interface DocumentFile {
 }
 
 export function ProviderDocumentsForm() {
+  const t = useTranslations('Onboarding');
+  const common = useTranslations('Common');
+  const format = useFormatter();
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
+  const [existingDocuments, setExistingDocuments] = useState<VerificationDocument[]>([]);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const { nextProviderStep, previousProviderStep } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiService
+      .getUserDocuments()
+      .then((items) => {
+        if (!cancelled) setExistingDocuments(items);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error(t('documentsLoadFailed'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingExisting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -37,18 +65,17 @@ export function ProviderDocumentsForm() {
         'image/jpeg',
         'image/jpg', 
         'image/png',
-        'image/webp'
       ];
       
       if (!validTypes.includes(file.type)) {
-        toast.error(`${file.name}: Please select PDF, JPG, PNG, or WebP files only`);
+        toast.error(t('documentTypeError', { name: file.name }));
         return;
       }
 
       // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        toast.error(`${file.name}: File size must be less than 5MB`);
+        toast.error(t('documentSizeError', { name: file.name }));
         return;
       }
 
@@ -80,7 +107,11 @@ export function ProviderDocumentsForm() {
     // Don't auto-upload - let user click upload button
   };
 
-  const uploadDocument = async (docIndex: number) => {
+  const uploadDocument = async (docIndex: number): Promise<boolean> => {
+    const currentDoc = documents[docIndex];
+    if (!currentDoc) return false;
+
+    let progressInterval: ReturnType<typeof setInterval> | undefined;
     try {
       // Mark as uploading
       setDocuments(prev => {
@@ -93,11 +124,8 @@ export function ProviderDocumentsForm() {
         return updated;
       });
 
-      const currentDoc = documents[docIndex];
-      if (!currentDoc) return;
-
       // Simulate progress updates
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setDocuments(prev => {
           const updated = [...prev];
           if (updated[docIndex] && updated[docIndex].uploadProgress < 90) {
@@ -110,8 +138,6 @@ export function ProviderDocumentsForm() {
       // Upload to API
       const result = await apiService.uploadDocument(currentDoc.file, currentDoc.type, `${currentDoc.type} document`);
       
-      clearInterval(progressInterval);
-      
       // Mark as completed
       setDocuments(prev => {
         const updated = [...prev];
@@ -123,7 +149,7 @@ export function ProviderDocumentsForm() {
         }
         return updated;
       });
-
+      return true;
     } catch (error) {
       console.error('Failed to upload document:', error);
       
@@ -131,14 +157,17 @@ export function ProviderDocumentsForm() {
       setDocuments(prev => {
         const updated = [...prev];
         if (updated[docIndex]) {
-          updated[docIndex].error = error instanceof Error ? error.message : 'Upload failed';
+          updated[docIndex].error = error instanceof Error ? error.message : t('uploadFailed');
           updated[docIndex].uploadProgress = 0;
           updated[docIndex].isUploading = false;
         }
         return updated;
       });
       
-      toast.error(`Failed to upload ${documents[docIndex]?.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(error instanceof Error ? error.message : t('documentUploadFailed', { name: currentDoc.name }));
+      return false;
+    } finally {
+      if (progressInterval) clearInterval(progressInterval);
     }
   };
 
@@ -150,14 +179,16 @@ export function ProviderDocumentsForm() {
         if (!doc.isUploaded && !doc.isUploading) {
           return uploadDocument(index);
         }
-        return Promise.resolve();
+        return Promise.resolve(true);
       });
 
-      await Promise.all(uploadPromises);
-      return true; // Success
+      const results = await Promise.all(uploadPromises);
+      const succeeded = results.every(Boolean);
+      if (!succeeded) toast.error(t('someUploadsFailed'));
+      return succeeded;
     } catch (error) {
       console.error('Failed to upload documents:', error);
-      toast.error('Some documents failed to upload');
+      toast.error(t('someUploadsFailed'));
       return false; // Failed
     } finally {
       setIsLoading(false);
@@ -180,13 +211,41 @@ export function ProviderDocumentsForm() {
     handleFileSelect(e.dataTransfer.files);
   };
 
-  const removeDocument = (index: number) => {
+  const removeDocument = async (index: number) => {
+    const document = documents[index];
+    if (!document) return;
+
+    if (document.uploadedDocumentId) {
+      try {
+        await apiService.deleteDocument(document.uploadedDocumentId);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : t('documentRemoveFailed'),
+        );
+        return;
+      }
+    }
+
     setDocuments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const removeExistingDocument = async (documentId: string) => {
+    try {
+      await apiService.deleteDocument(documentId);
+      setExistingDocuments((items) =>
+        items.filter((document) => document.id !== documentId),
+      );
+      toast.success(t('documentRemoved'));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t('documentRemoveFailed'),
+      );
+    }
+  };
+
   const handleSubmit = async () => {
-    if (documents.length === 0) {
-      toast.error('Please select at least one document');
+    if (documents.length === 0 && existingDocuments.length === 0) {
+      toast.error(t('documentRequired'));
       return;
     }
 
@@ -194,7 +253,7 @@ export function ProviderDocumentsForm() {
     const uploadSuccess = await handleUploadAll();
     
     if (uploadSuccess) {
-      toast.success('Documents uploaded successfully!');
+      toast.success(t('documentsUploaded'));
       nextProviderStep();
     }
   };
@@ -203,11 +262,17 @@ export function ProviderDocumentsForm() {
     previousProviderStep();
   };
 
-  const hasDocuments = documents.length > 0;
+  const hasDocuments = documents.length > 0 || existingDocuments.length > 0;
   const isUploading = documents.some(doc => doc.isUploading) || isLoading;
+  const documentStatusLabel = (status: VerificationDocument['status']) => ({
+    UPLOADED: t('documentUploadedStatus'),
+    UNDER_REVIEW: t('documentReviewStatus'),
+    APPROVED: t('documentApprovedStatus'),
+    REJECTED: t('documentRejectedStatus'),
+  })[status];
 
   return (
-    <div className="p-8">
+    <div className="p-5 sm:p-8">
       {/* Progress indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
@@ -222,14 +287,14 @@ export function ProviderDocumentsForm() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[30px] font-bold leading-[38px] text-gray-900 dark:text-white font-inter tracking-[0%] mb-6">
-          Let's finish setting up your account
+          {t('finishSetup')}
         </h1>
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Verification Documents
+            {t('documentsTitle')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Upload Training or Certification Documents
+            {t('documentsBody')}
           </p>
         </div>
       </div>
@@ -247,17 +312,20 @@ export function ProviderDocumentsForm() {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (!isUploading) fileInputRef.current?.click();
+          }}
+          aria-disabled={isUploading}
         >
           <Upload className={`w-8 h-8 mx-auto mb-3 ${isDragging ? 'text-green-500' : 'text-gray-400'}`} />
           <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
-            Click to upload
+            {t('clickUpload')}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-            or drag and drop
+            {t('dragDrop')}
           </p>
           <p className="text-xs text-gray-500">
-            JPG, PNG, PDF (max. 5MB)
+            {t('fileRequirements')}
           </p>
         </div>
 
@@ -265,18 +333,63 @@ export function ProviderDocumentsForm() {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.jpg,.jpeg,.png,.webp"
-          onChange={(e) => handleFileSelect(e.target.files)}
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={(e) => {
+            handleFileSelect(e.target.files);
+            e.currentTarget.value = '';
+          }}
+          disabled={isUploading}
           className="hidden"
         />
       </div>
 
       {/* Uploaded Documents */}
+      {isLoadingExisting && (
+        <p className="mb-4 text-sm text-gray-500" role="status">
+          {t('existingDocumentsLoading')}
+        </p>
+      )}
+
+      {existingDocuments.length > 0 && (
+        <div className="mb-5 space-y-2">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('existingDocuments')}
+          </p>
+          {existingDocuments.map((document) => (
+            <div
+              key={document.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <FileText className="h-5 w-5 shrink-0 text-green-700" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                    {document.originalName || document.fileName || t('verificationDocument')}
+                  </p>
+                  <p className="mt-0.5 text-xs capitalize text-gray-500">
+                    {documentStatusLabel(document.status)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void removeExistingDocument(document.id)}
+                disabled={isUploading}
+                aria-label={t('removeDocument', { name: document.originalName || document.fileName || t('verificationDocument') })}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-red-700/75 hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {documents.length > 0 && (
         <div className="mb-8 space-y-2">
           {documents.map((doc, index) => (
             <div
-              key={index}
+              key={`${doc.file.name}-${doc.file.lastModified}-${index}`}
               className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
             >
               <div className="flex items-center space-x-3 flex-1">
@@ -312,14 +425,14 @@ export function ProviderDocumentsForm() {
                     </div>
                   ) : !doc.isUploaded && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Ready to upload
+                      {t('readyUpload')}
                     </p>
                   )}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  {Math.round(doc.file.size / 1024)} KB
+                  {format.number(Math.round(doc.file.size / 1024))} KB
                 </span>
                 {doc.isUploading && (
                   <span className="text-xs text-green-600 dark:text-green-400">
@@ -327,8 +440,11 @@ export function ProviderDocumentsForm() {
                   </span>
                 )}
                 <button
-                  onClick={() => removeDocument(index)}
-                  className="p-1 text-green-400 hover:text-red-500 transition-colors"
+                  type="button"
+                  onClick={() => void removeDocument(index)}
+                  disabled={isUploading}
+                  aria-label={t('removeDocument', { name: doc.name })}
+                  className="p-1 text-green-700/70 transition-colors hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -347,7 +463,7 @@ export function ProviderDocumentsForm() {
           onClick={handlePrevious}
           className="text-gray-600 hover:text-gray-700"
         >
-          ← Previous
+          ← {common('previous')}
         </Button>
         
         <Button
@@ -355,9 +471,9 @@ export function ProviderDocumentsForm() {
           disabled={!hasDocuments || isUploading}
           className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isUploading ? 'Uploading...' : 
-           !hasDocuments ? 'Select Documents First' : 
-           'Submit'}
+          {isUploading ? t('uploading') :
+           !hasDocuments ? t('selectDocumentsFirst') :
+           common('submit')}
         </Button>
       </div>
     </div>

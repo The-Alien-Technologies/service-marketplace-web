@@ -1,10 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
+import {NextIntlClientProvider} from "next-intl";
+import {getLocale, getMessages, getTranslations} from "next-intl/server";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { SupportChatWidget } from "@/components/supportChat/support-chat-widget";
+import {LocalePreferenceSync} from "@/components/i18n/locale-preference-sync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,40 +26,56 @@ const dancingScript = Dancing_Script({
   weight: ["400", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Service Marketplace",
-  description: "Find and hire trusted service providers with ease",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata");
+  return {title: t("title"), description: t("description")};
+}
 
-export default function RootLayout({
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+interface SupportChatProps {
+  isOpenChat: boolean;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir="ltr" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${dancingScript.variable} antialiased`}
       >
-        <ThemeProvider
-          defaultTheme="light"
-          storageKey="service-marketplace-theme"
-        >
-          {children}
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-          />
-        </ThemeProvider>
-        <AuthModal />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <LocalePreferenceSync />
+          <ThemeProvider
+            defaultTheme="light"
+            storageKey="service-marketplace-theme"
+          >
+            {children}
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+            <SupportChatWidget />
+          </ThemeProvider>
+          <AuthModal />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Loader2, Edit, Trash2, Box } from "lucide-react";
+import { ChevronLeft, Loader2, Trash2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
@@ -18,8 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useFormatter, useTranslations } from "next-intl";
 
 export default function ServiceDetailsPage() {
+  const t = useTranslations("Services");
+  const common = useTranslations("Common");
+  const format = useFormatter();
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
@@ -34,11 +38,11 @@ export default function ServiceDetailsPage() {
       if (!id) return;
       try {
         setIsLoading(true);
-        const data = await apiService.getService(id);
+        const data = await apiService.getMyService(id);
         setService(data);
       } catch (error) {
         console.error("Failed to fetch service:", error);
-        toast.error("Failed to load service details");
+        toast.error(t("detailsLoadFailed"));
         router.push("/dashboard/services");
       } finally {
         setIsLoading(false);
@@ -46,17 +50,17 @@ export default function ServiceDetailsPage() {
     };
 
     fetchService();
-  }, [id, router]);
+  }, [id, router, t]);
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
       await apiService.deleteService(id);
-      toast.success("Service deleted successfully");
+      toast.success(t("deleted"));
       router.push("/dashboard/services");
     } catch (error) {
       console.error("Failed to delete service:", error);
-      toast.error("Failed to delete service");
+      toast.error(t("deleteFailed"));
       setIsDeleting(false);
     }
   };
@@ -82,7 +86,7 @@ export default function ServiceDetailsPage() {
             href="/dashboard/services"
             className="hover:text-gray-900 transition-colors"
           >
-            My services
+            {t("myServices")}
           </Link>
           <ChevronLeft className="w-4 h-4 mx-2 rotate-180" />
           <span className="text-gray-900 font-medium">{service.title}</span>
@@ -104,11 +108,14 @@ export default function ServiceDetailsPage() {
                       : "bg-red-50 text-red-700 border-red-200",
                 )}
               >
-                {service.status.charAt(0) +
-                  service.status.slice(1).toLowerCase()}
+                {service.status === "PUBLISHED"
+                    ? t("published")
+                    : service.status === "DRAFT"
+                      ? t("draft")
+                      : t("inactive")}
               </span>
               <span className="text-sm text-gray-500">
-                Category: {service.category?.name || "Uncategorized"}
+                {common("category")}: {service.category?.name || t("uncategorized")}
               </span>
             </div>
           </div>
@@ -125,16 +132,15 @@ export default function ServiceDetailsPage() {
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
-              Delete
+              {common("delete")}
             </Button>
 
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Delete Service</DialogTitle>
+                  <DialogTitle>{t("deleteTitle")}</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to delete this service? This action
-                    cannot be undone.
+                    {t("deleteBody")}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -142,7 +148,7 @@ export default function ServiceDetailsPage() {
                     variant="outline"
                     onClick={() => setShowDeleteDialog(false)}
                   >
-                    Cancel
+                    {common("cancel")}
                   </Button>
                   <Button
                     variant="destructive"
@@ -152,7 +158,7 @@ export default function ServiceDetailsPage() {
                       handleDelete();
                     }}
                   >
-                    Delete
+                    {common("delete")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -171,7 +177,7 @@ export default function ServiceDetailsPage() {
         <div className="lg:col-span-7 space-y-8">
           {/* Cover Image */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Cover Image</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("coverImage")}</h2>
             <div className="relative w-full aspect-[2/1] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
               {service.coverImage ? (
                 <Image
@@ -182,7 +188,7 @@ export default function ServiceDetailsPage() {
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50">
-                  No cover image
+                  {t("noCoverImage")}
                 </div>
               )}
             </div>
@@ -190,7 +196,7 @@ export default function ServiceDetailsPage() {
 
           {/* Overview */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Overview</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("overview")}</h2>
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {service.overview}
@@ -200,7 +206,7 @@ export default function ServiceDetailsPage() {
 
           {/* Tags */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Tags</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t("tags")}</h2>
             <div className="flex flex-wrap gap-2">
               {service.tags && service.tags.length > 0 ? (
                 service.tags.map((tag) => (
@@ -212,7 +218,7 @@ export default function ServiceDetailsPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No tags added</p>
+                <p className="text-gray-500 italic">{t("noTags")}</p>
               )}
             </div>
           </div>
@@ -220,8 +226,8 @@ export default function ServiceDetailsPage() {
           {/* Gallery - If exists */}
           {service.images && service.images.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Gallery</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <h2 className="text-lg font-semibold text-gray-900">{t("gallery")}</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
                 {service.images.map((img) => (
                   <div
                     key={img.id}
@@ -229,7 +235,7 @@ export default function ServiceDetailsPage() {
                   >
                     <Image
                       src={img.url}
-                      alt="Service gallery image"
+                      alt={t("galleryAlt")}
                       fill
                       className="object-cover"
                     />
@@ -244,7 +250,7 @@ export default function ServiceDetailsPage() {
         <div className="lg:col-span-5 space-y-8">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Pricing Plans
+              {t("pricingPlans")}
             </h2>
             <div className="space-y-4">
               {service.plans && service.plans.length > 0 ? (
@@ -264,18 +270,18 @@ export default function ServiceDetailsPage() {
                           </h3>
                           {plan.isPopular && (
                             <span className="text-[10px] font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full ml-2">
-                              Popular
+                              {t("popular")}
                             </span>
                           )}
                         </div>
                       </div>
                       <span className="font-semibold text-gray-900">
-                        GHS {Number(plan.price).toFixed(2)}
+                        {format.number(Number(plan.price), "currency")}
                       </span>
                     </div>
                     <div className="p-4">
                       <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                        Inclusions
+                        {t("inclusions")}
                       </h4>
                       <ul className="space-y-2">
                         {plan.inclusions.split("\n").map((inc, idx) => (
@@ -293,7 +299,7 @@ export default function ServiceDetailsPage() {
                 ))
               ) : (
                 <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                  No pricing plans available
+                  {t("noPlans")}
                 </div>
               )}
             </div>
@@ -302,7 +308,7 @@ export default function ServiceDetailsPage() {
           {/* Addons */}
           {service.addons && service.addons.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Add-ons</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{t("addOns")}</h2>
               <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
                 {service.addons.map((addon) => (
                   <div
@@ -320,7 +326,7 @@ export default function ServiceDetailsPage() {
                       )}
                     </div>
                     <span className="text-sm font-semibold text-gray-900">
-                      + GHS {Number(addon.price).toFixed(2)}
+                      + {format.number(Number(addon.price), "currency")}
                     </span>
                   </div>
                 ))}
