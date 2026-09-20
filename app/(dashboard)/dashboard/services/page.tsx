@@ -14,7 +14,7 @@ import {
   ColumnDef,
   PaginationState,
 } from "@tanstack/react-table";
-import { Search, Filter, MoreVertical, Plus, Loader2 } from "lucide-react";
+import { Search, MoreVertical, Plus, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useTranslations } from "next-intl";
 import { formatMoney } from "@/lib/money";
 import { canCreateService } from "@/lib/provider-access";
+import { useCategories } from "@/store/categories-store";
 
 const columnHelper = createColumnHelper<Service>();
 
@@ -39,6 +40,7 @@ export default function ServicesPage() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const canCreate = canCreateService(user);
+  const { categories } = useCategories();
 
   const [data, setData] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +49,18 @@ export default function ServicesPage() {
     pageSize: 10,
   });
   const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<Service["status"] | "">("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPagination((current) => ({ ...current, pageIndex: 0 }));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -55,10 +69,16 @@ export default function ServicesPage() {
         ? await apiService.getAdminServices({
             page: pagination.pageIndex + 1,
             limit: pagination.pageSize,
+            search: debouncedSearch || undefined,
+            status: statusFilter || undefined,
+            categoryId: categoryFilter || undefined,
           })
         : await apiService.getMyServices({
             page: pagination.pageIndex + 1,
             limit: pagination.pageSize,
+            search: debouncedSearch || undefined,
+            status: statusFilter || undefined,
+            categoryId: categoryFilter || undefined,
           });
 
       setData(response.services);
@@ -69,7 +89,15 @@ export default function ServicesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin, pagination.pageIndex, pagination.pageSize, t]);
+  }, [
+    categoryFilter,
+    debouncedSearch,
+    isAdmin,
+    pagination.pageIndex,
+    pagination.pageSize,
+    statusFilter,
+    t,
+  ]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -173,7 +201,11 @@ export default function ServicesPage() {
       columnHelper.display({
         id: "orders",
         header: t("totalOrders"),
-        cell: () => <span className="text-gray-600">0</span>, // Mock for now
+        cell: (info) => (
+          <span className="text-gray-600">
+            {info.row.original.orderCount ?? 0}
+          </span>
+        ),
       }),
       columnHelper.accessor("status", {
         header: common("status"),
@@ -255,19 +287,50 @@ export default function ServicesPage() {
         )}
       </div>
 
-      {/* Search & Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      {/* Server-side filters */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
         <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <Input placeholder={t("search")} className="pl-10 bg-white" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("search")}
+            className="pl-10 bg-white"
+          />
         </div>
-        <Button
-          variant="outline"
-          className="w-full gap-2 text-gray-600 sm:w-auto"
-        >
-          <Filter className="w-4 h-4" />
-          {t("filters")}
-        </Button>
+        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as Service["status"] | "");
+              setPagination((current) => ({ ...current, pageIndex: 0 }));
+            }}
+            aria-label={t("filterByStatus")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allStatuses")}</option>
+            <option value="PUBLISHED">{t("published")}</option>
+            <option value="DRAFT">{t("draft")}</option>
+            <option value="ARCHIVED">{t("archived")}</option>
+            <option value="SUSPENDED">{t("suspended")}</option>
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(event) => {
+              setCategoryFilter(event.target.value);
+              setPagination((current) => ({ ...current, pageIndex: 0 }));
+            }}
+            aria-label={t("filterByCategory")}
+            className="h-10 max-w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allCategories")}</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Table */}

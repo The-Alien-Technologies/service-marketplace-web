@@ -27,6 +27,7 @@ export function RecentReviews({
   initialVisible = 6,
 }: RecentReviewsProps) {
   const t = useTranslations("Marketplace");
+  const common = useTranslations("Common");
   const format = useFormatter();
   const [visibleCount, setVisibleCount] = useState(initialVisible);
   const [showAll, setShowAll] = useState(false);
@@ -138,7 +139,7 @@ export function RecentReviews({
             onClick={handleShowMore}
             className="flex items-center gap-2 text-brand-600 hover:text-brand-700 dark:text-brand-500 dark:hover:text-brand-400 font-medium text-sm transition-colors"
           >
-            <span>{showAll ? t("showLess") : t("showAll")}</span>
+            <span>{showAll ? t("showLess") : common("viewAll")}</span>
             <ChevronDown
               className={`w-4 h-4 transition-transform duration-200 ${
                 showAll ? "rotate-180" : ""

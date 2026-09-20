@@ -861,13 +861,6 @@ export default function AddServicePage() {
                           </Button>
                         )}
                         <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => togglePlanExpansion(plan.id)}
-                        >
-                          {common("cancel")}
-                        </Button>
-                        <Button
                           className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white"
                           onClick={() => togglePlanExpansion(plan.id)}
                         >
@@ -996,13 +989,11 @@ export default function AddServicePage() {
                     <div className="flex items-center gap-3 pt-2">
                       <Button
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                         onClick={() => removeAddon(addon.id)}
                       >
-                        {common("cancel")}
-                      </Button>
-                      <Button className="flex-1 bg-[#15803d] hover:bg-[#14532d] text-white">
-                        {common("save")}
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {common("remove")}
                       </Button>
                     </div>
                   </div>

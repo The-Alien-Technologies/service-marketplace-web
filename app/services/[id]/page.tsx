@@ -11,7 +11,6 @@ import { ReviewSummary } from "@/components/sections/service-detail/review-summa
 import { RecentReviews } from "@/components/sections/service-detail/recent-reviews";
 import { ServiceProviderBadge } from "@/components/sections/service-detail/service-provider-badge";
 import { PricingPlans } from "@/components/sections/service-detail/pricing-plans";
-import { mockPopularCategories } from "@/lib/mock-categories";
 import { CategoryCarousel } from "@/components/sections/carousels/category-carousel";
 import { AppDownloadSection } from "@/components/sections/home/app-download-section";
 import { useEffect, useState } from "react";
@@ -24,6 +23,7 @@ import {
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useCategories } from "@/store/categories-store";
 
 export default function ServiceDetailPage({
   params,
@@ -33,6 +33,7 @@ export default function ServiceDetailPage({
   const t = useTranslations("Marketplace");
   const common = useTranslations("Common");
   const { id: serviceId } = use(params);
+  const { featuredCategories, topLevelCategories } = useCategories();
 
   const [service, setService] = useState<Service | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,7 +148,7 @@ export default function ServiceDetailPage({
       avatar: service.provider?.avatar || "/assets/temp/user/u1.jpg",
       title: t("serviceProviderTitle"), // TODO: Add title to provider profile
       location: service.market?.name || service.currency,
-      rating: 0, // TODO: Implement rating
+      rating: reviewData.summary.average,
       isPro: false, // TODO: Implement pro status
     },
     pricingPlans:
@@ -217,7 +218,7 @@ export default function ServiceDetailPage({
               location={serviceData.provider.location}
               rating={serviceData.provider.rating}
               isPro={serviceData.provider.isPro}
-              isOnline={true}
+              isOnline={false}
             />
 
             {/* Pricing Plans */}
@@ -234,14 +235,22 @@ export default function ServiceDetailPage({
         </div>
       </div>
 
-      <CategoryCarousel
-        categories={mockPopularCategories}
-        title={t("popularService")}
-        onCategoryClick={(category) => {
-          // Navigate to category page
-          globalThis.location.href = `/categories/${category.id}`;
-        }}
-      />
+      {(featuredCategories.length > 0 || topLevelCategories.length > 0) && (
+        <CategoryCarousel
+          categories={(featuredCategories.length > 0
+            ? featuredCategories
+            : topLevelCategories
+          ).map((category) => ({
+            id: category.id,
+            name: category.name,
+            image: category.imageUrl || "/assets/temp/products/p1.jpg",
+          }))}
+          title={t("popularService")}
+          onCategoryClick={(category) => {
+            globalThis.location.href = `/categories/${category.id}`;
+          }}
+        />
+      )}
 
       {/* App Download Section */}
       <AppDownloadSection />

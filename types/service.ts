@@ -40,6 +40,9 @@ export interface Service {
   marketId: string;
   currency: string;
   availability: ServiceAvailability;
+  averageRating?: number;
+  reviewCount?: number;
+  orderCount?: number;
 
   // Relations
   plans: ServicePlan[];

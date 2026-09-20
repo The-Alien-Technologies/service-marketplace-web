@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -50,7 +50,10 @@ export function SuperAdminMarkets() {
     setLoadError(false);
     try {
       const [marketData, integrationData] = await Promise.all([
-        apiService.getAllMarkets(),
+        apiService.getAllMarkets({
+          search: search.trim() || undefined,
+          status: status === "ALL" ? undefined : status,
+        }),
         apiService.getPaymentIntegrations(),
       ]);
       setMarkets(marketData);
@@ -63,21 +66,14 @@ export function SuperAdminMarkets() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [search, status, t]);
 
-  useEffect(() => void refresh(), [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 300);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
-  const filteredMarkets = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return markets.filter((market) => {
-      const matchesSearch =
-        !term ||
-        market.name.toLowerCase().includes(term) ||
-        market.code.toLowerCase().includes(term) ||
-        market.currency.toLowerCase().includes(term);
-      return matchesSearch && (status === "ALL" || market.status === status);
-    });
-  }, [markets, search, status]);
+  const filteredMarkets = markets;
 
   const integrationFor = (marketId: string) =>
     integrations.find((integration) => integration.market.id === marketId);

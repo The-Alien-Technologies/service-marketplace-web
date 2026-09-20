@@ -75,17 +75,21 @@ export default function MyQuotesPage() {
   const fetchQuotes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiService.getClientQuotes();
+      const data = await apiService.getClientQuotes({
+        status: activeTab ?? undefined,
+        search: search.trim() || undefined,
+      });
       setQuotes(data);
     } catch {
       toast.error(t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [activeTab, search, t]);
 
   useEffect(() => {
-    fetchQuotes();
+    const timer = window.setTimeout(() => void fetchQuotes(), 300);
+    return () => window.clearTimeout(timer);
   }, [fetchQuotes]);
 
   const handleRespond = async (
@@ -111,16 +115,6 @@ export default function MyQuotesPage() {
       });
     }
   };
-
-  const filtered = quotes.filter((q) => {
-    const matchesTab = activeTab ? q.status === activeTab : true;
-    const matchesSearch =
-      !search ||
-      q.projectTitle.toLowerCase().includes(search.toLowerCase()) ||
-      q.provider.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      q.provider.lastName.toLowerCase().includes(search.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
 
   return (
     <div className="space-y-8">
@@ -164,13 +158,13 @@ export default function MyQuotesPage() {
         <div className="flex justify-center items-center py-24">
           <Loader2 className="w-8 h-8 animate-spin text-green-600" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : quotes.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-12 text-center text-gray-500">
           {t("noRequests")}
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((quote) => {
+          {quotes.map((quote) => {
             const styles = STATUS_STYLES[quote.status];
             const label = getStatusLabel(quote.status);
             const hasOffer = quote.status === "PENDING";

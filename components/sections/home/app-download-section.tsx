@@ -5,6 +5,12 @@ import {useTranslations} from "next-intl";
 
 export function AppDownloadSection() {
   const t = useTranslations("Home");
+  const googlePlayUrl = process.env.NEXT_PUBLIC_GOOGLE_PLAY_URL;
+  const appStoreUrl = process.env.NEXT_PUBLIC_APP_STORE_URL;
+  const badges = [
+    {url: googlePlayUrl, src: "/assets/site-images/playstore_badge.png", label: t("googlePlay")},
+    {url: appStoreUrl, src: "/assets/site-images/app_store_badge.png", label: t("appStore")},
+  ];
   return (
     <section className="relative bg-gradient-to-br from-[#1a3a2e] to-[#0d1f1a] dark:from-gray-900 dark:to-gray-950 overflow-hidden md:mb-[96px]">
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
@@ -44,33 +50,28 @@ export function AppDownloadSection() {
             </p>
 
             {/* App Store Badges */}
-            <div className="flex flex-wrap gap-4 pt-2">
-              <a
-                href="#"
-                className="inline-block transition-transform hover:scale-105"
-                aria-label={t("googlePlay")}
-              >
-                <Image
-                  src="/assets/site-images/playstore_badge.png"
-                  alt={t("googlePlay")}
-                  width={150}
-                  height={45}
-                  className="h-[45px] w-auto"
-                />
-              </a>
-              <a
-                href="#"
-                className="inline-block transition-transform hover:scale-105"
-                aria-label={t("appStore")}
-              >
-                <Image
-                  src="/assets/site-images/app_store_badge.png"
-                  alt={t("appStore")}
-                  width={150}
-                  height={45}
-                  className="h-[45px] w-auto"
-                />
-              </a>
+            <div className="pt-2">
+              <div className="flex flex-wrap gap-4">
+                {badges.map((badge) =>
+                  badge.url ? (
+                    <a
+                      key={badge.label}
+                      href={badge.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block transition-transform hover:scale-105"
+                      aria-label={badge.label}
+                    >
+                      <Image src={badge.src} alt={badge.label} width={150} height={45} className="h-[45px] w-auto" />
+                    </a>
+                  ) : (
+                    <Image key={badge.label} src={badge.src} alt={badge.label} width={150} height={45} className="h-[45px] w-auto opacity-65" />
+                  ),
+                )}
+              </div>
+              {(!googlePlayUrl || !appStoreUrl) && (
+                <p className="mt-3 text-sm text-white/70">{t("mobileAppsComingSoon")}</p>
+              )}
             </div>
           </div>
         </div>

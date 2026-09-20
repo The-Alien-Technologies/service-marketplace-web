@@ -401,22 +401,6 @@ export default function AdminPayoutsPage() {
     }
   };
 
-  const filteredPayouts = payouts.filter((payout) => {
-    const term = search.trim().toLowerCase();
-    if (!term) return true;
-    const providerName =
-      payout.provider?.displayName ||
-      `${payout.provider?.firstName || ""} ${payout.provider?.lastName || ""}`;
-    return [
-      payout.reference,
-      payout.institutionName,
-      providerName,
-      payout.provider?.email,
-    ]
-      .filter(Boolean)
-      .some((value) => value!.toLowerCase().includes(term));
-  });
-
   const tabs: Array<{ id: Tab; label: string; count: number }> = [
     {
       id: "requests",
@@ -555,7 +539,7 @@ export default function AdminPayoutsPage() {
             />
           </div>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            {filteredPayouts.length === 0 ? (
+            {payouts.length === 0 ? (
               <QueueEmpty
                 icon={WalletCards}
                 title="No payout requests"
@@ -563,7 +547,7 @@ export default function AdminPayoutsPage() {
               />
             ) : (
               <div className="divide-y divide-gray-100">
-                {filteredPayouts.map((payout) => {
+                {payouts.map((payout) => {
                   const meta = payoutMeta[payout.status];
                   const providerName =
                     payout.provider?.displayName ||

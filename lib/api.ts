@@ -230,6 +230,27 @@ class ApiService {
     return response.data;
   }
 
+  async updateAvatar(avatar: File): Promise<{ user: User }> {
+    const formData = new FormData();
+    formData.append("avatar", avatar);
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    throwIfSessionExpired(response.status, Boolean(token));
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || payload.error || "Could not update profile picture");
+    }
+    return payload.data;
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.request("/auth/account", { method: "DELETE" });
+  }
+
   async getOnboardingStatus(): Promise<OnboardingStatus> {
     const response = await this.request<OnboardingStatus>("/onboarding/status");
     return response.data;
@@ -241,8 +262,16 @@ class ApiService {
     return response.data;
   }
 
-  async getAllMarkets(): Promise<Market[]> {
-    const response = await this.request<Market[]>("/markets/admin/all");
+  async getAllMarkets(filters?: {
+    search?: string;
+    status?: Market["status"];
+  }): Promise<Market[]> {
+    const params = new URLSearchParams();
+    if (filters?.search) params.set("search", filters.search);
+    if (filters?.status) params.set("status", filters.status);
+    const response = await this.request<Market[]>(
+      `/markets/admin/all${params.size ? `?${params}` : ""}`,
+    );
     return response.data;
   }
 
@@ -459,10 +488,16 @@ class ApiService {
 
   async getCategories(
     includeInactive = false,
+    filters?: { search?: string; featured?: boolean },
   ): Promise<{ categories: Category[] }> {
-    const endpoint = includeInactive
-      ? "/categories?includeInactive=true"
-      : "/categories";
+    const params = new URLSearchParams();
+    if (includeInactive) params.set("includeInactive", "true");
+    if (filters?.search) params.set("search", filters.search);
+    if (filters?.featured !== undefined) {
+      params.set("featured", String(filters.featured));
+    }
+    const query = params.toString();
+    const endpoint = `/categories${query ? `?${query}` : ""}`;
     const response = await this.request<Category[]>(endpoint);
     return { categories: response.data };
   }
@@ -812,6 +847,8 @@ class ApiService {
     page?: number;
     limit?: number;
     market?: string;
+    search?: string;
+    sortBy?: "recent" | "popular";
   }): Promise<{
     services: Service[];
     total: number;
@@ -825,6 +862,8 @@ class ApiService {
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
     if (options?.market) params.append("market", options.market);
+    if (options?.search) params.append("search", options.search);
+    if (options?.sortBy) params.append("sortBy", options.sortBy);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -839,9 +878,11 @@ class ApiService {
 
   async getMyServices(options?: {
     status?: ServiceStatus;
+    categoryId?: string;
     page?: number;
     limit?: number;
     marketId?: string;
+    search?: string;
   }): Promise<{
     services: Service[];
     total: number;
@@ -851,9 +892,11 @@ class ApiService {
   }> {
     const params = new URLSearchParams();
     if (options?.status) params.append("status", options.status);
+    if (options?.categoryId) params.append("categoryId", options.categoryId);
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
     if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.search) params.append("search", options.search);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -873,6 +916,7 @@ class ApiService {
     page?: number;
     limit?: number;
     marketId?: string;
+    search?: string;
   }): Promise<{
     services: Service[];
     total: number;
@@ -887,6 +931,7 @@ class ApiService {
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
     if (options?.marketId) params.append("marketId", options.marketId);
+    if (options?.search) params.append("search", options.search);
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{
@@ -1852,17 +1897,30 @@ class ApiService {
     return json.data.quote;
   }
 
-  async getProviderQuotes(status?: string): Promise<QuoteRequest[]> {
-    const query = status ? `?status=${status}` : "";
+  async getProviderQuotes(options?: {
+    status?: string;
+    search?: string;
+  }): Promise<QuoteRequest[]> {
+    const params = new URLSearchParams();
+    if (options?.status) params.set("status", options.status);
+    if (options?.search) params.set("search", options.search);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{ quotes: QuoteRequest[] }>(
       `/quotes/provider${query}`,
     );
     return response.data.quotes;
   }
 
-  async getClientQuotes(): Promise<QuoteRequest[]> {
+  async getClientQuotes(options?: {
+    status?: string;
+    search?: string;
+  }): Promise<QuoteRequest[]> {
+    const params = new URLSearchParams();
+    if (options?.status) params.set("status", options.status);
+    if (options?.search) params.set("search", options.search);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const response = await this.request<{ quotes: QuoteRequest[] }>(
-      "/quotes/client",
+      `/quotes/client${query}`,
     );
     return response.data.quotes;
   }
@@ -2157,14 +2215,35 @@ class ApiService {
     });
   }
 
-  async getAdminDisputes(status?: string) {
-    const qs = status ? `?status=${status}` : "";
+  async getAdminDisputes(filters?: {
+    status?: string;
+    priority?: string;
+    issueType?: string;
+    search?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.priority) params.set("priority", filters.priority);
+    if (filters?.issueType) params.set("issueType", filters.issueType);
+    if (filters?.search) params.set("search", filters.search);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await this.request<Dispute[]>(`/disputes${qs}`);
     return result.data;
   }
 
-  async getMyDisputes() {
-    const result = await this.request<Dispute[]>("/disputes/my");
+  async getMyDisputes(filters?: {
+    status?: string;
+    priority?: string;
+    issueType?: string;
+    search?: string;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.priority) params.set("priority", filters.priority);
+    if (filters?.issueType) params.set("issueType", filters.issueType);
+    if (filters?.search) params.set("search", filters.search);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const result = await this.request<Dispute[]>(`/disputes/my${query}`);
     return result.data;
   }
 

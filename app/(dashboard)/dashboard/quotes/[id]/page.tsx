@@ -181,6 +181,19 @@ export default function QuoteDetailPage({
     setIsChatOpen(true);
   };
 
+  const handleCancelQuote = async () => {
+    setIsActionLoading(true);
+    try {
+      const updated = await apiService.updateQuoteStatus(id, "EXPIRED");
+      setQuote(updated);
+      toast.success(t("quoteCancelled"));
+    } catch {
+      toast.error(t("cancelFailed"));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -376,12 +389,19 @@ export default function QuoteDetailPage({
 
             {isPending && (
               <div className="pt-4 flex items-center gap-3">
-                <Button className="bg-gray-900 hover:bg-gray-800 text-white font-medium min-w-[120px] rounded-lg">
+                <Button
+                  className="bg-gray-900 hover:bg-gray-800 text-white font-medium min-w-[120px] rounded-lg"
+                  onClick={handleCancelQuote}
+                  disabled={isActionLoading}
+                >
+                  {isActionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {t("cancelQuote")}
                 </Button>
                 <Button
                   variant="outline"
                   className="text-gray-700 border-gray-200 hover:bg-gray-50 gap-2 font-medium rounded-lg"
+                  onClick={handleMessageClient}
+                  disabled={isActionLoading}
                 >
                   <Mail className="w-4 h-4" />
                   {t("messageClient")}

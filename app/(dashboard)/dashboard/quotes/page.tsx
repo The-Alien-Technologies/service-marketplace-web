@@ -8,7 +8,6 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -156,17 +155,21 @@ export default function QuoteRequestsPage() {
   const fetchQuotes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await apiService.getProviderQuotes(activeTab ?? undefined);
+      const data = await apiService.getProviderQuotes({
+        status: activeTab ?? undefined,
+        search: globalFilter.trim() || undefined,
+      });
       setQuotes(data);
     } catch (err) {
       console.error("Failed to load quote requests", err);
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, globalFilter]);
 
   useEffect(() => {
-    fetchQuotes();
+    const timer = window.setTimeout(() => void fetchQuotes(), 300);
+    return () => window.clearTimeout(timer);
   }, [fetchQuotes]);
 
   const table = useReactTable({
@@ -175,10 +178,8 @@ export default function QuoteRequestsPage() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting, globalFilter },
+    state: { sorting },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
   });
 
   return (

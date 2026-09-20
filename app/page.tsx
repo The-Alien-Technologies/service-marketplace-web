@@ -50,14 +50,14 @@ export default function Home() {
         providerName: providerName,
         providerAvatar:
           service.provider?.avatar || "/assets/temp/user/u1.jpg",
-        isPro: false, // TODO: Add pro status later
-        isOnline: false, // TODO: Add online status later
+        isPro: false,
+        isOnline: false,
         serviceImage: service.coverImage || "/assets/temp/products/p1.jpg",
         description: service.title,
         price: marketplace("from", {
           price: formatMoney(minPrice, service.currency, service.market?.locale),
         }),
-        rating: 0, // TODO: Add rating system later
+        rating: service.averageRating ?? 0,
       };
     },
     [common, marketplace],
@@ -70,19 +70,23 @@ export default function Home() {
         setIsLoadingServices(true);
 
         // Fetch published services sorted by creation date
-        const response = await apiService.getServices({
-          status: "PUBLISHED",
-          limit: 10,
-          market: selectedMarketCode,
-        });
+        const [popularResponse, recentResponse] = await Promise.all([
+          apiService.getServices({
+            status: "PUBLISHED",
+            limit: 10,
+            market: selectedMarketCode,
+            sortBy: "popular",
+          }),
+          apiService.getServices({
+            status: "PUBLISHED",
+            limit: 10,
+            market: selectedMarketCode,
+            sortBy: "recent",
+          }),
+        ]);
 
-        const transformedServices = response.services.map(
-          transformServiceToCard,
-        );
-
-        // Use same data for both sections for now
-        setBestsellers(transformedServices);
-        setMostViewed(transformedServices);
+        setBestsellers(popularResponse.services.map(transformServiceToCard));
+        setMostViewed(recentResponse.services.map(transformServiceToCard));
       } catch (error) {
         console.error("Failed to fetch services:", error);
         // Keep empty arrays on error
@@ -140,9 +144,9 @@ export default function Home() {
       {!isLoadingServices && mostViewed.length > 0 && (
         <ServiceCarousel
           services={mostViewed}
-          title={t("mostViewed")}
+          title={t("recentlyAdded")}
           showAllLink={{
-            text: t("seeMostViewed"),
+              text: t("seeRecentlyAdded"),
             onClick: () => router.push("/services"),
           }}
           onServiceClick={(service) => router.push(`/services/${service.id}`)}
@@ -162,10 +166,6 @@ export default function Home() {
           />
         </div>
       )}
-
-      {/* Get Inspired Section */}
-      {/* TODO: Integrate with real service portfolio images */}
-      {/* <GetInspiredSection inspirations={mockInspirations} /> */}
 
       {/* App Download Section */}
       <AppDownloadSection />

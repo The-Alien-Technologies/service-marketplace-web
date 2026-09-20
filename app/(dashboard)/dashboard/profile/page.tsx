@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { ChangeEvent, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   User as UserIcon,
@@ -36,6 +37,18 @@ import {
   SUPPORTED_LANGUAGES,
 } from "@/lib/languages";
 import {useTranslations} from "next-intl";
+import {
+  PhoneVerification,
+  PhoneVerificationStep,
+} from "@/components/ui/phone-verification";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Inline Switch Component
 function Switch({
@@ -72,9 +85,16 @@ function Switch({
 export default function ProfileSettingsPage() {
   const t = useTranslations("Profile");
   const auth = useTranslations("Auth");
-  const { user: storedUser, setUser } = useAuthStore();
+  const { user: storedUser, setUser, signOut } = useAuthStore();
+  const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [phoneVerificationStep, setPhoneVerificationStep] =
+    useState<PhoneVerificationStep>("input");
 
   // Edit States
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -198,8 +218,43 @@ export default function ProfileSettingsPage() {
     }
   };
 
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("avatarImageRequired"));
+      return;
+    }
+    try {
+      setIsUploadingAvatar(true);
+      const { user } = await apiService.updateAvatar(file);
+      setUser(user);
+      toast.success(t("avatarUpdated"));
+    } catch (error) {
+      toast.error((error as Error).message || t("avatarUpdateFailed"));
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeleting(true);
+      await apiService.deleteAccount();
+      signOut();
+      toast.success(t("accountDeleted"));
+      router.replace("/");
+    } catch (error) {
+      toast.error((error as Error).message || t("deleteFailed"));
+      setIsDeleting(false);
+    }
+  };
+
   const passwordsMatch =
     !passwordForm.confirm || passwordForm.new === passwordForm.confirm;
+  const phoneChanged =
+    personalForm.phoneNumber !== ((storedUser as any)?.phoneNumber || "");
 
   if (!storedUser && isLoading) {
     return (
@@ -271,9 +326,21 @@ export default function ProfileSettingsPage() {
               <Button
                 variant="outline"
                 className="text-gray-700 border-gray-200 h-9 px-4 rounded-lg bg-white"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
               >
-                Change picture
+                {isUploadingAvatar ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {isUploadingAvatar ? t("uploadingPicture") : t("changePicture")}
               </Button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={handleAvatarChange}
+              />
               {!storedUser.isServiceProviderVerified && (
                 <span className="text-sm font-medium text-orange-500 flex items-center gap-1.5">
                   Pending{" "}
@@ -291,7 +358,12 @@ export default function ProfileSettingsPage() {
               </h3>
               {!isEditingPersonal ? (
                 <button
-                  onClick={() => setIsEditingPersonal(true)}
+                  onClick={() => {
+                    setPhoneVerificationStep(
+                      storedUser.phoneVerified ? "verified" : "input",
+                    );
+                    setIsEditingPersonal(true);
+                  }}
                   className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-900"
                 >
                   <Pencil className="w-4 h-4" />
@@ -317,9 +389,18 @@ export default function ProfileSettingsPage() {
                   <Button
                     size="sm"
                     onClick={() =>
-                      handleUpdateProfile(personalForm, "personal")
+                      handleUpdateProfile(
+                        {
+                          firstName: personalForm.firstName,
+                          lastName: personalForm.lastName,
+                        },
+                        "personal",
+                      )
                     }
-                    disabled={isLoading}
+                    disabled={
+                      isLoading ||
+                      (phoneChanged && phoneVerificationStep !== "verified")
+                    }
                   >
                     Save
                   </Button>
@@ -364,16 +445,17 @@ export default function ProfileSettingsPage() {
                 <div className="flex min-w-0 items-center gap-3">
                   <Phone className="w-5 h-5 text-gray-400 shrink-0" />
                   {isEditingPersonal ? (
-                    <Input
+                    <PhoneVerification
                       value={personalForm.phoneNumber}
-                      onChange={(e) =>
+                      onChange={(phoneNumber) =>
                         setPersonalForm({
                           ...personalForm,
-                          phoneNumber: e.target.value,
+                          phoneNumber,
                         })
                       }
-                      placeholder="Phone Number"
-                      className="max-w-xs"
+                      onVerificationChange={setPhoneVerificationStep}
+                      initiallyVerified={Boolean(storedUser.phoneVerified)}
+                      required
                     />
                   ) : (
                     <span className="text-sm text-gray-900 font-medium">
@@ -884,10 +966,43 @@ export default function ProfileSettingsPage() {
                   </li>
                 ))}
               </ul>
+              <Button
+                variant="outline"
+                className="mt-5 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("deleteAccount")}
+              </Button>
             </div>
           </div>
         </div>
       )}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteConfirmBody")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              {t("keepAccount")}
+            </Button>
+            <Button
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("confirmDelete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

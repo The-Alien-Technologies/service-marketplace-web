@@ -17,7 +17,6 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
-  Filter,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
@@ -50,6 +49,7 @@ import { formatMoney } from "@/lib/money";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { marketDisplayName } from "@/lib/market-display";
 import { useMarketStore } from "@/store/market-store";
+import { exportCsv } from "@/lib/csv";
 
 // --- Types ---
 
@@ -557,6 +557,35 @@ function AdminOrders() {
     onPaginationChange: setPagination,
   });
 
+  const handleExport = () => {
+    const visibleRows = table.getRowModel().rows.map((row) => row.original);
+    const exportRows = visibleRows.map((item: any) => {
+      if (activeTab === "Transactions") {
+        return {
+          reference: item.reference,
+          user: item.user?.displayName || item.user?.email,
+          amount: item.amount,
+          currency: item.currency,
+          status: item.status,
+          channel: item.channel,
+          createdAt: item.createdAt,
+        };
+      }
+      return {
+        orderNumber: item.orderNumber,
+        service: item.service?.title,
+        client: item.client?.displayName,
+        provider: item.provider?.displayName || item.service?.provider?.displayName,
+        total: item.total,
+        currency: item.currency,
+        status: item.status,
+        paymentStatus: item.paymentStatus,
+        createdAt: item.createdAt,
+      };
+    });
+    exportCsv(`pavodah-${activeTab.toLowerCase().replace(/\s+/g, "-")}.csv`, exportRows);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header Section */}
@@ -640,17 +669,12 @@ function AdminOrders() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center md:gap-3">
+        <div className="w-full md:w-auto">
           <Button
             variant="outline"
-            className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            {t("filters")}
-          </Button>
-          <Button
-            variant="outline"
-            className="text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2"
+            className="w-full text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2 md:w-auto"
+            onClick={handleExport}
+            disabled={table.getRowModel().rows.length === 0}
           >
             <Download className="w-4 h-4" />
             {t("exportData")}

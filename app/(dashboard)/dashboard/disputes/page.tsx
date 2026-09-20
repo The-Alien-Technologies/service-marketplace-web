@@ -6,7 +6,6 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -14,7 +13,6 @@ import {
 import Link from "next/link";
 import {
   Search,
-  Filter,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
@@ -36,6 +34,7 @@ import { apiService } from "@/lib/api";
 import { Dispute } from "@/types/dispute";
 import { useAuthStore } from "@/store/auth-store";
 import { useFormatter, useTranslations } from "next-intl";
+import { exportCsv } from "@/lib/csv";
 
 // --- Column Helper ---
 
@@ -235,6 +234,9 @@ export default function DisputesPage() {
   const user = useAuthStore((state) => state.user);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [issueFilter, setIssueFilter] = useState("");
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -243,18 +245,29 @@ export default function DisputesPage() {
     try {
       const data =
         user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
-          ? await apiService.getAdminDisputes()
-          : await apiService.getMyDisputes();
+          ? await apiService.getAdminDisputes({
+              status: statusFilter || undefined,
+              priority: priorityFilter || undefined,
+              issueType: issueFilter || undefined,
+              search: globalFilter.trim() || undefined,
+            })
+          : await apiService.getMyDisputes({
+              status: statusFilter || undefined,
+              priority: priorityFilter || undefined,
+              issueType: issueFilter || undefined,
+              search: globalFilter.trim() || undefined,
+            });
       setDisputes(data ?? []);
     } catch {
       setDisputes([]);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.role]);
+  }, [globalFilter, issueFilter, priorityFilter, statusFilter, user?.role]);
 
   useEffect(() => {
-    fetchDisputes();
+    const timer = window.setTimeout(() => void fetchDisputes(), 300);
+    return () => window.clearTimeout(timer);
   }, [fetchDisputes]);
 
   const table = useReactTable({
@@ -263,11 +276,26 @@ export default function DisputesPage() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting, globalFilter },
+    state: { sorting },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
   });
+
+  const handleExport = () => {
+    exportCsv(
+      "pavodah-disputes.csv",
+      table.getRowModel().rows.map(({ original }) => ({
+        id: original.id,
+        orderNumber: original.order.orderNumber,
+        service: original.order.service.title,
+        client: `${original.client.firstName} ${original.client.lastName}`.trim(),
+        provider: `${original.provider.firstName} ${original.provider.lastName}`.trim(),
+        issueType: original.issueType,
+        priority: original.priority,
+        status: original.status,
+        createdAt: original.createdAt,
+      })),
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -281,8 +309,8 @@ export default function DisputesPage() {
         </p>
       </div>
 
-      {/* Search and Actions */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+      {/* Server-side filters and actions */}
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
         <div className="relative w-full md:max-w-md md:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
@@ -292,17 +320,51 @@ export default function DisputesPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center md:gap-3">
-          <Button
-            variant="outline"
-            className="text-gray-700 border-gray-200 bg-white hover:bg-gray-50 gap-2"
+        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label={t("filterStatus")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
           >
-            <Filter className="w-4 h-4" />
-            {t("filters")}
-          </Button>
+            <option value="">{t("allStatuses")}</option>
+            <option value="OPEN">{t("open")}</option>
+            <option value="INVESTIGATING">{t("investigating")}</option>
+            <option value="RESOLVED">{t("resolved")}</option>
+            <option value="CLOSED">{t("closed")}</option>
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(event) => setPriorityFilter(event.target.value)}
+            aria-label={t("filterPriority")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allPriorities")}</option>
+            <option value="LOW">{t("low")}</option>
+            <option value="MEDIUM">{t("medium")}</option>
+            <option value="HIGH">{t("high")}</option>
+          </select>
+          <select
+            value={issueFilter}
+            onChange={(event) => setIssueFilter(event.target.value)}
+            aria-label={t("filterIssue")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allIssues")}</option>
+            <option value="LATE_DELIVERY">{t("issueLateDelivery")}</option>
+            <option value="NON_DELIVERY">{t("issueNonDelivery")}</option>
+            <option value="QUALITY_ISSUE">{t("issueQuality")}</option>
+            <option value="PAYMENT_DISPUTE">{t("issuePayment")}</option>
+            <option value="MISCOMMUNICATION">{t("issueCommunication")}</option>
+            <option value="OTHER">{t("issueOther")}</option>
+          </select>
+        </div>
+        <div className="w-full md:w-auto">
           <Button
             variant="outline"
-            className="text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2"
+            className="w-full text-green-700 border-green-100 bg-green-50 hover:bg-green-100 gap-2 md:w-auto"
+            onClick={handleExport}
+            disabled={table.getRowModel().rows.length === 0}
           >
             <Download className="w-4 h-4" />
             {t("exportData")}

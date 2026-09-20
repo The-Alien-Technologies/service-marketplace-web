@@ -9,8 +9,6 @@ import { Pagination } from "@/components/ui/pagination";
 import { HorizontalSeparator } from "@/components/layout/horizontal-separator";
 import { ServiceCarousel } from "@/components/sections/carousels/service-carousel";
 import { AppDownloadSection } from "@/components/sections/home/app-download-section";
-import { GetInspiredSection } from "@/components/sections/home/get-inspired-section";
-import { mockInspirations } from "@/lib/mock-inspirations";
 
 import { apiService } from "@/lib/api";
 import { Service } from "@/types/service";
@@ -212,8 +210,8 @@ export default function CategoryPage({
                       ),
                     })
                   : t("priceOnRequest"),
-                rating: 0, // TODO: Add to API
-                isOnline: true, // TODO: Add to API
+                rating: service.averageRating ?? 0,
+                isOnline: false,
               }))}
             />
           ) : (
@@ -258,13 +256,13 @@ export default function CategoryPage({
                     ),
                   })
                 : t("priceOnRequest"),
-              rating: 0,
-              isOnline: true,
+              rating: service.averageRating ?? 0,
+              isOnline: false,
             }))}
             title={t("youMayLike")}
             showAllLink={{
               text: t("showAll"),
-              onClick: () => console.log("Show all services"),
+              onClick: () => (globalThis.location.href = "/services"),
             }}
             onServiceClick={(service) =>
               (globalThis.location.href = `/services/${service.id}`)
@@ -275,8 +273,6 @@ export default function CategoryPage({
         {/* App Download Section */}
         <AppDownloadSection />
 
-        {/* Get Inspired Section */}
-        <GetInspiredSection inspirations={mockInspirations} />
       </main>
 
       <Footer />

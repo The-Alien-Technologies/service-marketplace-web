@@ -3,9 +3,11 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {useTranslations} from "next-intl";
+import { useRouter } from "next/navigation";
 
 export function MomentsSection() {
   const t = useTranslations("Home");
+  const router = useRouter();
   return (
     <section className="relative py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 overflow-hidden">
       {/* Background Pattern/Image */}
@@ -33,6 +35,7 @@ export function MomentsSection() {
 
             <div className="lg:mt-[35px]">
               <Button
+                onClick={() => router.push("/services")}
                 size="lg"
                 className="bg-brand-900 hover:bg-brand-700 text-white px-8 py-6 text-base md:text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
               >

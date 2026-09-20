@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Loader2,
@@ -88,7 +88,11 @@ export function CountryAdministrators({
     setLoadError(false);
     try {
       const [adminData, marketData] = await Promise.all([
-        apiService.getCountryAdministrators(),
+        apiService.getCountryAdministrators({
+          search: search.trim() || undefined,
+          marketId: marketFilter === "ALL" ? undefined : marketFilter,
+          status: statusFilter === "ALL" ? undefined : statusFilter,
+        }),
         apiService.getAllMarkets(),
       ]);
       setAdministrators(adminData);
@@ -101,9 +105,12 @@ export function CountryAdministrators({
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [marketFilter, search, statusFilter, t]);
 
-  useEffect(() => void refresh(), [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 300);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
   useEffect(() => {
     const query = candidateQuery.trim();
@@ -133,20 +140,7 @@ export function CountryAdministrators({
     return () => window.clearTimeout(timer);
   }, [addOpen, candidateQuery, t]);
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return administrators.filter((admin) => {
-      const matchesSearch =
-        !term ||
-        displayName(admin).toLowerCase().includes(term) ||
-        admin.email.toLowerCase().includes(term);
-      const matchesMarket =
-        marketFilter === "ALL" || admin.adminMarketId === marketFilter;
-      const matchesStatus =
-        statusFilter === "ALL" || admin.status === statusFilter;
-      return matchesSearch && matchesMarket && matchesStatus;
-    });
-  }, [administrators, marketFilter, search, statusFilter]);
+  const filtered = administrators;
 
   const updateAdmin = async (
     admin: CountryAdministrator,

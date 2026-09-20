@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -100,6 +99,7 @@ export default function CategoriesPage() {
 
   // API state
   const [categories, setCategories] = useState<Category[]>([]);
+  const [parentCategories, setParentCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const invalidateGlobalCache = useCategoriesStore(
@@ -113,10 +113,13 @@ export default function CategoriesPage() {
     });
 
   // Fetch categories
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getCategories(true); // Include inactive for admin
+      const response = await apiService.getCategories(true, {
+        search: globalFilter.trim() || undefined,
+        featured: activeTab === "Featured" ? true : undefined,
+      });
       setCategories(response.categories);
     } catch (err) {
       toast.error(
@@ -125,11 +128,25 @@ export default function CategoriesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, globalFilter]);
+
+  const fetchParentCategories = useCallback(async () => {
+    try {
+      const response = await apiService.getCategories(true);
+      setParentCategories(response.categories);
+    } catch {
+      setParentCategories([]);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    const timer = window.setTimeout(() => void fetchCategories(), 300);
+    return () => window.clearTimeout(timer);
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    void fetchParentCategories();
+  }, [fetchParentCategories]);
 
   // Transform categories to table format
   const categoryTableData: CategoryTableRow[] = useMemo(() => {
@@ -137,7 +154,7 @@ export default function CategoriesPage() {
       id: cat.id,
       name: cat.name,
       subCategories: cat.subCategories?.length || 0,
-      activeListings: 0, // This would come from services count
+      activeListings: cat._count?.services ?? 0,
       isFeatured: cat.featured,
       imageUrl: cat.imageUrl,
       createdAt: cat.createdAt
@@ -151,9 +168,7 @@ export default function CategoriesPage() {
   }, [categories]);
 
   const featuredCategories = useMemo(() => {
-    return categoryTableData
-      .filter((cat) => cat.isFeatured)
-      .map((cat, index) => ({
+    return categoryTableData.map((cat, index) => ({
         ...cat,
         displayOrder: `#${index + 1}`,
       }));
@@ -218,6 +233,7 @@ export default function CategoriesPage() {
       setIsAddCategoryOpen(false);
       resetForm();
       fetchCategories();
+      fetchParentCategories();
       invalidateGlobalCache(); // Refresh cache for other components
       toast.success(
         isEditMode
@@ -234,19 +250,22 @@ export default function CategoriesPage() {
   };
 
   // Handle edit
-  const handleEdit = (category: CategoryTableRow) => {
-    const fullCategory = categories.find((c) => c.id === category.id);
-    if (fullCategory) {
-      setEditingCategory(fullCategory);
-      setFormName(fullCategory.name);
-      setFormDescription(fullCategory.description || "");
-      setFormParentCategoryId(fullCategory.parentCategoryId || "");
-      setIsFeatured(fullCategory.featured);
-      setImagePreview(fullCategory.imageUrl || null);
-      setIsEditMode(true);
-      setIsAddCategoryOpen(true);
-    }
-  };
+  const handleEdit = useCallback(
+    (category: CategoryTableRow) => {
+      const fullCategory = categories.find((c) => c.id === category.id);
+      if (fullCategory) {
+        setEditingCategory(fullCategory);
+        setFormName(fullCategory.name);
+        setFormDescription(fullCategory.description || "");
+        setFormParentCategoryId(fullCategory.parentCategoryId || "");
+        setIsFeatured(fullCategory.featured);
+        setImagePreview(fullCategory.imageUrl || null);
+        setIsEditMode(true);
+        setIsAddCategoryOpen(true);
+      }
+    },
+    [categories],
+  );
 
   // Handle delete - show confirmation modal
   const openDeleteDialog = (id: string) => {
@@ -262,6 +281,7 @@ export default function CategoriesPage() {
       await apiService.deleteCategory(categoryToDelete);
       toast.success(t("categoryDeleted"));
       fetchCategories();
+      fetchParentCategories();
       invalidateGlobalCache(); // Refresh cache for other components
     } catch (err) {
       toast.error(
@@ -273,6 +293,21 @@ export default function CategoriesPage() {
       setCategoryToDelete(null);
     }
   };
+
+  const handleRemoveFeatured = useCallback(
+    async (category: CategoryTableRow) => {
+      try {
+        await apiService.updateCategory(category.id, { featured: false });
+        toast.success(t("featuredRemoved"));
+        await Promise.all([fetchCategories(), fetchParentCategories()]);
+        invalidateGlobalCache();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : t("categoryUpdateFailed"),
+        );
+      }
+    }, [fetchCategories, fetchParentCategories, invalidateGlobalCache, t],
+  );
 
   // --- Column Definitions ---
   const categoryColumns = useMemo(
@@ -361,7 +396,7 @@ export default function CategoriesPage() {
         meta: { align: "right" },
       }),
     ],
-    [categories]
+    [handleEdit]
   );
 
   const featuredColumns = useMemo(
@@ -408,10 +443,11 @@ export default function CategoriesPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                <DropdownMenuItem
+                  onClick={() => void handleRemoveFeatured(row.original)}
+                >
                   Remove from Featured
                 </DropdownMenuItem>
-                <DropdownMenuItem>Edit Order</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -419,7 +455,7 @@ export default function CategoriesPage() {
         meta: { align: "right" },
       }),
     ],
-    []
+    [handleRemoveFeatured]
   );
 
   // --- Table Configuration ---
@@ -450,14 +486,11 @@ export default function CategoriesPage() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      globalFilter,
       pagination: categoriesPagination,
     },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setCategoriesPagination,
   });
 
@@ -467,7 +500,7 @@ export default function CategoriesPage() {
   };
 
   // Get parent category options (exclude current category if editing)
-  const parentCategoryOptions = categories.filter(
+  const parentCategoryOptions = parentCategories.filter(
     (cat) => !editingCategory || cat.id !== editingCategory.id
   );
 
@@ -524,6 +557,10 @@ export default function CategoriesPage() {
             onClick={() => {
               if (activeTab === "Categories") {
                 resetForm();
+                setIsAddCategoryOpen(true);
+              } else {
+                resetForm();
+                setIsFeatured(true);
                 setIsAddCategoryOpen(true);
               }
             }}

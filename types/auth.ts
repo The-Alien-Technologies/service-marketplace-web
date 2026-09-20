@@ -28,6 +28,7 @@ export interface Category {
   subCategories?: { id: string; name: string; imageUrl?: string }[];
   createdAt?: string;
   updatedAt?: string;
+  _count?: { subCategories?: number; services?: number };
 }
 
 export interface UserInterest {

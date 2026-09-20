@@ -7,14 +7,12 @@ import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
 } from "@tanstack/react-table";
 import {
   Search,
-  Filter,
   MoreVertical,
   CheckCircle2,
   Clock,
@@ -56,8 +54,10 @@ export default function UsersPage() {
   const searchParams = useSearchParams();
   const dashboardSource = searchParams.get("source") === "dashboard";
   const marketId = searchParams.get("marketId") || undefined;
-  const roleFilter = searchParams.get("role") || undefined;
-  const statusFilter = searchParams.get("status") || undefined;
+  const [roleFilter, setRoleFilter] = useState(searchParams.get("role") || "");
+  const [statusFilter, setStatusFilter] = useState(
+    searchParams.get("status") || "",
+  );
   const markets = useMarketStore((state) => state.markets);
   const scopedMarket = markets.find((market) => market.id === marketId);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -92,8 +92,8 @@ export default function UsersPage() {
           page,
           limit: pagination.limit,
           search: globalFilter || undefined,
-          role: roleFilter,
-          status: statusFilter,
+          role: roleFilter || undefined,
+          status: statusFilter || undefined,
           marketId,
           marketplaceOnly: dashboardSource,
         });
@@ -367,7 +367,6 @@ export default function UsersPage() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
     },
@@ -407,7 +406,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Filters and Search */}
+      {/* Server-side filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="relative w-full sm:max-w-md sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -418,13 +417,33 @@ export default function UsersPage() {
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <Button
-          variant="outline"
-          className="flex w-full items-center gap-2 sm:w-auto"
-        >
-          <Filter className="w-4 h-4" />
-          {t("filters")}
-        </Button>
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+          <select
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+            aria-label={t("filterByRole")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allRoles")}</option>
+            <option value="USER">{t("clients")}</option>
+            <option value="SERVICE_PROVIDER">{t("serviceProviders")}</option>
+            <option value="ADMIN">{t("administrators")}</option>
+            <option value="SUPER_ADMIN">{t("superAdministrators")}</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label={t("filterByStatus")}
+            className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700"
+          >
+            <option value="">{t("allStatuses")}</option>
+            <option value="ACTIVE">{t("active")}</option>
+            <option value="SUSPENDED">{t("suspended")}</option>
+            <option value="PENDING">{t("pendingVerification")}</option>
+            <option value="REJECTED">{t("rejected")}</option>
+            <option value="DELETED">{t("deleted")}</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}

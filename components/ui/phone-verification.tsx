@@ -93,6 +93,9 @@ export function PhoneVerification({
   const handleCountryChange = (country: Country) => {
     setSelectedCountry(country);
     setVerificationError('');
+    setVerificationStep('input');
+    setVerificationPhoneNumber('');
+    setVerificationCode(Array(OTP_LENGTH).fill(''));
     onChange(localNumber);
   };
 
@@ -100,6 +103,9 @@ export function PhoneVerification({
     const digits = rawValue.replace(/\D/g, '').slice(0, 15);
     setLocalNumber(digits);
     setVerificationError('');
+    setVerificationStep('input');
+    setVerificationPhoneNumber('');
+    setVerificationCode(Array(OTP_LENGTH).fill(''));
     onChange(digits);
   };
 
