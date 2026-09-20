@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CircleDollarSign,
   FileClock,
+  Handshake,
   Loader2,
   Save,
   ShieldCheck,
@@ -42,6 +43,8 @@ export default function SystemSettingsPage() {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const [commissionRate, setCommissionRate] = useState("10");
   const [savedRate, setSavedRate] = useState(10);
+  const [pavodahShareRate, setPavodahShareRate] = useState("50");
+  const [savedPavodahShareRate, setSavedPavodahShareRate] = useState(50);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,22 +55,29 @@ export default function SystemSettingsPage() {
   const [marketName, setMarketName] = useState("your country");
   const [currency, setCurrency] = useState("GHS");
   const [locale, setLocale] = useState("en-GH");
+  const loadSequence = useRef(0);
 
   const loadSettings = useCallback((marketId?: string) => {
+    const requestSequence = ++loadSequence.current;
     setIsLoading(true);
     setLoadError(null);
     apiService
       .getPaymentSettings(marketId)
       .then((settings) => {
+        if (requestSequence !== loadSequence.current) return;
         const rate = Number(settings.commissionRate);
+        const centralRate = Number(settings.pavodahShareRate);
         setCommissionRate(String(rate));
         setSavedRate(rate);
+        setPavodahShareRate(String(centralRate));
+        setSavedPavodahShareRate(centralRate);
         setUpdatedAt(settings.updatedAt);
         setMarketName(settings.market.name);
         setCurrency(settings.market.currency);
         setLocale(settings.market.locale);
       })
       .catch((error) => {
+        if (requestSequence !== loadSequence.current) return;
         const message =
           error instanceof Error
             ? error.message
@@ -75,7 +85,9 @@ export default function SystemSettingsPage() {
         setLoadError(message);
         toast.error(message);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (requestSequence === loadSequence.current) setIsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -107,31 +119,66 @@ export default function SystemSettingsPage() {
   }, [isSuperAdmin, loadSettings, selectedMarketId]);
 
   const parsedRate = Number(commissionRate);
-  const isValid =
-    Number.isFinite(parsedRate) && parsedRate >= 0 && parsedRate <= 100;
-  const hasChanges = isValid && parsedRate !== savedRate;
-  const example = useMemo(
-    () => ({
-      commission: isValid ? parsedRate : 0,
-      provider: isValid ? 100 - parsedRate : 100,
-    }),
-    [isValid, parsedRate],
-  );
+  const parsedPavodahShareRate = Number(pavodahShareRate);
+  const isCommissionValid =
+    commissionRate.trim() !== "" &&
+    Number.isFinite(parsedRate) &&
+    parsedRate >= 0 &&
+    parsedRate <= 100;
+  const isPavodahShareValid =
+    pavodahShareRate.trim() !== "" &&
+    Number.isFinite(parsedPavodahShareRate) &&
+    parsedPavodahShareRate >= 0 &&
+    parsedPavodahShareRate <= 100;
+  const isValid = isCommissionValid && isPavodahShareValid;
+  const hasChanges =
+    isValid &&
+    (parsedRate !== savedRate ||
+      (isSuperAdmin && parsedPavodahShareRate !== savedPavodahShareRate));
+  const example = useMemo(() => {
+    const commission = isCommissionValid ? parsedRate : 0;
+    const pavodah = isPavodahShareValid
+      ? (commission * parsedPavodahShareRate) / 100
+      : 0;
+    return {
+      commission,
+      provider: 100 - commission,
+      pavodah,
+      partner: commission - pavodah,
+    };
+  }, [
+    isCommissionValid,
+    isPavodahShareValid,
+    parsedPavodahShareRate,
+    parsedRate,
+  ]);
 
   const save = async () => {
     if (!isValid) {
-      toast.error("Commission must be between 0% and 100%");
+      toast.error("Both percentages must be between 0% and 100%");
       return;
     }
     setIsSaving(true);
+    const marketIdAtSave = isSuperAdmin ? selectedMarketId : undefined;
     try {
       const settings = await apiService.updatePaymentSettings(
         parsedRate,
-        isSuperAdmin ? selectedMarketId : undefined,
+        marketIdAtSave,
+        isSuperAdmin ? parsedPavodahShareRate : undefined,
       );
+      if (
+        marketIdAtSave &&
+        settings.market.id !== selectedMarketId
+      ) {
+        toast.success("Commission updated for the selected country");
+        return;
+      }
       const rate = Number(settings.commissionRate);
+      const centralRate = Number(settings.pavodahShareRate);
       setSavedRate(rate);
       setCommissionRate(String(rate));
+      setSavedPavodahShareRate(centralRate);
+      setPavodahShareRate(String(centralRate));
       setUpdatedAt(settings.updatedAt);
       setMarketName(settings.market.name);
       setCurrency(settings.market.currency);
@@ -160,7 +207,11 @@ export default function SystemSettingsPage() {
           </p>
         </div>
         {isSuperAdmin && markets.length > 0 && (
-          <Select value={selectedMarketId} onValueChange={setSelectedMarketId}>
+          <Select
+            value={selectedMarketId}
+            onValueChange={setSelectedMarketId}
+            disabled={isSaving || confirmOpen}
+          >
             <SelectTrigger className="w-full bg-white sm:w-56">
               <SelectValue placeholder="Choose a country" />
             </SelectTrigger>
@@ -176,8 +227,16 @@ export default function SystemSettingsPage() {
       </header>
 
       {isLoading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-green-700" />
+        <div
+          className="flex min-h-[40vh] items-center justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2
+            className="h-8 w-8 animate-spin text-green-700"
+            aria-hidden="true"
+          />
+          <span className="sr-only">Loading payment settings</span>
         </div>
       ) : loadError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center">
@@ -211,51 +270,99 @@ export default function SystemSettingsPage() {
                 </h2>
                 <p className="mt-1 max-w-xl text-sm leading-relaxed text-gray-600">
                   This percentage is deducted from the retained order amount.
-                  Pavodah absorbs Paystack collection and payout fees from this
-                  share.
+                  Paystack collection and payout fees are recorded separately
+                  from this allocation.
                 </p>
               </div>
             </div>
 
-            <div className="mt-8 max-w-sm">
-              <label
-                htmlFor="commission"
-                className="text-sm font-semibold text-gray-800"
-              >
-                Commission rate
-              </label>
-              <div className="relative mt-2">
-                <Input
-                  id="commission"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={commissionRate}
-                  onChange={(event) => setCommissionRate(event.target.value)}
-                  className="h-12 pr-12 text-base font-semibold"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
-                  %
-                </span>
-              </div>
-              {!isValid && (
-                <p className="mt-2 text-sm text-red-700">
-                  Enter a rate from 0% through 100%.
+            <div className="mt-8 grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="commission"
+                  className="text-sm font-semibold text-gray-800"
+                >
+                  Order commission
+                </label>
+                <div className="relative mt-2">
+                  <Input
+                    id="commission"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={commissionRate}
+                    onChange={(event) => setCommissionRate(event.target.value)}
+                    className="h-12 pr-12 text-base font-semibold"
+                    aria-invalid={!isCommissionValid}
+                    aria-describedby="commission-help commission-error"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                    %
+                  </span>
+                </div>
+                {!isCommissionValid && (
+                  <p
+                    id="commission-error"
+                    className="mt-2 text-sm text-red-700"
+                  >
+                    Enter a commission from 0% through 100%.
+                  </p>
+                )}
+                <p id="commission-help" className="sr-only">
+                  Percentage deducted from the retained order amount.
                 </p>
-              )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="pavodah-share"
+                  className="text-sm font-semibold text-gray-800"
+                >
+                  Pavodah share of commission
+                </label>
+                <div className="relative mt-2">
+                  <Input
+                    id="pavodah-share"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={pavodahShareRate}
+                    onChange={(event) =>
+                      setPavodahShareRate(event.target.value)
+                    }
+                    disabled={!isSuperAdmin}
+                    className="h-12 pr-12 text-base font-semibold"
+                    aria-invalid={!isPavodahShareValid}
+                    aria-describedby="pavodah-share-help pavodah-share-error"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                    %
+                  </span>
+                </div>
+                {!isPavodahShareValid ? (
+                  <p
+                    id="pavodah-share-error"
+                    className="mt-2 text-sm text-red-700"
+                  >
+                    Enter a share from 0% through 100%.
+                  </p>
+                ) : (
+                  <p
+                    id="pavodah-share-help"
+                    className="mt-2 text-xs leading-relaxed text-gray-500"
+                  >
+                    {isSuperAdmin
+                      ? "The country partner receives the remainder of the commission."
+                      : "Only a super administrator can change this split."}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="mt-8 overflow-hidden rounded-xl bg-gray-100">
-              <div className="grid grid-cols-2 divide-x divide-gray-200">
-                <div className="p-5">
-                  <p className="text-xs font-medium text-gray-500">
-                    Pavodah receives
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-gray-950">
-                    {money(example.commission, currency, locale)}
-                  </p>
-                </div>
+              <div className="grid sm:grid-cols-3 sm:divide-x sm:divide-gray-200">
                 <div className="p-5">
                   <p className="text-xs font-medium text-gray-500">
                     Provider receives
@@ -264,10 +371,28 @@ export default function SystemSettingsPage() {
                     {money(example.provider, currency, locale)}
                   </p>
                 </div>
+                <div className="border-t border-gray-200 p-5 sm:border-t-0">
+                  <p className="text-xs font-medium text-gray-500">
+                    Country partner receives
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-gray-950">
+                    {money(example.partner, currency, locale)}
+                  </p>
+                </div>
+                <div className="border-t border-gray-200 p-5 sm:border-t-0">
+                  <p className="text-xs font-medium text-gray-500">
+                    Pavodah receives
+                  </p>
+                  <p className="mt-1 text-xl font-bold text-gray-950">
+                    {money(example.pavodah, currency, locale)}
+                  </p>
+                </div>
               </div>
               <p className="border-t border-gray-200 px-5 py-3 text-xs text-gray-600">
-                Example split for a retained order amount of{" "}
-                {money(100, currency, locale)} in {marketName}.
+                Example for a retained {money(100, currency, locale)} order in{" "}
+                {marketName}. The {money(example.commission, currency, locale)}
+                commission is divided only after the provider share is set
+                aside.
               </p>
             </div>
 
@@ -293,6 +418,18 @@ export default function SystemSettingsPage() {
           </main>
 
           <aside className="space-y-5">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <Handshake className="h-5 w-5 text-green-800" />
+              <h2 className="mt-4 text-sm font-bold text-gray-950">
+                Local collection, delayed release
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                Customer funds stay refundable in the Pavodah-controlled local
+                collection account. Provider and partner balances become
+                withdrawable after acceptance; each payout is transferred and
+                reconciled independently.
+              </p>
+            </div>
             <div className="rounded-xl bg-[#103c25] p-5 text-white">
               <ShieldCheck className="h-5 w-5 text-green-200" />
               <h2 className="mt-4 text-sm font-bold">
@@ -310,9 +447,9 @@ export default function SystemSettingsPage() {
                 Refund behavior
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                Partial refunds recalculate the same order rate over the amount
-                retained, so Pavodah and the provider share the reduction
-                proportionally.
+                Partial refunds recalculate all three allocations over the
+                amount retained, using the commission and Pavodah-share rates
+                captured when the order was created.
               </p>
             </div>
           </aside>
@@ -322,16 +459,21 @@ export default function SystemSettingsPage() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="bg-white sm:max-w-md dark:bg-gray-900">
           <DialogHeader>
-            <DialogTitle>Change commission to {parsedRate}%?</DialogTitle>
+            <DialogTitle>Save the new payment allocation?</DialogTitle>
             <DialogDescription>
-              This applies to every order created after you save it. Existing
-              orders keep their original commission snapshot.
+              New orders will use a {parsedRate}% commission
+              {isSuperAdmin
+                ? ` with ${parsedPavodahShareRate}% of that commission assigned to Pavodah.`
+                : "."}{" "}
+              Existing orders keep their original allocation.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-xl bg-gray-100 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
             On a retained {money(100, currency, locale)} order in {marketName},
-            Pavodah receives {money(example.commission, currency, locale)} and
-            the provider receives {money(example.provider, currency, locale)}.
+            the provider receives {money(example.provider, currency, locale)},
+            the country partner receives{" "}
+            {money(example.partner, currency, locale)}, and Pavodah receives{" "}
+            {money(example.pavodah, currency, locale)}.
           </div>
           <DialogFooter>
             <Button

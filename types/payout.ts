@@ -31,8 +31,12 @@ export interface OrderSettlement {
   retainedAmount: number | string;
   commissionRate: number | string;
   commissionAmount: number | string;
+  pavodahShareRate: number | string;
+  pavodahAmount: number | string;
+  partnerAmount: number | string;
   providerAmount: number | string;
   status: SettlementStatus;
+  partnerStatus: SettlementStatus;
   acceptedAt?: string | null;
   acceptedBy?: "CUSTOMER" | "ADMIN" | null;
   releaseReviewStatus: ReleaseReviewStatus;
@@ -94,6 +98,24 @@ export interface ProviderPayout {
       order: { id: string; orderNumber: string; planTitle: string };
     };
   }>;
+}
+
+export interface MarketPartnerPayout {
+  id: string;
+  marketId: string;
+  reference: string;
+  amount: number | string;
+  grossCommissionAmount: number | string;
+  adjustmentAmount: number | string;
+  currency: string;
+  status: ProviderPayoutStatus;
+  institutionName: string;
+  accountName?: string | null;
+  accountNumberLast4: string;
+  createdAt: string;
+  approvedAt?: string | null;
+  processedAt?: string | null;
+  failureMessage?: string | null;
 }
 
 export interface EarningsSummary {

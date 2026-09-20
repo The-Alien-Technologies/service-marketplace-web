@@ -39,6 +39,7 @@ import {
   PayoutAccount,
   PayoutDestinationType,
   PayoutInstitution,
+  MarketPartnerPayout,
   ProviderEarning,
   ProviderPayout,
   ProviderPayoutStatus,
@@ -122,10 +123,7 @@ class ApiService {
       if (!result.data?.token || !result.data.refreshToken) return null;
 
       localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.data.token);
-      localStorage.setItem(
-        REFRESH_TOKEN_STORAGE_KEY,
-        result.data.refreshToken,
-      );
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, result.data.refreshToken);
       return result.data;
     })().finally(() => {
       this.refreshPromise = null;
@@ -310,14 +308,19 @@ class ApiService {
     const formData = new FormData();
     formData.append("avatar", avatar);
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-    const response = await this.authenticatedFetch(`${API_BASE_URL}/auth/avatar`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
+    const response = await this.authenticatedFetch(
+      `${API_BASE_URL}/auth/avatar`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      },
+    );
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.message || payload.error || "Could not update profile picture");
+      throw new Error(
+        payload.message || payload.error || "Could not update profile picture",
+      );
     }
     return payload.data;
   }
@@ -495,7 +498,10 @@ class ApiService {
   async activatePaymentCredential(credentialId: string) {
     const response = await this.request<PaymentCredentialVersion>(
       `/payments/admin/integrations/credentials/${credentialId}/activate`,
-      { method: "POST" },
+      {
+        method: "POST",
+        body: JSON.stringify({ confirmPavodahOwnership: true }),
+      },
     );
     return response.data;
   }
@@ -606,13 +612,16 @@ class ApiService {
     if (imageFile) formData.append("image", imageFile);
 
     const token = localStorage.getItem("auth_token");
-    const response = await this.authenticatedFetch(`${API_BASE_URL}/categories`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await this.authenticatedFetch(
+      `${API_BASE_URL}/categories`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -687,13 +696,16 @@ class ApiService {
     if (imageFile) formData.append("image", imageFile);
 
     const token = localStorage.getItem("auth_token");
-    const response = await this.authenticatedFetch(`${API_BASE_URL}/categories/${id}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await this.authenticatedFetch(
+      `${API_BASE_URL}/categories/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1186,13 +1198,16 @@ class ApiService {
 
     // Use fetch directly for FormData to avoid JSON processing
     const token = localStorage.getItem("auth_token");
-    const response = await this.authenticatedFetch(`${API_BASE_URL}/onboarding/profile`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await this.authenticatedFetch(
+      `${API_BASE_URL}/onboarding/profile`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1311,13 +1326,16 @@ class ApiService {
     }
 
     const token = localStorage.getItem("auth_token");
-    const response = await this.authenticatedFetch(`${API_BASE_URL}/onboarding/documents`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const response = await this.authenticatedFetch(
+      `${API_BASE_URL}/onboarding/documents`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       },
-      body: formData,
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1714,8 +1732,7 @@ class ApiService {
     if (options?.page) params.append("page", options.page.toString());
     if (options?.limit) params.append("limit", options.limit.toString());
     if (options?.marketId) params.append("marketId", options.marketId);
-    if (options?.completedHistory)
-      params.append("completedHistory", "true");
+    if (options?.completedHistory) params.append("completedHistory", "true");
     if (options?.createdMonth)
       params.append("createdMonth", options.createdMonth);
 
@@ -2063,6 +2080,68 @@ class ApiService {
     return response.data;
   }
 
+  async getPartnerPayoutInstitutions(
+    type: PayoutDestinationType,
+    marketId: string,
+  ) {
+    const response = await this.request<PayoutInstitution[]>(
+      `/payouts/admin/partner-institutions?type=${type}&marketId=${encodeURIComponent(marketId)}`,
+    );
+    return response.data;
+  }
+
+  async getPartnerPayoutAccount(marketId: string) {
+    const response = await this.request<PayoutAccount | null>(
+      `/payouts/admin/partner-account?marketId=${encodeURIComponent(marketId)}`,
+    );
+    return response.data;
+  }
+
+  async updatePartnerPayoutAccount(data: {
+    marketId: string;
+    type: PayoutDestinationType;
+    institutionCode: string;
+    accountNumber: string;
+    accountName: string;
+  }) {
+    const response = await this.request<PayoutAccount>(
+      "/payouts/admin/partner-account",
+      { method: "PUT", body: JSON.stringify(data) },
+    );
+    return response.data;
+  }
+
+  async getPartnerPayouts(marketId: string) {
+    const response = await this.request<MarketPartnerPayout[]>(
+      `/payouts/admin/partner-payouts?marketId=${encodeURIComponent(marketId)}`,
+    );
+    return response.data;
+  }
+
+  async requestPartnerPayout(marketId: string) {
+    const response = await this.request<MarketPartnerPayout>(
+      `/payouts/admin/partner-payouts/request?marketId=${encodeURIComponent(marketId)}`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async approvePartnerPayout(id: string) {
+    const response = await this.request<MarketPartnerPayout>(
+      `/payouts/admin/partner-payouts/${id}/approve`,
+      { method: "POST" },
+    );
+    return response.data;
+  }
+
+  async finalizePartnerPayout(id: string, otp: string) {
+    const response = await this.request<MarketPartnerPayout>(
+      `/payouts/admin/partner-payouts/${id}/finalize`,
+      { method: "POST", body: JSON.stringify({ otp }) },
+    );
+    return response.data;
+  }
+
   async sendPayoutAccountOtp() {
     const response = await this.request<{
       phoneNumber: string;
@@ -2192,6 +2271,7 @@ class ApiService {
     const suffix = marketId ? `?marketId=${encodeURIComponent(marketId)}` : "";
     const response = await this.request<{
       commissionRate: number | string;
+      pavodahShareRate: number | string;
       updatedAt: string;
       market: {
         id: string;
@@ -2203,10 +2283,15 @@ class ApiService {
     return response.data;
   }
 
-  async updatePaymentSettings(commissionRate: number, marketId?: string) {
+  async updatePaymentSettings(
+    commissionRate: number,
+    marketId?: string,
+    pavodahShareRate?: number,
+  ) {
     const suffix = marketId ? `?marketId=${encodeURIComponent(marketId)}` : "";
     const response = await this.request<{
       commissionRate: number | string;
+      pavodahShareRate: number | string;
       updatedAt: string;
       market: {
         id: string;
@@ -2216,7 +2301,10 @@ class ApiService {
       };
     }>(`/payouts/admin/settings${suffix}`, {
       method: "PATCH",
-      body: JSON.stringify({ commissionRate }),
+      body: JSON.stringify({
+        commissionRate,
+        ...(pavodahShareRate === undefined ? {} : { pavodahShareRate }),
+      }),
     });
     return response.data;
   }

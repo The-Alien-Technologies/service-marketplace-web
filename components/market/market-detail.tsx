@@ -16,6 +16,15 @@ import {
 import { toast } from "react-toastify";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -29,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiService } from "@/lib/api";
 import { marketDisplayName } from "@/lib/market-display";
 import { isPaymentIntegrationReady } from "@/lib/payment-readiness";
+import { PartnerPayoutPanel } from "./partner-payout-panel";
 import {
   CountryAdministrator,
   Market,
@@ -48,6 +58,10 @@ export function MarketDetail({ marketId }: { marketId: string }) {
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState<string | null>("load");
   const [loadError, setLoadError] = useState(false);
+  const [credentialToActivate, setCredentialToActivate] = useState<
+    string | null
+  >(null);
+  const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
 
   const refresh = useCallback(async () => {
     setBusy("load");
@@ -138,11 +152,13 @@ export function MarketDetail({ marketId }: { marketId: string }) {
           : t("credentialRevoked"),
       );
       await refresh();
+      return true;
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("somethingWentWrong"),
       );
       setBusy(null);
+      return false;
     }
   };
 
@@ -410,15 +426,20 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        {credential.status === "STAGED" && (
+                        {(credential.status === "STAGED" ||
+                          (credential.status === "ACTIVE" &&
+                            !credential.ownershipAttestedAt)) && (
                           <Button
                             size="sm"
-                            onClick={() =>
-                              void credentialAction(credential.id, "activate")
-                            }
+                            onClick={() => {
+                              setOwnershipConfirmed(false);
+                              setCredentialToActivate(credential.id);
+                            }}
                             disabled={busy === credential.id}
                           >
-                            {t("activate")}
+                            {credential.status === "ACTIVE"
+                              ? t("attestOwnership")
+                              : t("activate")}
                           </Button>
                         )}
                         {(credential.status === "STAGED" ||
@@ -456,6 +477,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
               </div>
             )}
           </section>
+          {paymentReady && <PartnerPayoutPanel market={market} />}
         </TabsContent>
 
         <TabsContent value="administrators">
@@ -523,6 +545,63 @@ export function MarketDetail({ marketId }: { marketId: string }) {
           </section>
         </TabsContent>
       </Tabs>
+      <Dialog
+        open={credentialToActivate !== null}
+        onOpenChange={(open) => {
+          if (!open && busy !== credentialToActivate) {
+            setCredentialToActivate(null);
+            setOwnershipConfirmed(false);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("confirmPavodahOwnershipTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("confirmPavodahOwnershipBody", { market: displayName })}
+            </DialogDescription>
+          </DialogHeader>
+          <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-4 text-sm leading-relaxed text-gray-700">
+            <Checkbox
+              className="mt-0.5"
+              checked={ownershipConfirmed}
+              onCheckedChange={(checked) =>
+                setOwnershipConfirmed(checked === true)
+              }
+            />
+            <span>{t("confirmPavodahOwnershipCheckbox")}</span>
+          </label>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCredentialToActivate(null)}
+              disabled={busy === credentialToActivate}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              disabled={
+                !ownershipConfirmed || busy === credentialToActivate
+              }
+              onClick={() => {
+                if (!credentialToActivate) return;
+                const id = credentialToActivate;
+                void credentialAction(id, "activate").then((succeeded) => {
+                  if (succeeded) {
+                    setCredentialToActivate(null);
+                    setOwnershipConfirmed(false);
+                  }
+                });
+              }}
+            >
+              {busy === credentialToActivate && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {t("confirmAndActivate")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

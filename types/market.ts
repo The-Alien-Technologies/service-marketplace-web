@@ -59,6 +59,8 @@ export interface PaymentCredentialVersion {
   status: PaymentCredentialStatus;
   validatedAt?: string | null;
   activatedAt?: string | null;
+  ownershipAttestedAt?: string | null;
+  ownershipAttestedBy?: string | null;
   expiresAt?: string | null;
   createdAt: string;
 }
