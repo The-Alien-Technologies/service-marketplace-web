@@ -90,6 +90,78 @@ interface AuthResponse {
 }
 
 class ApiService {
+  private refreshPromise: Promise<AuthResponse | null> | null = null;
+
+  private isPublicAuthEndpoint(endpoint: string): boolean {
+    return [
+      "/auth/login",
+      "/auth/register",
+      "/auth/social",
+      "/auth/forgot-password",
+      "/auth/verify-password-reset-otp",
+      "/auth/reset-password",
+      "/auth/refresh",
+    ].includes(endpoint);
+  }
+
+  private async refreshSession(): Promise<AuthResponse | null> {
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+      if (!refreshToken) return null;
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!response.ok) return null;
+
+      const result = (await response.json()) as ApiResponse<AuthResponse>;
+      if (!result.data?.token || !result.data.refreshToken) return null;
+
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.data.token);
+      localStorage.setItem(
+        REFRESH_TOKEN_STORAGE_KEY,
+        result.data.refreshToken,
+      );
+      return result.data;
+    })().finally(() => {
+      this.refreshPromise = null;
+    });
+
+    return this.refreshPromise;
+  }
+
+  async authenticatedFetch(
+    url: string,
+    options: RequestInit = {},
+    allowRefresh = true,
+  ): Promise<Response> {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const withToken = (authToken: string | null): RequestInit => ({
+      ...options,
+      headers: {
+        ...options.headers,
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+    });
+
+    let response = await fetch(url, withToken(token));
+    if (response.status === 401 && token && allowRefresh) {
+      const refreshed = await this.refreshSession();
+      if (refreshed) {
+        response = await fetch(url, withToken(refreshed.token));
+      }
+    }
+
+    if (allowRefresh) {
+      throwIfSessionExpired(response.status, Boolean(token));
+    }
+    return response;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -114,8 +186,11 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
-      throwIfSessionExpired(response.status, Boolean(token));
+      const response = await this.authenticatedFetch(
+        url,
+        config,
+        !this.isPublicAuthEndpoint(endpoint),
+      );
       const responseText = await response.text();
       let data:
         | ApiResponse<T>
@@ -235,12 +310,11 @@ class ApiService {
     const formData = new FormData();
     formData.append("avatar", avatar);
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-    const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+    const response = await this.authenticatedFetch(`${API_BASE_URL}/auth/avatar`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-    throwIfSessionExpired(response.status, Boolean(token));
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(payload.message || payload.error || "Could not update profile picture");
@@ -532,14 +606,13 @@ class ApiService {
     if (imageFile) formData.append("image", imageFile);
 
     const token = localStorage.getItem("auth_token");
-    const response = await fetch(`${API_BASE_URL}/categories`, {
+    const response = await this.authenticatedFetch(`${API_BASE_URL}/categories`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
-    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -614,14 +687,13 @@ class ApiService {
     if (imageFile) formData.append("image", imageFile);
 
     const token = localStorage.getItem("auth_token");
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    const response = await this.authenticatedFetch(`${API_BASE_URL}/categories/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
-    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1114,14 +1186,13 @@ class ApiService {
 
     // Use fetch directly for FormData to avoid JSON processing
     const token = localStorage.getItem("auth_token");
-    const response = await fetch(`${API_BASE_URL}/onboarding/profile`, {
+    const response = await this.authenticatedFetch(`${API_BASE_URL}/onboarding/profile`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
-    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1137,32 +1208,23 @@ class ApiService {
   }
 
   async refreshToken(): Promise<AuthResponse> {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
-    if (!refreshToken) {
-      throw new Error("No refresh token available");
-    }
-
-    const response = await this.request<AuthResponse>("/auth/refresh", {
-      method: "POST",
-      body: JSON.stringify({
-        refreshToken,
-      }),
-    });
-
-    // Update tokens
-    if (response.data.token) {
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.data.token);
-      localStorage.setItem(
-        REFRESH_TOKEN_STORAGE_KEY,
-        response.data.refreshToken,
-      );
-    }
-
-    return response.data;
+    const refreshed = await this.refreshSession();
+    if (!refreshed) throw new Error("Unable to refresh session");
+    return refreshed;
   }
 
   async signOut(): Promise<void> {
-    clearStoredAuthSession();
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+      if (token) {
+        await this.authenticatedFetch(`${API_BASE_URL}/auth/logout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    } finally {
+      clearStoredAuthSession();
+    }
   }
 
   // Forgot password flow
@@ -1249,14 +1311,13 @@ class ApiService {
     }
 
     const token = localStorage.getItem("auth_token");
-    const response = await fetch(`${API_BASE_URL}/onboarding/documents`, {
+    const response = await this.authenticatedFetch(`${API_BASE_URL}/onboarding/documents`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
-    throwIfSessionExpired(response.status, Boolean(token));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -1896,12 +1957,11 @@ class ApiService {
     attachments.forEach((f) => formData.append("attachments", f));
 
     const token = localStorage.getItem("auth_token");
-    const res = await fetch(`${API_BASE_URL}/quotes`, {
+    const res = await this.authenticatedFetch(`${API_BASE_URL}/quotes`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-    throwIfSessionExpired(res.status, Boolean(token));
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || `HTTP error! status: ${res.status}`);

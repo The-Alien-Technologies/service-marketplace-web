@@ -12,6 +12,7 @@ import {
 import { useNotificationStore } from "@/store/notification-store";
 import { clearStoredAuthSession } from "@/lib/client-session";
 import { getSignUpEntryState } from "@/lib/auth-entry-state";
+import { apiService } from "@/lib/api";
 
 interface AuthStore extends AuthState {
   // Hydration state
@@ -35,7 +36,7 @@ interface AuthStore extends AuthState {
   setForgotPasswordEmail: (email: string | null) => void;
   setForgotPasswordOtp: (otp: string | null) => void;
   clearForgotPasswordState: () => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 
   // Flow-specific navigation methods
   nextUserStep: () => void;
@@ -117,7 +118,11 @@ export const useAuthStore = create<AuthStore>()(
         }),
 
       signOut: async () => {
-        clearStoredAuthSession();
+        try {
+          await apiService.signOut();
+        } catch {
+          clearStoredAuthSession();
+        }
         useNotificationStore.getState().reset();
         set({
           user: null,

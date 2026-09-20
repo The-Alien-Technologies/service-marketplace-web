@@ -21,6 +21,13 @@ import { useAuthStore } from "@/store/auth-store";
 import { useFormatter, useTranslations } from "next-intl";
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
+const ATTACHMENT_URL = /^(https?:\/\/|\/uploads\/)/i;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 function MessagesContent() {
   const t = useTranslations("Messaging");
@@ -46,6 +53,7 @@ function MessagesContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const deepLinkHandledRef = useRef<string | null>(null);
@@ -111,8 +119,7 @@ function MessagesContent() {
 
   const handleSend = () => {
     if (!inputText.trim()) return;
-    sendMessage(inputText.trim());
-    setInputText("");
+    if (sendMessage(inputText.trim())) setInputText("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -130,10 +137,16 @@ function MessagesContent() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeConversation) return;
+    setFileError("");
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setFileError(t("imageOnly"));
+      e.target.value = "";
+      return;
+    }
     setIsUploading(true);
     try {
       const url = await uploadFile(file);
-      if (url) sendMessage(url);
+      if (url && !sendMessage(url)) setFileError(t("reconnecting"));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -289,6 +302,8 @@ function MessagesContent() {
                     {messages.map((msg) => {
                       const isMe = msg.senderId === user?.id;
                       const isImage = IMAGE_EXTENSIONS.test(msg.content);
+                      const isAttachment =
+                        !isImage && ATTACHMENT_URL.test(msg.content);
                       return (
                         <div
                           key={msg.id}
@@ -319,6 +334,16 @@ function MessagesContent() {
                                   className="rounded-lg object-cover max-h-48 w-auto"
                                   unoptimized
                                 />
+                              </a>
+                            ) : isAttachment ? (
+                              <a
+                                href={msg.content}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 underline underline-offset-2"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                                {t("openAttachment")}
                               </a>
                             ) : (
                               <p>{msg.content}</p>
@@ -366,7 +391,7 @@ function MessagesContent() {
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept="image/*,application/pdf,.doc,.docx"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={handleFileChange}
                   />
 
@@ -419,6 +444,11 @@ function MessagesContent() {
                         </button>
                       </div>
                     </div>
+                    {fileError && (
+                      <p className="mt-2 text-xs text-red-600" role="status">
+                        {fileError}
+                      </p>
+                    )}
                   </div>
                 </div>
               </>

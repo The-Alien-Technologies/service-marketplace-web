@@ -8,13 +8,14 @@ import {
   ChevronDown,
   Mail,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ContactModal } from "./contact-modal";
 import { ChatBox } from "./chat-box";
 import { QuoteRequestModal } from "./quote-request-modal";
 import { CheckoutModal } from "./checkout-modal";
 import { useTranslations } from "next-intl";
 import { formatMoney } from "@/lib/money";
+import { useAuthStore } from "@/store/auth-store";
 
 interface PricingFeature {
   text: string;
@@ -72,6 +73,19 @@ export function PricingPlans({
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "chat" | "quote" | "checkout" | null
+  >(null);
+  const { isAuthenticated, showAuth } = useAuthStore();
+
+  useEffect(() => {
+    if (!isAuthenticated || !pendingAction) return;
+
+    if (pendingAction === "chat") setIsChatOpen(true);
+    if (pendingAction === "quote") setIsQuoteModalOpen(true);
+    if (pendingAction === "checkout") setIsCheckoutModalOpen(true);
+    setPendingAction(null);
+  }, [isAuthenticated, pendingAction]);
 
   const getIcon = (iconType: string) => {
     switch (iconType) {
@@ -102,16 +116,31 @@ export function PricingPlans({
 
   const handleStartChat = () => {
     setIsContactModalOpen(false);
+    if (!isAuthenticated) {
+      setPendingAction("chat");
+      showAuth("signin");
+      return;
+    }
     setIsChatOpen(true);
   };
 
   const handleGetQuote = () => {
     setIsContactModalOpen(false);
+    if (!isAuthenticated) {
+      setPendingAction("quote");
+      showAuth("signin");
+      return;
+    }
     setIsQuoteModalOpen(true);
   };
 
   const handleConfirm = () => {
     if (!checkoutEnabled) return;
+    if (!isAuthenticated) {
+      setPendingAction("checkout");
+      showAuth("signin");
+      return;
+    }
     setIsCheckoutModalOpen(true);
   };
 

@@ -20,6 +20,13 @@ interface ChatBoxProps {
 }
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i;
+const ATTACHMENT_URL = /^(https?:\/\/|\/uploads\/)/i;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 export function ChatBox({
   isOpen,
@@ -27,7 +34,7 @@ export function ChatBox({
   providerId,
   providerName,
   providerAvatar,
-  isOnline = true,
+  isOnline = false,
   responseTime,
 }: ChatBoxProps) {
   const t = useTranslations("Messaging");
@@ -44,6 +51,7 @@ export function ChatBox({
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -60,6 +68,7 @@ export function ChatBox({
     isLoading,
     clearActiveConversation,
     activeConversation,
+    isConnected,
   } = useChatStore();
 
   useEffect(() => {
@@ -124,8 +133,7 @@ export function ChatBox({
 
   const handleSend = () => {
     if (!message.trim() || !activeConversation) return;
-    sendMessage(message.trim());
-    setMessage("");
+    if (sendMessage(message.trim())) setMessage("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -148,10 +156,16 @@ export function ChatBox({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeConversation) return;
+    setFileError("");
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setFileError(t("imageOnly"));
+      e.target.value = "";
+      return;
+    }
     setIsUploading(true);
     try {
       const url = await uploadFile(file);
-      if (url) sendMessage(url);
+      if (url && !sendMessage(url)) setFileError(t("reconnecting"));
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -194,9 +208,11 @@ export function ChatBox({
             <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
               {providerName}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {t("averageResponse", { time: responseTime ?? t("defaultResponseTime") })}
-            </p>
+            {responseTime && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t("averageResponse", { time: responseTime })}
+              </p>
+            )}
           </div>
         </div>
         <button
@@ -227,7 +243,8 @@ export function ChatBox({
                 <button
                   key={index}
                   onClick={() => handleQuickMessage(msg)}
-                  className="w-full text-left p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  disabled={!activeConversation || !isConnected}
+                  className="w-full text-left p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <p className="text-sm text-gray-900 dark:text-white">{msg}</p>
                 </button>
@@ -239,6 +256,8 @@ export function ChatBox({
             {messages.map((msg) => {
               const isMe = msg.senderId === user?.id;
               const isImage = IMAGE_EXTENSIONS.test(msg.content);
+              const isAttachment =
+                !isImage && ATTACHMENT_URL.test(msg.content);
               return (
                 <div
                   key={msg.id}
@@ -262,6 +281,16 @@ export function ChatBox({
                           className="rounded-lg object-cover max-h-48 w-auto"
                           unoptimized
                         />
+                      </a>
+                    ) : isAttachment ? (
+                      <a
+                        href={msg.content}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 underline underline-offset-2"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        {t("openAttachment")}
                       </a>
                     ) : (
                       <p>{msg.content}</p>
@@ -308,7 +337,7 @@ export function ChatBox({
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept="image/*,application/pdf,.doc,.docx"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={handleFileChange}
         />
 
@@ -326,7 +355,7 @@ export function ChatBox({
           <button
             onClick={() => fileInputRef.current?.click()}
             aria-label={t("attachFile")}
-            disabled={isUploading}
+            disabled={isUploading || !isConnected || !activeConversation}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50"
           >
             {isUploading ? (
@@ -350,12 +379,17 @@ export function ChatBox({
           <button
             onClick={handleSend}
             aria-label={t("sendMessage")}
-            disabled={!activeConversation || !message.trim()}
+            disabled={!isConnected || !activeConversation || !message.trim()}
             className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-brand-900"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
+        {(fileError || !isConnected) && (
+          <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="status">
+            {fileError || t("reconnecting")}
+          </p>
+        )}
       </div>
     </div>
   );

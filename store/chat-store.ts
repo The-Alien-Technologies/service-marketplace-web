@@ -4,7 +4,6 @@ import { Conversation, Message } from "@/types/chat";
 import { apiService } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 import { canAcknowledgeConversation } from "@/lib/chat-visibility";
-import { throwIfSessionExpired } from "@/lib/client-session";
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
@@ -27,7 +26,7 @@ interface ChatState {
   fetchConversations: (search?: string) => Promise<void>;
   setActiveConversation: (conversationId: string) => Promise<void>;
   setConversationVisible: (visible: boolean) => void;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string) => boolean;
   startCustomConversation: (targetId: string) => Promise<string>;
   uploadFile: (file: File) => Promise<string>; // returns file URL
   clearActiveConversation: () => void;
@@ -56,8 +55,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const newSocket = io(SOCKET_URL, {
       auth: { token },
     });
+    let hasRetriedAuthentication = false;
 
     newSocket.on("connect", () => {
+      hasRetriedAuthentication = false;
       set({ isConnected: true });
       const activeConversation = get().activeConversation;
       if (
@@ -75,6 +76,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     newSocket.on("disconnect", () => {
       set({ isConnected: false });
+    });
+
+    newSocket.on("connect_error", async () => {
+      if (hasRetriedAuthentication) return;
+      hasRetriedAuthentication = true;
+      try {
+        const refreshed = await apiService.refreshToken();
+        newSocket.auth = { token: refreshed.token };
+        newSocket.connect();
+      } catch {
+        set({ isConnected: false });
+      }
     });
 
     newSocket.on("receive_message", (message: Message) => {
@@ -181,16 +194,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   fetchConversations: async (search = "") => {
     set({ isLoading: true });
     try {
-      // In a real scenario, you'd add this method to your ApiService
-      // For now, doing a direct fetch using the stored token
-      const token = localStorage.getItem("auth_token");
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
       const query = params.size ? `?${params.toString()}` : "";
-      const res = await fetch(`${SOCKET_URL}/api/chat/conversations${query}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      throwIfSessionExpired(res.status, Boolean(token));
+      const res = await apiService.authenticatedFetch(
+        `${SOCKET_URL}/api/chat/conversations${query}`,
+      );
       const data = await res.json();
       if (data.data) {
         set({ conversations: data.data.conversations });
@@ -204,16 +213,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   startCustomConversation: async (targetId: string) => {
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${SOCKET_URL}/api/chat/start`, {
+      const res = await apiService.authenticatedFetch(`${SOCKET_URL}/api/chat/start`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ targetId }),
       });
-      throwIfSessionExpired(res.status, Boolean(token));
       const data = await res.json();
       if (data.data) {
         const conversation = data.data.conversation;
@@ -253,14 +259,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ activeConversation: conversation, isLoading: true });
 
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch(
+      const res = await apiService.authenticatedFetch(
         `${SOCKET_URL}/api/chat/conversations/${conversationId}/messages`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
       );
-      throwIfSessionExpired(res.status, Boolean(token));
       const data = await res.json();
       if (
         requestId === activeConversationRequestId &&
@@ -334,25 +335,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendMessage: (content: string) => {
     const { socket, activeConversation } = get();
-    if (socket?.connected && activeConversation) {
-      socket.emit("send_message", {
-        conversationId: activeConversation.id,
-        content,
-      });
-    }
+    if (!socket?.connected || !activeConversation) return false;
+
+    socket.emit("send_message", {
+      conversationId: activeConversation.id,
+      content,
+    });
+    return true;
   },
 
   uploadFile: async (file: File) => {
     try {
-      const token = localStorage.getItem("auth_token");
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${SOCKET_URL}/api/chat/upload`, {
+      const res = await apiService.authenticatedFetch(`${SOCKET_URL}/api/chat/upload`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      throwIfSessionExpired(res.status, Boolean(token));
       const data = await res.json();
       if (data.data?.url) {
         return data.data.url as string;
